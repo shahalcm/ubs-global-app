@@ -1,0 +1,420 @@
+// app/(auth)/login.jsx
+import React, { useState } from 'react'
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Modal,
+  FlatList,
+} from 'react-native'
+import { router } from 'expo-router'
+
+const COUNTRIES = [
+  { code: '+1', flag: '🇺🇸', name: 'US' },
+  { code: '+44', flag: '🇬🇧', name: 'UK' },
+  { code: '+91', flag: '🇮🇳', name: 'IN' },
+  { code: '+971', flag: '🇦🇪', name: 'AE' },
+  { code: '+966', flag: '🇸🇦', name: 'SA' },
+  { code: '+92', flag: '🇵🇰', name: 'PK' },
+  { code: '+60', flag: '🇲🇾', name: 'MY' },
+  { code: '+65', flag: '🇸🇬', name: 'SG' },
+  { code: '+86', flag: '🇨🇳', name: 'CN' },
+  { code: '+81', flag: '🇯🇵', name: 'JP' },
+  { code: '+49', flag: '🇩🇪', name: 'DE' },
+  { code: '+33', flag: '🇫🇷', name: 'FR' },
+]
+
+export default function LoginScreen() {
+  const [phone, setPhone] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
+  const [showPicker, setShowPicker] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleContinue = async () => {
+    if (!phone || phone.length < 7) return
+    setLoading(true)
+    try {
+      // await api.post('/auth/send-otp', { phone: selectedCountry.code + phone })
+      router.push({
+        pathname: '/(auth)/otp',
+        params: { phone: selectedCountry.code + phone }
+      })
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      // google sign in logic here
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+
+          {/* White Card */}
+          <View style={styles.card}>
+
+            {/* Title */}
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>
+              Sign in to manage your global trade
+            </Text>
+
+            {/* Phone Label */}
+            <Text style={styles.label}>Phone number</Text>
+
+            {/* Phone Input Row */}
+            <View style={styles.phoneRow}>
+              <TouchableOpacity
+                style={styles.countryBtn}
+                onPress={() => setShowPicker(true)}
+              >
+                <Text style={styles.countryCode}>{selectedCountry.code}</Text>
+                <Text style={styles.dropdownArrow}>⌄</Text>
+              </TouchableOpacity>
+
+              <TextInput
+                style={styles.phoneInput}
+                placeholder="Enter mobile number"
+                placeholderTextColor="#aab"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+                maxLength={15}
+              />
+            </View>
+
+            {/* Continue Button */}
+            <TouchableOpacity
+              style={[styles.continueBtn, loading && { opacity: 0.6 }]}
+              onPress={handleContinue}
+              disabled={loading}
+            >
+              <Text style={styles.continueBtnText}>
+                {loading ? 'Please wait...' : 'Continue'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* OR Divider */}
+            <View style={styles.orRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>OR</Text>
+              <View style={styles.orLine} />
+            </View>
+
+            {/* Google Button */}
+            <TouchableOpacity
+              style={styles.googleBtn}
+              onPress={handleGoogleLogin}
+            >
+              {/* Google G icon using colored text */}
+              <View style={styles.googleIconBox}>
+                <Text style={styles.googleIconText}>G</Text>
+              </View>
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            {/* Sign Up Link */}
+            <Text style={styles.signupText}>
+              Don&apos;t have an account?{' '}
+              <Text
+                style={styles.signupLink}
+                onPress={() => router.push('/(auth)/signup')}
+              >
+                Sign Up
+              </Text>
+            </Text>
+
+          </View>
+
+          {/* Footer Links */}
+          <View style={styles.footer}>
+            <TouchableOpacity>
+              <Text style={styles.footerLink}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Text style={styles.footerLink}>Terms of Service</Text>
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Text style={styles.footerLink}>Contact Support</Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Country Picker Modal */}
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPicker(false)}
+        >
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Select Country Code</Text>
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={(item) => item.code + item.name}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryRow}
+                  onPress={() => {
+                    setSelectedCountry(item)
+                    setShowPicker(false)
+                  }}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <Text style={styles.countryName}>{item.name}</Text>
+                  <Text style={styles.countryCodeRight}>{item.code}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#e8eef8',
+  },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+  },
+
+  // Card
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
+    marginBottom: 24,
+  },
+
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1a237e',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a237e',
+    marginBottom: 10,
+  },
+
+  // Phone Row
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  countryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#dde3f0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    backgroundColor: '#f5f7fc',
+    gap: 6,
+    minWidth: 85,
+  },
+  countryCode: {
+    fontSize: 15,
+    color: '#1a237e',
+    fontWeight: '600',
+  },
+  dropdownArrow: {
+    fontSize: 16,
+    color: '#1a237e',
+    marginTop: -2,
+  },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#dde3f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 15,
+    color: '#1a237e',
+    backgroundColor: '#f5f7fc',
+  },
+
+  // Continue Button
+  continueBtn: {
+    backgroundColor: '#1a237e',
+    borderRadius: 14,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  continueBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  // OR Divider
+  orRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  orText: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '500',
+    letterSpacing: 1,
+  },
+
+  // Google Button
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#dde3f0',
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginBottom: 24,
+    gap: 12,
+    backgroundColor: '#fff',
+  },
+  googleIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  googleIconText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a237e',
+  },
+
+  // Sign Up
+  signupText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#555',
+  },
+  signupLink: {
+    color: '#29b6f6',
+    fontWeight: '700',
+  },
+
+  // Footer
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    flexWrap: 'wrap',
+  },
+  footerLink: {
+    fontSize: 13,
+    color: '#888',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '65%',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1a237e',
+    marginBottom: 16,
+  },
+  countryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#eee',
+    gap: 12,
+  },
+  countryFlag: {
+    fontSize: 22,
+  },
+  countryName: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1a237e',
+    fontWeight: '500',
+  },
+  countryCodeRight: {
+    fontSize: 14,
+    color: '#888',
+  },
+})

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "client",
+    "name": "UBS Global Importing & Exporting",
     "slug": "client",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,22 +23,28 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "splash": {
+      "backgroundColor": "#ffffff",
+      "resizeMode": "native"
+    },
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
+        "@stripe/stripe-react-native",
         {
-          "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
-          }
+          "merchantIdentifier": "",
+          "enableGooglePay": false
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "root": "app"
+      }
     }
   }
 }
