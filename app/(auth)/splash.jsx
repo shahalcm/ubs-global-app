@@ -79,8 +79,6 @@ export default function SplashScreen() {
             contentFit="contain"
             accessibilityLabel="UBS Global logo"
           />
-          <Text style={styles.mainTitle}>UBS GLOBAL</Text>
-          <Text style={styles.subTitle}>IMPORTING & EXPORTING</Text>
         </View>
 
         {/* Bottom Loader Section */}
@@ -124,21 +122,6 @@ const styles = StyleSheet.create({
   },
   logo: {
     marginBottom: 20, // space between logo and title
-  },
-  mainTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: NAVY,
-    letterSpacing: 2,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subTitle: {
-    fontSize: 12, // decreased size to fit on one line
-    fontWeight: "700",
-    color: SKY,
-    letterSpacing: 3, // slightly reduced letter spacing
-    textAlign: "center",
   },
   bottomContainer: {
     justifyContent: "flex-end",

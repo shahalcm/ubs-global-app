@@ -101,7 +101,10 @@ export default function DrawerMenuScreen() {
                 Premium Member • Importer/Exporter
               </Text>
 
-              <TouchableOpacity style={styles.editBtn}>
+              <TouchableOpacity 
+                style={styles.editBtn}
+                onPress={() => handleNavigate("/(buyer)/edit-profile")}
+              >
                 <Text style={styles.editIcon}>✎</Text>
                 <Text style={styles.editText}>Edit Profile</Text>
               </TouchableOpacity>

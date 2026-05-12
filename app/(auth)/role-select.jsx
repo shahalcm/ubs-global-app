@@ -36,9 +36,9 @@ export default function RoleSelectScreen() {
     try {
       // await api.patch('/auth/set-role', { role: selectedRole })
       if (selectedRole === 'buyer') {
-        router.replace('/(auth)/location-permission')
+        router.replace('/(buyer)/home')
       } else {
-        router.replace('/(seller)/dashboard')
+        router.replace('/(seller)/become-seller')
       }
     } catch (error) {
       console.log(error)
