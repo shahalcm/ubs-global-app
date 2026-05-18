@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 
 export function BottomNav({ items, activeKey, onPress }) {
@@ -9,6 +10,14 @@ export function BottomNav({ items, activeKey, onPress }) {
         const active = item.key === activeKey;
         return (
           <TouchableOpacity key={item.key} style={styles.tab} onPress={() => onPress(item.key)} accessibilityRole="button">
+            {item.icon && (
+              <MaterialCommunityIcons 
+                name={item.icon} 
+                size={24} 
+                color={active ? colors.primary : colors.textMuted}
+                style={styles.icon}
+              />
+            )}
             <Text style={[styles.label, active && styles.labelActive]}>{item.label}</Text>
           </TouchableOpacity>
         );
@@ -31,7 +40,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 6,
   },
-  tab: { flex: 1, alignItems: 'center' },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  icon: { marginBottom: 4 },
   label: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
   labelActive: { color: colors.primary, fontWeight: '700' },
 });

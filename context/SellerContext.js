@@ -68,8 +68,10 @@ export function SellerProvider({ children }) {
         dispatch({ type: 'SET_SELLER', payload: JSON.parse(cached) });
       }
       const response = await api.get('/sellers/profile');
-      dispatch({ type: 'SET_SELLER', payload: response.data });
-      await AsyncStorage.setItem('sellerProfile', JSON.stringify(response.data));
+      if (response.data.success) {
+        dispatch({ type: 'SET_SELLER', payload: response.data.seller });
+        await AsyncStorage.setItem('sellerProfile', JSON.stringify(response.data.seller));
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
     } finally {
@@ -82,7 +84,7 @@ export function SellerProvider({ children }) {
     try {
       const [statsRes, productsRes, ordersRes, messagesRes, notificationsRes] = await Promise.all([
         api.get('/sellers/dashboard-stats'),
-        api.get('/products/my-products'),
+        api.get('/products/seller/my-products'),
         api.get('/orders/seller-orders'),
         api.get('/messages'),
         api.get('/notifications'),

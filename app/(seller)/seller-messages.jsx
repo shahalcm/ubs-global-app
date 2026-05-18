@@ -1,31 +1,114 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SellerHeader from '../../components/seller/SellerHeader';
-import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
-
-const conversations = [
-  { id: '1', name: 'Maya Singh', last: 'Can you confirm the shipping date?', unread: 2, online: true },
-  { id: '2', name: 'Arjun Nair', last: 'Thanks for the quick response', unread: 0, online: false },
-  { id: '3', name: 'Sara Ali', last: 'I need one more color variant', unread: 1, online: false },
-];
-
-const threads = [
-  { fromSeller: false, text: 'Hello, your order is on the way.', time: '9:02 AM' },
-  { fromSeller: true, text: 'Thanks for the update. Please share the tracking details.', time: '9:05 AM' },
-  { fromSeller: false, text: 'Sure, will send shortly.', time: '9:08 AM' },
-];
+import { getChatRooms, getMessages, sendMessage, markAsRead } from '../../services/messageService';
+import { onReceiveMessage, joinRoom, removeListener } from '../../services/socketService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SellerMessages() {
-  const { messages } = useSeller();
   const [search, setSearch] = useState('');
-  const [activeChat, setActiveChat] = useState(conversations[0]);
+  const [rooms, setRooms] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
   const [messageText, setMessageText] = useState('');
+  const [threads, setThreads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [myId, setMyId] = useState(null);
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setMyId(user._id);
+      }
+      fetchRooms();
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    onReceiveMessage((newMessage) => {
+      if (activeChat && newMessage.chatRoomId === activeChat._id) {
+        setThreads((prev) => {
+          if (!prev.find(m => m._id === newMessage._id)) return [...prev, newMessage];
+          return prev;
+        });
+        markAsRead(activeChat._id).catch(console.error);
+        fetchRooms();
+      } else {
+        fetchRooms();
+      }
+    });
+
+    return () => {
+      removeListener('receiveMessage');
+    };
+  }, [activeChat]);
+
+  const fetchRooms = async () => {
+    try {
+      const res = await getChatRooms();
+      if (res.success) {
+        setRooms(res.rooms);
+      }
+    } catch (error) {
+      console.error('Failed to fetch rooms', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async (room) => {
+    setActiveChat(room);
+    joinRoom(room._id);
+    try {
+      const res = await getMessages(room._id);
+      if (res.success) {
+        setThreads(res.messages);
+        if (room.sellerUnread > 0) {
+          await markAsRead(room._id);
+          fetchRooms();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch messages', error);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!messageText.trim() || !activeChat) return;
+    const text = messageText;
+    setMessageText('');
+    
+    try {
+      const res = await sendMessage(activeChat._id, { text });
+      if (res.success) {
+        setThreads(prev => {
+           if (!prev.find(m => m._id === res.message._id)) return [...prev, res.message];
+           return prev;
+        });
+        fetchRooms();
+      }
+    } catch (error) {
+      console.error('Send error', error);
+    }
+  };
 
   const filtered = useMemo(() => {
-    return conversations.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
-  }, [search]);
+    return rooms.filter((item) => {
+      const name = item.buyerId?.name || 'User';
+      return name.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [search, rooms]);
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -36,33 +119,64 @@ export default function SellerMessages() {
           <TextInput style={styles.searchInput} placeholder="Search conversations..." value={search} onChangeText={setSearch} />
         </View>
 
-        <FlatList data={filtered} keyExtractor={(item) => item.id} renderItem={({ item }) => (
-          <TouchableOpacity style={[styles.conversation, activeChat?.id === item.id && styles.activeConversation]} onPress={() => setActiveChat(item)}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{item.name.charAt(0)}</Text></View>
-            <View style={styles.conversationInfo}>
-              <Text style={styles.conversationName}>{item.name}</Text>
-              <Text style={styles.conversationLast}>{item.last}</Text>
-            </View>
-            <View style={styles.metaColumn}><Text style={styles.time}>3m</Text>{item.unread > 0 && <View style={styles.unreadBadge}><Text style={styles.unreadText}>{item.unread}</Text></View>}</View>
-          </TouchableOpacity>
-        )} style={styles.list} ListEmptyComponent={<Text style={styles.empty}>No conversations found.</Text>} />
+        <FlatList 
+          data={filtered} 
+          keyExtractor={(item) => item._id} 
+          renderItem={({ item }) => {
+            const name = item.buyerId?.name || 'User';
+            const unread = item.sellerUnread || 0;
+            return (
+              <TouchableOpacity style={[styles.conversation, activeChat?._id === item._id && styles.activeConversation]} onPress={() => loadMessages(item)}>
+                <View style={styles.avatar}><Text style={styles.avatarText}>{name.charAt(0)}</Text></View>
+                <View style={styles.conversationInfo}>
+                  <Text style={styles.conversationName} numberOfLines={1}>{name}</Text>
+                  <Text style={styles.conversationLast} numberOfLines={1}>{item.lastMessage || 'No messages yet'}</Text>
+                </View>
+                <View style={styles.metaColumn}>
+                  <Text style={styles.time}>{formatTime(item.lastMessageAt)}</Text>
+                  {unread > 0 && <View style={styles.unreadBadge}><Text style={styles.unreadText}>{unread}</Text></View>}
+                </View>
+              </TouchableOpacity>
+            );
+          }} 
+          style={styles.list} 
+          ListEmptyComponent={loading ? <ActivityIndicator size="small" color={colors.primary} style={{marginTop: 20}} /> : <Text style={styles.empty}>No conversations found.</Text>} 
+        />
 
+        {activeChat ? (
         <View style={styles.chatCard}>
-          <View style={styles.chatHeader}><View><Text style={styles.chatTitle}>{activeChat.name}</Text><View style={styles.statusRow}><View style={[styles.statusDot, activeChat.online ? styles.online : styles.offline]} /><Text style={styles.statusText}>{activeChat.online ? 'Online' : 'Offline'}</Text></View></View></View>
-          <ScrollView style={styles.thread} contentContainerStyle={{ paddingVertical: 12 }}>
-            {threads.map((message, index) => (
-              <View key={index} style={[styles.bubble, message.fromSeller ? styles.rightBubble : styles.leftBubble]}>
-                <Text style={[styles.bubbleText, message.fromSeller && styles.rightText]}>{message.text}</Text>
-                <Text style={[styles.timeLabel, message.fromSeller && styles.rightText]}>{message.time}</Text>
+          <View style={styles.chatHeader}>
+             <View>
+                <Text style={styles.chatTitle}>{activeChat.buyerId?.name || 'User'}</Text>
+             </View>
+          </View>
+          <ScrollView 
+            style={styles.thread} 
+            contentContainerStyle={{ paddingVertical: 12 }}
+            ref={scrollViewRef}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            {threads.map((message, index) => {
+              const isMine = message.senderId === myId;
+              return (
+              <View key={message._id || index} style={[styles.bubble, isMine ? styles.rightBubble : styles.leftBubble]}>
+                <Text style={[styles.bubbleText, isMine && styles.rightText]}>{message.text}</Text>
+                <Text style={[styles.timeLabel, isMine && styles.rightText]}>{formatTime(message.createdAt)}</Text>
               </View>
-            ))}
+            )})}
           </ScrollView>
           <View style={styles.inputRow}>
             <TouchableOpacity style={styles.iconButton}><MaterialCommunityIcons name="paperclip" size={22} color="#7a7a7a" /></TouchableOpacity>
-            <TextInput style={styles.textInput} placeholder="Type a message" value={messageText} onChangeText={setMessageText} />
-            <TouchableOpacity style={styles.sendButton}><MaterialCommunityIcons name="send" size={20} color="#fff" /></TouchableOpacity>
+            <TextInput style={styles.textInput} placeholder="Type a message" value={messageText} onChangeText={setMessageText} onSubmitEditing={handleSend} />
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend}><MaterialCommunityIcons name="send" size={20} color="#fff" /></TouchableOpacity>
           </View>
         </View>
+        ) : (
+          <View style={[styles.chatCard, { justifyContent: 'center', alignItems: 'center' }]}>
+            <MaterialCommunityIcons name="message-text-outline" size={48} color="#e0e0e0" />
+            <Text style={{ marginTop: 12, color: '#7a7a7a' }}>Select a conversation to start chatting</Text>
+          </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -70,10 +184,10 @@ export default function SellerMessages() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, padding: 20, paddingBottom: 100 },
+  container: { flex: 1, padding: 20, paddingBottom: 20 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 16, height: 48, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
   searchInput: { marginLeft: 10, fontSize: 14, flex: 1 },
-  list: { marginBottom: 16 },
+  list: { marginBottom: 16, flex: 0.8 },
   conversation: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: '#fff', marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
   activeConversation: { backgroundColor: '#eef6ff' },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
@@ -85,7 +199,7 @@ const styles = StyleSheet.create({
   time: { fontSize: 12, color: '#8a8a8a' },
   unreadBadge: { marginTop: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
   unreadText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  chatCard: { flex: 1, backgroundColor: '#fff', borderRadius: 24, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 14, elevation: 4 },
+  chatCard: { flex: 1.2, backgroundColor: '#fff', borderRadius: 24, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 14, elevation: 4 },
   chatHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   chatTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
   statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },

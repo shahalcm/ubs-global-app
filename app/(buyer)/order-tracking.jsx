@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 export default function OrderTrackingScreen() {
   return (
@@ -19,7 +20,7 @@ export default function OrderTrackingScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backIcon}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Track Order</Text>
@@ -27,7 +28,7 @@ export default function OrderTrackingScreen() {
           </View>
         </View>
         <TouchableOpacity style={styles.headerRight}>
-          <Text style={styles.bellIcon}>🔔</Text>
+          <MaterialCommunityIcons name="bell" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -46,7 +47,7 @@ export default function OrderTrackingScreen() {
                 <Text style={styles.etaTime}>14:30 - 15:00</Text>
               </View>
               <TouchableOpacity style={styles.liveTrackBtn} activeOpacity={0.8}>
-                <Text style={styles.liveTrackIcon}>⌖</Text>
+                <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#fff" />
                 <Text style={styles.liveTrackText}>Live{'\n'}Track</Text>
               </TouchableOpacity>
             </View>
@@ -63,7 +64,7 @@ export default function OrderTrackingScreen() {
             <View style={styles.timelineRow}>
               <View style={styles.timelineIconCol}>
                 <View style={[styles.circle, styles.circleGreen]}>
-                  <Text style={styles.checkIcon}>✓</Text>
+                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
                 </View>
                 <View style={[styles.line, styles.lineGreen]} />
               </View>
@@ -78,7 +79,7 @@ export default function OrderTrackingScreen() {
             <View style={styles.timelineRow}>
               <View style={styles.timelineIconCol}>
                 <View style={[styles.circle, styles.circleGreen]}>
-                  <Text style={styles.checkIcon}>✓</Text>
+                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
                 </View>
                 <View style={[styles.line, styles.lineGreen]} />
               </View>
@@ -93,7 +94,7 @@ export default function OrderTrackingScreen() {
             <View style={styles.timelineRow}>
               <View style={styles.timelineIconCol}>
                 <View style={[styles.circle, styles.circleGreen]}>
-                  <Text style={styles.checkIcon}>✓</Text>
+                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
                 </View>
                 <View style={[styles.line, styles.lineGray]} />
               </View>
@@ -108,7 +109,7 @@ export default function OrderTrackingScreen() {
             <View style={styles.timelineRow}>
               <View style={styles.timelineIconCol}>
                 <View style={[styles.circle, styles.circleBlue]}>
-                  <Text style={styles.truckIcon}>🚚</Text>
+                  <MaterialCommunityIcons name="truck" size={20} color="#fff" />
                 </View>
                 <View style={[styles.line, styles.lineGray, { borderStyle: 'dashed' }]} />
               </View>
@@ -155,7 +156,7 @@ export default function OrderTrackingScreen() {
               <Text style={styles.trackingNumber}>UBS7729910023</Text>
             </View>
             <TouchableOpacity style={styles.copyBtn}>
-              <Text style={styles.copyIcon}>⎘</Text>
+              <MaterialCommunityIcons name="content-copy" size={20} color="#666" />
             </TouchableOpacity>
           </View>
         </View>
@@ -163,7 +164,7 @@ export default function OrderTrackingScreen() {
         {/* Delivery Address */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.headerIcon}>📍</Text>
+            <MaterialCommunityIcons name="map-marker" size={20} color="#666" />
             <Text style={styles.cardTitleLine}>Delivery Address</Text>
           </View>
           <View style={styles.addressBox}>
@@ -211,11 +212,11 @@ export default function OrderTrackingScreen() {
       {/* Bottom Fixed Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.helpBtn}>
-          <Text style={styles.helpIcon}>?</Text>
+          <MaterialCommunityIcons name="help-circle" size={20} color="#666" />
           <Text style={styles.helpText}>Need{'\n'}Help?</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.contactBtn} onPress={() => router.push('/(buyer)/messages')}>
-          <Text style={styles.contactIcon}>💬</Text>
+          <MaterialCommunityIcons name="message-text" size={20} color="#fff" />
           <Text style={styles.contactText}>Contact Seller</Text>
         </TouchableOpacity>
       </View>
@@ -248,10 +249,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     padding: 4,
   },
-  backIcon: {
-    fontSize: 22,
-    color: '#1a237e',
-  },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
@@ -264,10 +261,6 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     padding: 4,
-  },
-  bellIcon: {
-    fontSize: 20,
-    color: '#000040',
   },
 
   scrollContent: {
@@ -324,10 +317,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
-  liveTrackIcon: {
-    color: '#fff',
-    fontSize: 16,
-  },
   liveTrackText: {
     color: '#fff',
     fontSize: 11,
@@ -382,17 +371,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderWidth: 1,
     borderColor: '#ddd',
-  },
-  checkIcon: {
-    color: '#4caf50',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  truckIcon: {
-    fontSize: 12,
-  },
-  boxIcon: {
-    fontSize: 12,
   },
   
   line: {
@@ -508,21 +486,12 @@ const styles = StyleSheet.create({
   copyBtn: {
     padding: 4,
   },
-  copyIcon: {
-    fontSize: 18,
-    color: '#000040',
-  },
 
   // Address
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  headerIcon: {
-    fontSize: 16,
-    color: '#000040',
-    marginRight: 8,
   },
   cardTitleLine: {
     fontSize: 12,
@@ -642,11 +611,6 @@ const styles = StyleSheet.create({
     marginRight: 24,
     gap: 8,
   },
-  helpIcon: {
-    fontSize: 16,
-    color: '#008b8b',
-    fontWeight: 'bold',
-  },
   helpText: {
     fontSize: 11,
     fontWeight: '600',
@@ -661,10 +625,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     gap: 8,
-  },
-  contactIcon: {
-    color: '#fff',
-    fontSize: 16,
   },
   contactText: {
     color: '#fff',

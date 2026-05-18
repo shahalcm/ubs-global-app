@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 export default function EditProfileScreen() {
   const [name, setName] = useState("UBS Global User");
@@ -27,7 +28,7 @@ export default function EditProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <View style={{ width: 40 }} />
@@ -93,10 +94,6 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 8,
     marginLeft: -8,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: "#333",
   },
   headerTitle: {
     fontSize: 18,

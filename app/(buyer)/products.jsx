@@ -89,6 +89,18 @@ const CATEGORIES = [
     count: '400+ Products',
     image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&q=80',
   },
+  {
+    id: '13',
+    name: 'Spare Parts',
+    count: '3.1k+ Products',
+    image: require("../../assets/images/spare_parts.png"),
+  },
+  {
+    id: '14',
+    name: 'Perfumes',
+    count: '1.2k+ Products',
+    image: require("../../assets/images/perfumes.jpg"),
+  },
 ]
 
 const renderCategory = ({ item }) => (
@@ -101,7 +113,7 @@ const renderCategory = ({ item }) => (
     activeOpacity={0.85}
   >
     <Image
-      source={{ uri: item.image }}
+      source={typeof item.image === 'string' ? { uri: item.image } : item.image}
       style={styles.categoryImage}
       resizeMode="cover"
     />
@@ -123,11 +135,8 @@ export default function ProductsScreen() {
         </TouchableOpacity>
         <Text style={styles.topTitle}>UBS Global</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <TouchableOpacity onPress={() => router.push('/(buyer)/wishlist')}>
-            <Text style={styles.cartIcon}>♡</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(buyer)/cart')}>
-            <Text style={styles.cartIcon}>🛒</Text>
+          <TouchableOpacity onPress={() => router.push('/(buyer)/notifications')}>
+            <Text style={styles.cartIcon}>🔔</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -159,7 +168,7 @@ export default function ProductsScreen() {
         {/* Can't find card */}
         <View style={styles.findCard}>
           <Text style={styles.findTitle}>
-            Can't find what you're looking for?
+            Can&apos;t find what you&apos;re looking for?
           </Text>
           <Text style={styles.findDesc}>
             Our global network of verified vendors can source specific
@@ -170,48 +179,10 @@ export default function ProductsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 90 }} />
+
       </ScrollView>
 
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/home')}
-        >
-          <Text style={styles.navIcon}>⌂</Text>
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/messages')}
-        >
-          <Text style={styles.navIcon}>✉</Text>
-          <Text style={styles.navLabel}>Messages</Text>
-        </TouchableOpacity>
-
-        {/* Center Sell Button */}
-        <TouchableOpacity
-          style={styles.sellBtn}
-          onPress={() => router.push('/(seller)/dashboard')}
-        >
-          <Text style={styles.sellIcon}>+</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIconActive}>▦</Text>
-          <Text style={styles.navLabelActive}>Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/profile')}
-        >
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navLabel}>Profile</Text>
-        </TouchableOpacity>
-      </View>
 
     </SafeAreaView>
   )
@@ -341,61 +312,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Bottom Nav
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 8,
-  },
-  navItem: {
-    alignItems: 'center',
-    gap: 2,
-    flex: 1,
-  },
-  navIcon: {
-    fontSize: 22,
-    color: '#999',
-  },
-  navIconActive: {
-    fontSize: 22,
-    color: '#1a237e',
-  },
-  navLabel: {
-    fontSize: 10,
-    color: '#999',
-  },
-  navLabelActive: {
-    fontSize: 10,
-    color: '#1a237e',
-    fontWeight: '600',
-  },
-  sellBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#1a237e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#1a237e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  sellIcon: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: '300',
-    marginTop: -2,
-  },
+
 })  

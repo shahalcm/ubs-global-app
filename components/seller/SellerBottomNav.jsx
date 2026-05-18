@@ -1,71 +1,116 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSellerDrawer } from '../../context/SellerLayoutContext';
 import { colors } from '../../constants/colors';
-
-const tabs = [
-  { name: 'dashboard', label: 'Dashboard', icon: 'home' },
-  { name: 'my-products', label: 'Products', icon: 'cube-outline' },
-  { name: 'seller-orders', label: 'Orders', icon: 'clipboard-list' },
-  { name: 'seller-messages', label: 'Messages', icon: 'message-text-outline' },
-  { name: 'seller-profile', label: 'Profile', icon: 'account-circle-outline' },
-];
 
 export default function SellerBottomNav() {
   const router = useRouter();
+  const { closeDrawer } = useSellerDrawer();
+  const insets = useSafeAreaInsets();
   const segments = useSegments();
   const activeSegment = segments[segments.length - 1] || 'dashboard';
 
+  const hiddenScreens = ['become-seller', 'add-product', 'edit-product', 'order-details'];
+  if (hiddenScreens.includes(activeSegment)) return null;
+
   return (
-    <View style={styles.container}>
-      {tabs.map((tab) => {
-        const active = activeSegment === tab.name;
-        return (
-          <TouchableOpacity
-            key={tab.name}
-            style={styles.tab}
-            onPress={() => router.push(`/${tab.name}`)}
-          >
-            <MaterialCommunityIcons
-              name={tab.icon}
-              size={22}
-              color={active ? colors.primary : '#8a8a8a'}
-            />
-            <Text style={[styles.label, active && styles.activeLabel]}>{tab.label}</Text>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <TouchableOpacity
+        style={styles.tab}
+        onPress={() => { closeDrawer(); router.push('/(seller)/dashboard'); }}
+      >
+        <Text style={[styles.icon, activeSegment === 'dashboard' && styles.activeIcon]}>⌂</Text>
+        <Text style={[styles.label, activeSegment === 'dashboard' && styles.activeLabel]}>Dashboard</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tab}
+        onPress={() => { closeDrawer(); router.push('/(seller)/my-products'); }}
+      >
+        <Text style={[styles.icon, activeSegment === 'my-products' && styles.activeIcon]}>▦</Text>
+        <Text style={[styles.label, activeSegment === 'my-products' && styles.activeLabel]}>Products</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.centerBtn}
+        onPress={() => { closeDrawer(); router.push('/(seller)/add-product'); }}
+      >
+        <Text style={styles.centerIcon}>+</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tab}
+        onPress={() => { closeDrawer(); router.push('/(seller)/seller-messages'); }}
+      >
+        <Text style={[styles.icon, activeSegment === 'seller-messages' && styles.activeIcon]}>✉</Text>
+        <Text style={[styles.label, activeSegment === 'seller-messages' && styles.activeLabel]}>Messages</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tab}
+        onPress={() => { closeDrawer(); router.push('/(seller)/seller-profile'); }}
+      >
+        <Text style={[styles.icon, activeSegment === 'seller-profile' && styles.activeIcon]}>👤</Text>
+        <Text style={[styles.label, activeSegment === 'seller-profile' && styles.activeLabel]}>Profile</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    height: 74,
-    backgroundColor: '#ffffff',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    backgroundColor: '#fff',
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
+    justifyContent: 'space-around',
     borderTopWidth: 1,
-    borderTopColor: '#ececec',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 6,
+    borderTopColor: '#eee',
   },
   tab: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 68,
+    gap: 2,
+  },
+  icon: {
+    fontSize: 22,
+    color: '#999',
+  },
+  activeIcon: {
+    color: '#1a237e',
   },
   label: {
-    fontSize: 11,
-    color: '#8a8a8a',
-    marginTop: 2,
+    fontSize: 10,
+    color: '#999',
   },
   activeLabel: {
-    color: colors.primary,
-    fontWeight: '700',
+    color: '#1a237e',
+    fontWeight: '600',
+  },
+  centerBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1a237e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#1a237e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  centerIcon: {
+    fontSize: 30,
+    color: '#fff',
+    fontWeight: '300',
+    marginTop: -2,
   },
 });

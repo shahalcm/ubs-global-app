@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LineChart, BarChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../../constants/colors';
 
 const screenWidth = Dimensions.get('window').width - 40;
 
-export default function EarningsChart({ mode = 'week', onModeChange, data }) {
+export default function EarningsChart({ mode = 'week', onModeChange, data = {} }) {
   const labels = data.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const values = data.values || [450, 700, 650, 900, 800, 950, 1100];
 

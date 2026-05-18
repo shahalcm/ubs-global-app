@@ -1,118 +1,49 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import i18next from 'i18next';
-import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Button } from 'react-native-paper';
-import { initReactI18next } from 'react-i18next';
-import ar from '../../i18n/ar.json';
-import en from '../../i18n/en.json';
-import ml from '../../i18n/ml.json';
-import { colors } from '../../constants/colors';
-
-const LANGUAGE_STORAGE_KEY = 'ubs_selected_language';
-
-const LANGUAGE_OPTIONS = [
-  { code: 'en', flag: '🇬🇧', name: 'English', nativeName: 'English' },
-  { code: 'ar', flag: '🇸🇦', name: 'Arabic', nativeName: 'العربية' },
-  { code: 'hi', flag: '🇮🇳', name: 'Hindi', nativeName: 'हिन्दी' },
-  { code: 'ml', flag: '🇮🇳', name: 'Malayalam', nativeName: 'മലയാളം' },
-  { code: 'fr', flag: '🇫🇷', name: 'French', nativeName: 'Français' },
-  { code: 'es', flag: '🇪🇸', name: 'Spanish', nativeName: 'Español' },
-  { code: 'de', flag: '🇩🇪', name: 'German', nativeName: 'Deutsch' },
-  { code: 'zh', flag: '🇨🇳', name: 'Chinese', nativeName: '中文' },
-  { code: 'ja', flag: '🇯🇵', name: 'Japanese', nativeName: '日本語' },
-  { code: 'ur', flag: '🇵🇰', name: 'Urdu', nativeName: 'اردو' },
-  { code: 'tr', flag: '🇹🇷', name: 'Turkish', nativeName: 'Türkçe' },
-  { code: 'ru', flag: '🇷🇺', name: 'Russian', nativeName: 'Русский' },
-];
-
-const resources = {
-  en: { translation: en },
-  ar: { translation: ar },
-  ml: { translation: ml },
-  hi: { translation: en },
-  fr: { translation: en },
-  es: { translation: en },
-  de: { translation: en },
-  zh: { translation: en },
-  ja: { translation: en },
-  ur: { translation: en },
-  tr: { translation: en },
-  ru: { translation: en },
-};
-
-async function initializeI18n(languageCode) {
-  if (!i18next.isInitialized) {
-    await i18next.use(initReactI18next).init({
-      compatibilityJSON: 'v4',
-      resources,
-      lng: languageCode,
-      fallbackLng: 'en',
-      interpolation: { escapeValue: false },
-    });
-    return;
-  }
-
-  await i18next.changeLanguage(languageCode);
-}
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useRouter, useLocalSearchParams } from 'expo-router'
+import React, { useMemo, useState } from 'react'
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Button } from 'react-native-paper'
+import { useTranslation } from 'react-i18next'
+import { colors } from '../../constants/colors'
+import { setAppLanguage, LANGUAGE_OPTIONS } from '../../i18n'
 
 export default function LanguageScreen() {
-  const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [selectedCode, setSelectedCode] = useState('en');
-  const [isBusy, setIsBusy] = useState(false);
+  const router = useRouter()
+  const { fromSettings } = useLocalSearchParams() || {}
+  const { t, i18n } = useTranslation()
+  const [query, setQuery] = useState('')
+  const [selectedCode, setSelectedCode] = useState(i18n.language || 'en')
+  const [isBusy, setIsBusy] = useState(false)
 
-  useEffect(() => {
-    let active = true;
 
-    const loadLanguage = async () => {
-      try {
-        const savedCode = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-        const fallback = 'en';
-        const code =
-          savedCode && LANGUAGE_OPTIONS.some((item) => item.code === savedCode) ? savedCode : fallback;
-        if (active) {
-          setSelectedCode(code);
-        }
-        await initializeI18n(code);
-      } catch {
-        await initializeI18n('en');
-      }
-    };
-
-    void loadLanguage();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const filteredLanguages = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) {
-      return LANGUAGE_OPTIONS;
-    }
+    const normalized = query.trim().toLowerCase()
+    if (!normalized) return LANGUAGE_OPTIONS
 
     return LANGUAGE_OPTIONS.filter(
       (item) =>
-        item.name.toLowerCase().includes(normalized) || item.nativeName.toLowerCase().includes(normalized),
-    );
-  }, [query]);
+        item.name.toLowerCase().includes(normalized) ||
+        item.nativeName.toLowerCase().includes(normalized),
+    )
+  }, [query])
 
   const handleContinue = async () => {
-    setIsBusy(true);
+    setIsBusy(true)
     try {
-      await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, selectedCode);
-      await initializeI18n(selectedCode);
-      router.push('/login');
+      await setAppLanguage(selectedCode)
+      if (fromSettings === 'true') {
+        router.back()
+      } else {
+        router.push('/(auth)/login')
+      }
     } finally {
-      setIsBusy(false);
+      setIsBusy(false)
     }
-  };
+  }
 
   const renderLanguageItem = ({ item }) => {
-    const selected = item.code === selectedCode;
+    const selected = item.code === selectedCode
     return (
       <TouchableOpacity
         style={[styles.row, selected && styles.rowSelected]}
@@ -126,18 +57,18 @@ export default function LanguageScreen() {
         </View>
         {selected ? <MaterialCommunityIcons name="check-circle" size={22} color={colors.accent} /> : null}
       </TouchableOpacity>
-    );
-  };
+    )
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Select Your Language</Text>
-      <Text style={styles.subtitle}>Choose your preferred language</Text>
+      <Text style={styles.title}>{t('Select Your Language')}</Text>
+      <Text style={styles.subtitle}>{t('Choose your preferred language')}</Text>
 
       <TextInput
         value={query}
         onChangeText={setQuery}
-        placeholder="Search language"
+        placeholder={t('Search language')}
         placeholderTextColor={colors.textMuted}
         style={styles.searchInput}
       />
@@ -159,10 +90,10 @@ export default function LanguageScreen() {
         disabled={isBusy}
         onPress={handleContinue}
       >
-        Continue
+        {isBusy ? t('Please wait...') : t('Continue')}
       </Button>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({

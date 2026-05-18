@@ -10,8 +10,16 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useAuth } from '../../context/AuthContext'
 
 export default function ProfileScreen() {
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    router.replace('/(auth)/login')
+  }
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -20,15 +28,15 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.avatarWrapper}>
             <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80' }} 
+              source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80' }} 
               style={styles.avatar} 
             />
             <View style={styles.editBadge}>
-              <Text style={styles.editBadgeIcon}>✎</Text>
+              <MaterialCommunityIcons name="pencil" size={12} color="#fff" />
             </View>
           </View>
-          <Text style={styles.userName}>Alexander Vanguard</Text>
-          <Text style={styles.userEmail}>a.vanguard@logistics-global.com</Text>
+          <Text style={styles.userName}>{user?.name || 'Alexander Vanguard'}</Text>
+          <Text style={styles.userEmail}>{user?.email || 'a.vanguard@logistics-global.com'}</Text>
           
           <View style={styles.badgesRow}>
             <View style={styles.badgePremium}>
@@ -40,7 +48,7 @@ export default function ProfileScreen() {
           </View>
 
           <TouchableOpacity style={styles.editProfileBtn}>
-            <Text style={styles.editProfileBtnIcon}>👤</Text>
+            <MaterialCommunityIcons name="account" size={16} color="#fff" />
             <Text style={styles.editProfileBtnText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
@@ -49,12 +57,27 @@ export default function ProfileScreen() {
 
         {/* Promo Card */}
         <View style={styles.promoCard}>
-          <Text style={styles.promoTitle}>Scale Your Trade Globally</Text>
-          <Text style={styles.promoDesc}>
-            Join the world's most reliable network of importers and exporters. Get your products listed today.
+          <Text style={styles.promoTitle}>
+            {user?.role === 'seller' ? 'Seller Dashboard' : 'Scale Your Trade Globally'}
           </Text>
-          <TouchableOpacity style={styles.promoBtn} onPress={() => router.push('/(seller)/dashboard')}>
-            <Text style={styles.promoBtnText}>Become a Seller</Text>
+          <Text style={styles.promoDesc}>
+            {user?.role === 'seller' 
+              ? 'Manage your store, view orders, and track your global earnings.'
+              : 'Join the world\'s most reliable network of importers and exporters. Get your products listed today.'}
+          </Text>
+          <TouchableOpacity 
+            style={styles.promoBtn} 
+            onPress={() => {
+              if (user?.role === 'seller') {
+                router.push('/(seller)/dashboard')
+              } else {
+                router.push('/(seller)/become-seller')
+              }
+            }}
+          >
+            <Text style={styles.promoBtnText}>
+              {user?.role === 'seller' ? 'Go to Dashboard' : 'Become a Seller'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -64,7 +87,7 @@ export default function ProfileScreen() {
           {/* Card 1 */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/orders')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#e8eaf6' }]}>
-              <Text style={[styles.dashIcon, { color: '#3f51b5' }]}>📦</Text>
+              <MaterialCommunityIcons name="package" size={24} color="#3f51b5" />
             </View>
             <Text style={styles.dashCardTitle}>My Orders</Text>
             <Text style={[styles.dashCardSub, { color: '#008b8b', fontWeight: '700' }]}>4 Active</Text>
@@ -72,7 +95,7 @@ export default function ProfileScreen() {
           {/* Card 2 */}
           <TouchableOpacity style={styles.dashCard} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#e0f7fa' }]}>
-              <Text style={[styles.dashIcon, { color: '#006064' }]}>♡</Text>
+              <MaterialCommunityIcons name="heart" size={24} color="#006064" />
             </View>
             <Text style={styles.dashCardTitle}>Wishlist</Text>
             <Text style={styles.dashCardSub}>12 Items</Text>
@@ -83,15 +106,22 @@ export default function ProfileScreen() {
               <Text style={styles.badgeNotificationText}>2</Text>
             </View>
             <View style={[styles.dashIconBox, { backgroundColor: '#efebe9' }]}>
-              <Text style={[styles.dashIcon, { color: '#4e342e' }]}>💬</Text>
+              <MaterialCommunityIcons name="message-text" size={24} color="#4e342e" />
             </View>
             <Text style={styles.dashCardTitle}>Messages</Text>
             <Text style={styles.dashCardSub}>Unread</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/my-requests')} activeOpacity={0.8}>
+            <View style={[styles.dashIconBox, { backgroundColor: '#e8eaf6' }]}> 
+              <MaterialCommunityIcons name="account-question" size={24} color="#1a237e" />
+            </View>
+            <Text style={styles.dashCardTitle}>Contact Requests</Text>
+            <Text style={styles.dashCardSub}>Track approvals</Text>
+          </TouchableOpacity>
           {/* Card 4 */}
           <TouchableOpacity style={styles.dashCard} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#f3e5f5' }]}>
-              <Text style={[styles.dashIcon, { color: '#6a1b9a' }]}>🔔</Text>
+              <MaterialCommunityIcons name="bell" size={24} color="#6a1b9a" />
             </View>
             <Text style={styles.dashCardTitle}>Notifications</Text>
             <Text style={styles.dashCardSub}>Update Ready</Text>
@@ -153,37 +183,16 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <View style={styles.logoutContainer}>
-          <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/(auth)/login')}>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
             <Text style={styles.logoutIcon}>↪</Text>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
         
-        <View style={{ height: 100 }} />
+
       </ScrollView>
 
-      {/* Bottom Nav */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/home')}>
-          <Text style={styles.navIcon}>⌂</Text>
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/messages')}>
-          <Text style={styles.navIcon}>✉</Text>
-          <Text style={styles.navLabel}>Messages</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sellBtn} onPress={() => router.push('/(seller)/dashboard')}>
-          <Text style={styles.sellIcon}>+</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/products')}>
-          <Text style={styles.navIcon}>▦</Text>
-          <Text style={styles.navLabel}>Products</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/profile')}>
-          <Text style={styles.navIconActive}>👤</Text>
-          <Text style={styles.navLabelActive}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+
 
     </SafeAreaView>
   )
@@ -227,10 +236,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#fff',
-  },
-  editBadgeIcon: {
-    color: '#fff',
-    fontSize: 12,
   },
   userName: {
     fontSize: 22,
@@ -278,10 +283,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     gap: 8,
-  },
-  editProfileBtnIcon: {
-    color: '#fff',
-    fontSize: 12,
   },
   editProfileBtnText: {
     color: '#fff',
@@ -370,9 +371,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  dashIcon: {
-    fontSize: 20,
-  },
+
   dashCardTitle: {
     fontSize: 13,
     fontWeight: '700',
@@ -469,61 +468,5 @@ const styles = StyleSheet.create({
     color: '#c62828',
   },
 
-  // Bottom Nav
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 8,
-  },
-  navItem: {
-    alignItems: 'center',
-    gap: 2,
-    flex: 1,
-  },
-  navIcon: {
-    fontSize: 22,
-    color: '#999',
-  },
-  navIconActive: {
-    fontSize: 22,
-    color: '#1a237e',
-  },
-  navLabel: {
-    fontSize: 10,
-    color: '#999',
-  },
-  navLabelActive: {
-    fontSize: 10,
-    color: '#1a237e',
-    fontWeight: '600',
-  },
-  sellBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#1a237e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#1a237e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  sellIcon: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: '300',
-    marginTop: -2,
-  },
+
 })

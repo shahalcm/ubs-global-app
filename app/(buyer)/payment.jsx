@@ -1,419 +1,124 @@
-// app/(buyer)/payment.jsx
 import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-} from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import RazorpayCheckout from 'react-native-razorpay'
+import { verifyPayment } from '../../services/paymentService'
+import { useAuth } from '../../context/AuthContext'
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function PaymentScreen() {
-  const [saveCard, setSaveCard] = useState(false)
+  const { user } = useAuth()
+  const { razorpayOrderId, amount, orderId, orderNumber, grandTotal, key } = useLocalSearchParams()
+  const [loading, setLoading] = useState(false)
+
+  const handlePayNow = async () => {
+    const options = {
+      description: `UBS Global Order #${orderNumber}`,
+      image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
+      currency: 'USD',
+      key: key,
+      amount: amount,
+      name: 'UBS Global',
+      order_id: razorpayOrderId,
+      prefill: {
+        email: user?.email || '',
+        contact: user?.phone || '',
+        name: user?.name || ''
+      },
+      theme: { color: '#1a237e' }
+    }
+
+    setLoading(true)
+    try {
+      const data = await RazorpayCheckout.open(options)
+      const verifyRes = await verifyPayment({
+        razorpayOrderId: razorpayOrderId,
+        razorpayPaymentId: data.razorpay_payment_id,
+        razorpaySignature: data.razorpay_signature,
+        orderId: orderId
+      })
+
+      if (verifyRes.success) {
+        Alert.alert('✅ Payment Successful!', `$${grandTotal} paid successfully`, [
+          {
+            text: 'OK',
+            onPress: () => {
+              Alert.alert('🎉 Order Placed!', `Your order #${orderNumber} has been placed successfully.`, [
+                { text: 'Track Order', onPress: () => router.push({ pathname: '/(buyer)/order-tracking', params: { orderId } }) },
+                { text: 'Continue Shopping', onPress: () => router.replace('/(buyer)/home') }
+              ])
+            }
+          }
+        ])
+      }
+    } catch (error) {
+      if (error.code === 2 || error.code === 0) {
+        Alert.alert('Cancelled', 'Payment was cancelled')
+      } else {
+        Alert.alert('Failed', 'Payment failed. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Header */}
       <View style={styles.header}>
-        <Text style={styles.headerLogo}>UBS Global</Text>
-        <View style={styles.secureBadge}>
-          <Text style={styles.secureIcon}>🔒</Text>
-          <Text style={styles.secureText}>Secure Transaction</Text>
+        <TouchableOpacity onPress={() => router.back()}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <Text style={styles.headerLogo}>Payment</Text>
+        <View style={{width: 24}}/>
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.secureCard}>
+          <MaterialCommunityIcons name="shield-lock" size={32} color="#4CAF50" />
+          <Text style={styles.secureText}>Secure Payment via Razorpay</Text>
+          <Text style={styles.subText}>256-bit SSL Encrypted</Text>
+        </View>
+
+        <View style={styles.amountCard}>
+          <Text style={styles.amountLabel}>Total Amount</Text>
+          <Text style={styles.amountValue}>${grandTotal}</Text>
+          <Text style={styles.currencyLabel}>USD</Text>
+          <Text style={styles.orderLabel}>Order: #{orderNumber}</Text>
+        </View>
+
+        <View style={styles.methodCard}>
+          <MaterialCommunityIcons name="credit-card-outline" size={32} color="#1a237e" />
+          <Text style={styles.methodTitle}>Pay with Razorpay</Text>
+          <Text style={styles.methodDesc}>Cards, UPI, Net Banking, Wallets</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Secure Checkout</Text>
-
-        {/* Express Checkout */}
-        <TouchableOpacity style={styles.applePayBtn} activeOpacity={0.8}>
-          <Text style={styles.applePayText}>Pay with Pay</Text>
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.payBtn} onPress={handlePayNow} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Pay Now ${grandTotal}</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.googlePayBtn} activeOpacity={0.8}>
-          <Text style={styles.googlePayText}>Pay with GPay</Text>
-        </TouchableOpacity>
-
-        {/* Payment Method Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Payment Method</Text>
-            <View style={styles.cardIconsRow}>
-              <View style={[styles.cardIconBox, { backgroundColor: '#1a1f71' }]}><Text style={styles.cardIconText}>V</Text></View>
-              <View style={[styles.cardIconBox, { backgroundColor: '#ff5f00' }]}><Text style={styles.cardIconText}>M</Text></View>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Cardholder Name</Text>
-            <TextInput style={styles.input} placeholder="Full Name as on card" placeholderTextColor="#aaa" />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Card Number</Text>
-            <View style={styles.inputWithIcon}>
-              <Text style={styles.inputIcon}>💳</Text>
-              <TextInput style={styles.inputField} placeholder="0000 0000 0000 0000" keyboardType="number-pad" placeholderTextColor="#aaa" />
-            </View>
-          </View>
-
-          <View style={styles.rowInputs}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.inputLabel}>Expiry Date</Text>
-              <TextInput style={styles.input} placeholder="MM / YY" placeholderTextColor="#aaa" />
-            </View>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.inputLabel}>CVV</Text>
-              <View style={styles.inputWithIcon}>
-                <TextInput style={styles.inputField} placeholder="•••" secureTextEntry placeholderTextColor="#aaa" />
-                <Text style={styles.cvvHelp}>?</Text>
-              </View>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.checkboxRow} onPress={() => setSaveCard(!saveCard)} activeOpacity={0.8}>
-            <View style={[styles.checkbox, saveCard && styles.checkboxActive]}>
-              {saveCard && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>Save card details for future global shipments</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* PayPal Card */}
-        <TouchableOpacity style={styles.paypalCard} activeOpacity={0.8}>
-          <View style={styles.paypalLeft}>
-            <View style={styles.paypalIconWrapper}><Text style={styles.paypalIcon}>P</Text></View>
-            <Text style={styles.paypalText}>Pay with PayPal</Text>
-          </View>
-          <Text style={styles.arrowIcon}>›</Text>
-        </TouchableOpacity>
-
-        {/* Order Summary Card */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Text style={styles.summaryTitle}>Order Summary</Text>
-          </View>
-          <View style={styles.summaryBody}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryItem}>Bulk Industrial Lathes (3 units)</Text>
-              <Text style={styles.summaryPrice}>$12,450.00</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryItem}>Ocean Freight (Shanghai to NYC)</Text>
-              <Text style={styles.summaryPrice}>$1,200.00</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryItem}>Customs Insurance</Text>
-              <Text style={styles.summaryPrice}>$245.00</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalValue}>$13,895.00</Text>
-            </View>
-
-            {/* Escrow Badge */}
-            <View style={styles.escrowBox}>
-              <Text style={styles.escrowIcon}>🛡</Text>
-              <View style={styles.escrowTextCol}>
-                <Text style={styles.escrowTitle}>Global Secure Shield</Text>
-                <Text style={styles.escrowDesc}>Your funds are held in escrow until shipping confirmation is validated by UBS Global.</Text>
-              </View>
-            </View>
-
-            {/* Pay Button */}
-            <TouchableOpacity 
-              style={styles.payBtn} 
-              activeOpacity={0.9}
-              onPress={() => router.push('/(buyer)/home')}
-            >
-              <Text style={styles.payBtnIcon}>🔒</Text>
-              <Text style={styles.payBtnText}>Pay $13,895.00 Now</Text>
-            </TouchableOpacity>
-
-            <View style={styles.secureFooter}>
-              <Text style={styles.secureFooterText}>🛡 SSL ENCRYPTED SECURE PAYMENT</Text>
-              <Text style={styles.poweredText}>Powered by Stripe</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Delivery Estimate */}
-        <View style={styles.deliveryCard}>
-          <Text style={styles.routeTag}>PRE-VALIDATED ROUTE</Text>
-          <Text style={styles.deliveryDate}>Delivery Estimated: Oct 24 - Oct 28</Text>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.footerLogos}>
-            <View style={styles.footerLogoMock} />
-            <View style={styles.footerLogoMock} />
-            <View style={styles.footerLogoMock} />
-          </View>
-          <Text style={styles.footerText}>
-            © 2024 UBS Global Logistics. Licensed International Trade Facilitator.
-          </Text>
-        </View>
-
-      </ScrollView>
+        <Text style={styles.tosText}>By paying you agree to our Terms of Service</Text>
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f5f8',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fbfbfe', // Match light bg
-    borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
-  },
-  headerLogo: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#000040', // Deep Navy
-  },
-  secureBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  secureIcon: { fontSize: 12, color: '#888' },
-  secureText: { fontSize: 13, color: '#666', fontWeight: '600' },
-  
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 60,
-  },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1a1a1a',
-    marginBottom: 20,
-  },
-
-  // Express
-  applePayBtn: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  applePayText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  googlePayBtn: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  googlePayText: { color: '#333', fontSize: 16, fontWeight: '700' },
-
-  // Cards Base
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#eaeaea',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#000040',
-  },
-  cardIconsRow: { flexDirection: 'row', gap: 6 },
-  cardIconBox: {
-    width: 26,
-    height: 16,
-    borderRadius: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardIconText: { color: '#fff', fontSize: 9, fontWeight: 'bold' },
-
-  // Inputs
-  inputGroup: { marginBottom: 16 },
-  inputLabel: {
-    fontSize: 11,
-    color: '#555',
-    marginBottom: 6,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    fontSize: 14,
-    color: '#333',
-  },
-  inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  inputIcon: { fontSize: 16, marginRight: 8, color: '#666' },
-  inputField: {
-    flex: 1,
-    paddingVertical: 14,
-    fontSize: 14,
-    color: '#333',
-  },
-  rowInputs: { flexDirection: 'row' },
-  cvvHelp: { fontSize: 16, color: '#888', fontWeight: 'bold' },
-
-  // Checkbox
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxActive: { backgroundColor: '#000040', borderColor: '#000040' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  checkboxLabel: { flex: 1, fontSize: 12, color: '#555', lineHeight: 18 },
-
-  // PayPal
-  paypalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#eaeaea',
-  },
-  paypalLeft: { flexDirection: 'row', alignItems: 'center' },
-  paypalIconWrapper: {
-    width: 24,
-    height: 24,
-    backgroundColor: '#003087',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  paypalIcon: { color: '#fff', fontSize: 14, fontWeight: 'bold', fontStyle: 'italic' },
-  paypalText: { fontSize: 14, fontWeight: '700', color: '#333' },
-  arrowIcon: { fontSize: 18, color: '#aaa', fontWeight: '600' },
-
-  // Summary
-  summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#eaeaea',
-    overflow: 'hidden',
-  },
-  summaryHeader: {
-    backgroundColor: '#fbfbfe', // pale
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
-  },
-  summaryTitle: { fontSize: 16, fontWeight: '800', color: '#000040' },
-  summaryBody: { padding: 20 },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  summaryItem: { fontSize: 13, color: '#666', flex: 1, paddingRight: 10 },
-  summaryPrice: { fontSize: 13, color: '#555', fontWeight: '500' },
-  divider: { height: 1, backgroundColor: '#eee', marginVertical: 16 },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  totalLabel: { fontSize: 14, fontWeight: '800', color: '#333' },
-  totalValue: { fontSize: 18, fontWeight: '800', color: '#000040' },
-
-  escrowBox: {
-    backgroundColor: '#f0f9ff',
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  escrowIcon: { fontSize: 16, color: '#0288d1', marginRight: 10, marginTop: 2 },
-  escrowTextCol: { flex: 1 },
-  escrowTitle: { fontSize: 11, fontWeight: '800', color: '#004d40', marginBottom: 2 },
-  escrowDesc: { fontSize: 10, color: '#00695c', lineHeight: 15 },
-
-  payBtn: {
-    backgroundColor: '#000040',
-    borderRadius: 10,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  payBtnIcon: { color: '#fff', fontSize: 14, marginRight: 8 },
-  payBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  
-  secureFooter: { alignItems: 'center' },
-  secureFooterText: { fontSize: 10, fontWeight: '800', color: '#2e7d32', marginBottom: 4 },
-  poweredText: { fontSize: 10, color: '#aaa' },
-
-  // Delivery
-  deliveryCard: {
-    backgroundColor: '#f4f5fa',
-    borderRadius: 12,
-    padding: 24,
-    marginBottom: 40,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#eaeaea',
-  },
-  routeTag: { fontSize: 10, fontWeight: '800', color: '#008b8b', letterSpacing: 0.5, marginBottom: 6 },
-  deliveryDate: { fontSize: 15, fontWeight: '800', color: '#000040' },
-
-  // Footer
-  footer: { alignItems: 'center', borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingTop: 24 },
-  footerLogos: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  footerLogoMock: { width: 36, height: 24, backgroundColor: '#c5c5c5', borderRadius: 4 },
-  footerText: { fontSize: 11, color: '#888', textAlign: 'center', paddingHorizontal: 30, lineHeight: 18 },
+  container: { flex: 1, backgroundColor: '#f4f5f8' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
+  headerLogo: { fontSize: 18, fontWeight: '800', color: '#000040' },
+  content: { padding: 20 },
+  secureCard: { alignItems: 'center', backgroundColor: '#e8f5e9', padding: 20, borderRadius: 12, marginBottom: 20 },
+  secureText: { fontSize: 16, fontWeight: '700', color: '#2e7d32', marginTop: 10 },
+  subText: { fontSize: 12, color: '#4caf50' },
+  amountCard: { alignItems: 'center', backgroundColor: '#fff', padding: 30, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#eaeaea' },
+  amountLabel: { fontSize: 14, color: '#666', marginBottom: 10 },
+  amountValue: { fontSize: 36, fontWeight: '800', color: '#1a237e' },
+  currencyLabel: { fontSize: 14, fontWeight: '700', color: '#666', marginTop: 5 },
+  orderLabel: { fontSize: 12, color: '#999', marginTop: 15 },
+  methodCard: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 12, borderWidth: 1, borderColor: '#eaeaea' },
+  methodTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginTop: 10 },
+  methodDesc: { fontSize: 12, color: '#666', marginTop: 5 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: '#fff' },
+  payBtn: { backgroundColor: '#1a237e', paddingVertical: 18, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
+  payBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  tosText: { textAlign: 'center', fontSize: 11, color: '#888' }
 })

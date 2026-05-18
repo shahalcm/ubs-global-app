@@ -11,53 +11,63 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useAuth } from '../../context/AuthContext'
+import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 
 const MENU_ITEMS = [
-  { id: "home", label: "Home", icon: "⌂", route: "/(buyer)/home" },
+  { id: "home", label: "Home", icon: "home", route: "/(buyer)/home" },
   {
     id: "categories",
-    label: "Categories",
-    icon: "△",
-    route: "/(buyer)/categories",
+    label: "All Categories",
+    icon: "shape-circle-plus",
+    route: "/(buyer)/products",
   },
-  { id: "products", label: "Products", icon: "▦", route: "/(buyer)/products" },
-  { id: "orders", label: "Orders", icon: "🧾", route: "/(buyer)/orders" },
+  { id: "products", label: "All Products", icon: "view-grid", route: "/(buyer)/product-listing" },
+  { id: "orders", label: "Orders", icon: "receipt", route: "/(buyer)/orders" },
   {
     id: "tracking",
     label: "Order Tracking",
-    icon: "🚚",
+    icon: "truck",
     route: "/(buyer)/order-tracking",
   },
-  { id: "wishlist", label: "Wishlist", icon: "♡", route: "/(buyer)/wishlist" },
+  { id: "wishlist", label: "Wishlist", icon: "heart", route: "/(buyer)/wishlist" },
   { type: "divider" },
   {
     id: "messages",
     label: "Messages",
-    icon: "✉",
+    icon: "email",
     route: "/(buyer)/messages",
     badge: 3,
   },
   {
     id: "notifications",
     label: "Notifications",
-    icon: "🔔",
+    icon: "bell",
     route: "/(buyer)/notifications",
   },
   { type: "divider" },
-  { id: "settings", label: "Settings", icon: "⚙", route: "/(buyer)/settings" },
-  { id: "help", label: "Help Center", icon: "🎧", route: "/(buyer)/help" },
+  { id: "settings", label: "Settings", icon: "cog", route: "/(buyer)/settings" },
+  { id: "help", label: "Help Center", icon: "headphones", route: "/(buyer)/help" },
 ];
 
 export default function DrawerMenuScreen() {
+  const { t } = useTranslation();
   const activeRoute = "home";
+  const { user, logout } = useAuth();
 
   const handleNavigate = (route) => {
     if (route) {
       router.push(route);
     }
   };
+
+  const handleLogout = async () => {
+    await logout()
+    router.replace('/(auth)/login')
+  }
 
   return (
     <View style={styles.container}>
@@ -81,7 +91,7 @@ export default function DrawerMenuScreen() {
                 style={styles.closeBtn}
                 onPress={() => router.back()}
               >
-                <Text style={styles.closeIcon}>✕</Text>
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
@@ -90,23 +100,23 @@ export default function DrawerMenuScreen() {
               <View style={styles.avatarContainer}>
                 <Image
                   source={{
-                    uri: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80",
+                    uri: user?.avatar || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80",
                   }}
                   style={styles.avatar}
                 />
               </View>
-              <Text style={styles.userName}>UBS Global User</Text>
-              <Text style={styles.userEmail}>user.global@ubsexports.com</Text>
+              <Text style={styles.userName}>{user?.name || "UBS Global User"}</Text>
+              <Text style={styles.userEmail}>{user?.email || "user.global@ubsexports.com"}</Text>
               <Text style={styles.userBadge}>
-                Premium Member • Importer/Exporter
+                {t('Premium Member • Importer/Exporter')}
               </Text>
 
               <TouchableOpacity 
                 style={styles.editBtn}
                 onPress={() => handleNavigate("/(buyer)/edit-profile")}
               >
-                <Text style={styles.editIcon}>✎</Text>
-                <Text style={styles.editText}>Edit Profile</Text>
+                <MaterialCommunityIcons name="pencil" size={16} color="#000033" />
+                <Text style={styles.editText}>{t('Edit Profile')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -129,21 +139,18 @@ export default function DrawerMenuScreen() {
                     style={[styles.menuItem, isActive && styles.menuItemActive]}
                     onPress={() => handleNavigate(item.route)}
                   >
-                    <Text
-                      style={[
-                        styles.menuIcon,
-                        isActive && styles.menuIconActive,
-                      ]}
-                    >
-                      {item.icon}
-                    </Text>
+                    <MaterialCommunityIcons
+                      name={item.icon}
+                      size={20}
+                      color={isActive ? "#008b8b" : "#666"}
+                    />
                     <Text
                       style={[
                         styles.menuLabel,
                         isActive && styles.menuLabelActive,
                       ]}
                     >
-                      {item.label}
+                      {t(item.label)}
                     </Text>
 
                     {item.badge && (
@@ -162,10 +169,10 @@ export default function DrawerMenuScreen() {
             <View style={styles.mainDivider} />
             <TouchableOpacity
               style={styles.logoutBtn}
-              onPress={() => router.replace("/(auth)/login")}
+              onPress={handleLogout}
             >
-              <Text style={styles.logoutIcon}>⎋</Text>
-              <Text style={styles.logoutText}>Logout</Text>
+              <MaterialCommunityIcons name="logout" size={20} color="#c62828" />
+              <Text style={styles.logoutText}>{t('Logout')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -209,11 +216,6 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     padding: 8,
-  },
-  closeIcon: {
-    fontSize: 20,
-    color: "#666",
-    fontWeight: "500",
   },
 
   // Profile
@@ -263,10 +265,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
-  editIcon: {
-    fontSize: 14,
-    color: "#000033",
-  },
   editText: {
     fontSize: 14,
     fontWeight: "600",
@@ -296,19 +294,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginHorizontal: 12,
     borderRadius: 8,
+    gap: 10,
   },
   menuItemActive: {
     backgroundColor: "#dbeafe", // Light blue
-  },
-  menuIcon: {
-    fontSize: 20,
-    color: "#555",
-    width: 32,
-    textAlign: "center",
-    marginRight: 12,
-  },
-  menuIconActive: {
-    color: "#1565c0", // Blue
   },
   menuLabel: {
     flex: 1,
@@ -344,11 +333,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 28,
     gap: 12,
-  },
-  logoutIcon: {
-    fontSize: 20,
-    color: "#c62828",
-    transform: [{ scaleX: -1 }], // Flip to mimic logout door
   },
   logoutText: {
     fontSize: 15,

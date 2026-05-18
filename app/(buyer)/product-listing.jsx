@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
+import { getProducts } from '../../services/productService'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -51,6 +52,28 @@ const getCategoryData = (category) => {
       ]
     }
   }
+  if (normalized.includes('spare') || normalized.includes('parts')) {
+    return {
+      subcategories: ['All Spare Parts', 'Automotive', 'Industrial', 'Electrical'],
+      products: [
+        { id: '1', name: 'V8 Engine Block', rating: 4.9, reviews: 120, price: '$1,200.00', image: 'https://images.unsplash.com/photo-1486262715619-670810a07129?w=400&q=80' },
+        { id: '2', name: 'Ceramic Brake Pads', rating: 4.8, reviews: 85, price: '$45.00', image: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&q=80' },
+        { id: '3', name: 'Heavy Duty Bearings', rating: 4.7, reviews: 210, price: '$110.00', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&q=80' },
+        { id: '4', name: 'Suspension Kit', rating: 4.6, reviews: 340, price: '$350.00', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&q=80' },
+      ]
+    }
+  }
+  if (normalized.includes('perfume') || normalized.includes('fragrance')) {
+    return {
+      subcategories: ['All Perfumes', 'Men', 'Women', 'Unisex', 'Gift Sets'],
+      products: [
+        { id: '1', name: 'Luxury Oud Extrait', rating: 4.9, reviews: 310, price: '$180.00', image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&q=80' },
+        { id: '2', name: 'Floral Essence EDP', rating: 4.8, reviews: 450, price: '$85.00', image: 'https://images.unsplash.com/photo-1590156546946-ce55a12a6a1d?w=400&q=80' },
+        { id: '3', name: 'Citrus Splash Cologne', rating: 4.7, reviews: 290, price: '$65.00', image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&q=80' },
+        { id: '4', name: 'Midnight Musk Pour Homme', rating: 4.9, reviews: 520, price: '$120.00', image: 'https://images.unsplash.com/photo-1590156546946-ce55a12a6a1d?w=400&q=80' },
+      ]
+    }
+  }
 
   // Default fallback
   const fallbackLabel = category || 'Logistics'
@@ -70,6 +93,34 @@ export default function ProductListingScreen() {
   const categoryData = getCategoryData(category)
   const [activeTab, setActiveTab] = useState(categoryData.subcategories[0])
   const [wishlist, setWishlist] = useState({})
+  const [products, setProducts] = useState([])
+  const [pagination, setPagination] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  React.useEffect(() => {
+    loadProducts()
+  }, [category])
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      setProducts([]) // clear previous products
+      const res = await getProducts({
+        category: category,
+        page: 1,
+        limit: 20
+      })
+      if (res?.products) {
+        setProducts(res.products)
+        setPagination(res.pagination)
+      }
+    } catch (error) {
+      console.log(error)
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const toggleWishlist = (id) => {
     setWishlist((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -81,7 +132,7 @@ export default function ProductListingScreen() {
       onPress={() =>
         router.push({
           pathname: '/(buyer)/product-details',
-          params: { id: item.id },
+          params: { id: item._id || item.id },
         })
       }
       activeOpacity={0.9}
@@ -89,16 +140,16 @@ export default function ProductListingScreen() {
       {/* Image */}
       <View style={styles.imageBox}>
         <Image
-          source={{ uri: item.image }}
+          source={{ uri: item.images?.[0] || item.image || 'https://via.placeholder.com/150' }}
           style={styles.productImage}
           resizeMode="cover"
         />
         <TouchableOpacity
           style={styles.wishlistBtn}
-          onPress={() => toggleWishlist(item.id)}
+          onPress={() => toggleWishlist(item._id || item.id)}
         >
           <Text style={styles.wishlistIcon}>
-            {wishlist[item.id] ? '❤️' : '🤍'}
+            {wishlist[item._id || item.id] ? '❤️' : '🤍'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -106,16 +157,16 @@ export default function ProductListingScreen() {
       {/* Info */}
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>
-          {item.name}
+          {item.title || item.name}
         </Text>
         <View style={styles.ratingRow}>
           <Text style={styles.starIcon}>☆</Text>
           <Text style={styles.ratingText}>
-            {item.rating} ({item.reviews} reviews)
+            {item.rating || 0} ({item.totalReviews || 0} reviews)
           </Text>
         </View>
         <View style={styles.priceRow}>
-          <Text style={styles.priceText}>{item.price}</Text>
+          <Text style={styles.priceText}>${item.price}</Text>
           <TouchableOpacity style={styles.cartBtn}>
             <Text style={styles.cartBtnIcon}>🛒</Text>
           </TouchableOpacity>
@@ -141,15 +192,9 @@ export default function ProductListingScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.topIconBtn}
-            onPress={() => router.push('/(buyer)/wishlist')}
+            onPress={() => router.push('/(buyer)/notifications')}
           >
-            <Text style={styles.topIcon}>♡</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.topIconBtn}
-            onPress={() => router.push('/(buyer)/cart')}
-          >
-            <Text style={styles.topIcon}>🛒</Text>
+            <Text style={styles.topIcon}>🔔</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -185,23 +230,33 @@ export default function ProductListingScreen() {
 
       {/* Results Count + Sort */}
       <View style={styles.resultsRow}>
-        <Text style={styles.resultsText}>Showing {categoryData.products.length} items</Text>
+        <Text style={styles.resultsText}>Showing {products.length} items</Text>
         <TouchableOpacity style={styles.sortBtn}>
           <Text style={styles.sortIcon}>≡</Text>
           <Text style={styles.sortText}>Sort</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Product Grid */}
-      <FlatList
-        data={categoryData.products}
-        renderItem={renderProduct}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={styles.grid}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Product Grid or Empty State */}
+      {!loading && products.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>📦</Text>
+          <Text style={styles.emptyTitle}>No Products Found</Text>
+          <Text style={styles.emptyDesc}>
+            No products available in this category yet. Please check back later.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          renderItem={renderProduct}
+          keyExtractor={(item) => item.id || item._id}
+          numColumns={2}
+          columnWrapperStyle={styles.gridRow}
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       {/* Sort & Filter Floating Button */}
       <View style={styles.fabWrapper}>
@@ -214,47 +269,7 @@ export default function ProductListingScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/home')}
-        >
-          <Text style={styles.navIcon}>⌂</Text>
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/messages')}
-        >
-          <Text style={styles.navIcon}>✉</Text>
-          <Text style={styles.navLabel}>Messages</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.sellBtn}
-          onPress={() => router.push('/(seller)/dashboard')}
-        >
-          <Text style={styles.sellIcon}>+</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/products')}
-        >
-          <Text style={styles.navIconActive}>▦</Text>
-          <Text style={styles.navLabelActive}>Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/(buyer)/profile')}
-        >
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navLabel}>Profile</Text>
-        </TouchableOpacity>
-      </View>
 
     </SafeAreaView>
   )
@@ -364,7 +379,7 @@ const styles = StyleSheet.create({
   // Grid
   grid: {
     paddingHorizontal: 16,
-    paddingBottom: 160,
+    paddingBottom: 20,
     paddingTop: 8,
   },
   gridRow: {
@@ -480,62 +495,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
-
-  // Bottom Nav
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 8,
-  },
-  navItem: {
-    alignItems: 'center',
-    gap: 2,
+  
+  // Empty State
+  emptyState: {
     flex: 1,
-  },
-  navIcon: {
-    fontSize: 22,
-    color: '#999',
-  },
-  navIconActive: {
-    fontSize: 22,
-    color: '#1a237e',
-  },
-  navLabel: {
-    fontSize: 10,
-    color: '#999',
-  },
-  navLabelActive: {
-    fontSize: 10,
-    color: '#1a237e',
-    fontWeight: '600',
-  },
-  sellBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#1a237e',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    marginTop: 40,
+  },
+  emptyIcon: {
+    fontSize: 48,
     marginBottom: 16,
-    shadowColor: '#1a237e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    opacity: 0.8,
   },
-  sellIcon: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: '300',
-    marginTop: -2,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a237e',
+    marginBottom: 8,
   },
+  emptyDesc: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+
 })

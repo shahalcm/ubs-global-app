@@ -1,34 +1,27 @@
-import { Stack } from 'expo-router';
-import React, { useEffect } from 'react';
-import { PaperProvider, MD3LightTheme } from 'react-native-paper';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from '../context/AuthContext';
-import { CartProvider } from '../context/CartContext';
-import { colors } from '../constants/colors';
-
-const theme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: colors.primary,
-    secondary: colors.accent,
-    background: colors.background,
-    surface: colors.surface,
-    error: colors.error,
-  },
-};
+import 'react-native-gesture-handler'
+import { AuthProvider } from '../context/AuthContext'
+import { CartProvider } from '../context/CartContext'
+import { Slot } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { I18nextProvider } from 'react-i18next'
+import i18n, { initI18n } from '../i18n'
 
 export default function RootLayout() {
+  const [i18nLoaded, setI18nLoaded] = useState(false)
+
+  useEffect(() => {
+    initI18n().then(() => setI18nLoaded(true))
+  }, [])
+
+  if (!i18nLoaded) return null
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={theme}>
-        <AuthProvider>
-          <CartProvider>
-            <Stack screenOptions={{ headerShown: false }} />
-          </CartProvider>
-        </AuthProvider>
-      </PaperProvider>
-    </SafeAreaProvider>
-  );
+    <I18nextProvider i18n={i18n}>
+      <AuthProvider>
+        <CartProvider>
+          <Slot />
+        </CartProvider>
+      </AuthProvider>
+    </I18nextProvider>
+  )
 }

@@ -40,7 +40,7 @@ export default function EditProduct() {
   }, [product]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (!result.cancelled) {
       setImages((prev) => [...prev, result.uri].slice(0, 5));
     }
@@ -115,7 +115,7 @@ export default function EditProduct() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingBottom: 120 },
+  container: { padding: 20, paddingBottom: 20 },
   photoRow: { flexDirection: 'row', marginBottom: 20 },
   thumbSlot: { width: 84, height: 84, borderRadius: 18, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e8e8e8', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   thumbText: { color: '#8a8a8a' },

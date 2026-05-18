@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = React.useState(true);
@@ -19,7 +20,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 40 }} />
@@ -28,6 +29,13 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         
+        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/(auth)/language?fromSettings=true')}>
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingLabel}>Language</Text>
+            <Text style={styles.settingDesc}>Change application language</Text>
+          </View>
+          <Text style={styles.chevron}>→</Text>
+        </TouchableOpacity>
         <View style={styles.settingItem}>
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingLabel}>Push Notifications</Text>
@@ -90,10 +98,6 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 8,
     marginLeft: -8,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: "#333",
   },
   headerTitle: {
     fontSize: 18,

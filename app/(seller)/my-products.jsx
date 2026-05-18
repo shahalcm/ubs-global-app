@@ -60,7 +60,7 @@ export default function MyProducts() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, padding: 20, paddingBottom: 100 },
+  container: { flex: 1, padding: 20, paddingBottom: 20 },
   loader: { flex: 1, justifyContent: 'center' },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 16, height: 48, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
   searchInput: { marginLeft: 10, flex: 1, fontSize: 14 },
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 13, color: '#676767' },
   chipTextActive: { color: '#fff' },
-  list: { paddingBottom: 80 },
+  list: { paddingBottom: 20 },
   empty: { fontSize: 14, color: '#7a7a7a', textAlign: 'center', marginTop: 40 },
   fab: { position: 'absolute', right: 24, bottom: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 12, elevation: 7 },
 });

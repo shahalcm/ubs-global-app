@@ -12,8 +12,11 @@ import {
   ScrollView,
   Modal,
   FlatList,
+  Alert,
 } from 'react-native'
 import { router } from 'expo-router'
+import { sendOTP } from '../../services/authService'
+import { useTranslation } from 'react-i18next'
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -31,6 +34,7 @@ const COUNTRIES = [
 ]
 
 export default function LoginScreen() {
+  const { t } = useTranslation()
   const [phone, setPhone] = useState('')
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
   const [showPicker, setShowPicker] = useState(false)
@@ -40,13 +44,15 @@ export default function LoginScreen() {
     if (!phone || phone.length < 7) return
     setLoading(true)
     try {
-      // await api.post('/auth/send-otp', { phone: selectedCountry.code + phone })
+      const fullPhone = selectedCountry.code + phone
+      await sendOTP(fullPhone)
       router.push({
         pathname: '/(auth)/otp',
-        params: { phone: selectedCountry.code + phone }
+        params: { phone: fullPhone }
       })
     } catch (error) {
       console.log(error)
+      Alert.alert(t('Error'), t('Failed to send OTP. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -76,13 +82,13 @@ export default function LoginScreen() {
           <View style={styles.card}>
 
             {/* Title */}
-            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.title}>{t('Welcome Back')}</Text>
             <Text style={styles.subtitle}>
-              Sign in to manage your global trade
+              {t('Sign in to manage your global trade')}
             </Text>
 
             {/* Phone Label */}
-            <Text style={styles.label}>Phone number</Text>
+            <Text style={styles.label}>{t('Phone number')}</Text>
 
             {/* Phone Input Row */}
             <View style={styles.phoneRow}>
@@ -96,7 +102,7 @@ export default function LoginScreen() {
 
               <TextInput
                 style={styles.phoneInput}
-                placeholder="Enter mobile number"
+                placeholder={t('Enter mobile number')}
                 placeholderTextColor="#aab"
                 keyboardType="phone-pad"
                 value={phone}
@@ -112,14 +118,14 @@ export default function LoginScreen() {
               disabled={loading}
             >
               <Text style={styles.continueBtnText}>
-                {loading ? 'Please wait...' : 'Continue'}
+                {loading ? t('Please wait...') : t('Continue')}
               </Text>
             </TouchableOpacity>
 
             {/* OR Divider */}
             <View style={styles.orRow}>
               <View style={styles.orLine} />
-              <Text style={styles.orText}>OR</Text>
+              <Text style={styles.orText}>{t('OR')}</Text>
               <View style={styles.orLine} />
             </View>
 
@@ -132,17 +138,17 @@ export default function LoginScreen() {
               <View style={styles.googleIconBox}>
                 <Text style={styles.googleIconText}>G</Text>
               </View>
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
+              <Text style={styles.googleBtnText}>{t('Continue with Google')}</Text>
             </TouchableOpacity>
 
             {/* Sign Up Link */}
             <Text style={styles.signupText}>
-              Don&apos;t have an account?{' '}
+              {t("Don't have an account?")}{' '}
               <Text
                 style={styles.signupLink}
                 onPress={() => router.push('/(auth)/signup')}
               >
-                Sign Up
+                {t('Sign Up')}
               </Text>
             </Text>
 
@@ -151,13 +157,13 @@ export default function LoginScreen() {
           {/* Footer Links */}
           <View style={styles.footer}>
             <TouchableOpacity>
-              <Text style={styles.footerLink}>Privacy Policy</Text>
+              <Text style={styles.footerLink}>{t('Privacy Policy')}</Text>
             </TouchableOpacity>
             <TouchableOpacity>
-              <Text style={styles.footerLink}>Terms of Service</Text>
+              <Text style={styles.footerLink}>{t('Terms of Service')}</Text>
             </TouchableOpacity>
             <TouchableOpacity>
-              <Text style={styles.footerLink}>Contact Support</Text>
+              <Text style={styles.footerLink}>{t('Contact Support')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -177,7 +183,7 @@ export default function LoginScreen() {
           onPress={() => setShowPicker(false)}
         >
           <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Select Country Code</Text>
+            <Text style={styles.modalTitle}>{t('Select Country Code')}</Text>
             <FlatList
               data={COUNTRIES}
               keyExtractor={(item) => item.code + item.name}

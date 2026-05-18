@@ -1,5 +1,5 @@
 // app/(buyer)/messages.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -11,48 +11,37 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-
-const MOCK_MESSAGES = [
-  {
-    id: 1,
-    supplierName: 'SolarTrade Global Ltd.',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&q=80',
-    lastMessage: 'The shipping documents have been attached. Please review them at your earliest convenience.',
-    time: '10:30 AM',
-    unreadCount: 2,
-    isOnline: true,
-  },
-  {
-    id: 2,
-    supplierName: 'Guangzhou Industrial Supply',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&q=80',
-    lastMessage: 'Yes, we can offer a 15% discount if you order more than 100 units.',
-    time: 'Yesterday',
-    unreadCount: 0,
-    isOnline: false,
-  },
-  {
-    id: 3,
-    supplierName: 'Apex Machinery & Tools',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&q=80',
-    lastMessage: 'Your order #UBS-00123 has been shipped via Global Express Logistics.',
-    time: 'Oct 24',
-    unreadCount: 0,
-    isOnline: true,
-  },
-  {
-    id: 4,
-    supplierName: 'EcoPackaging Solutions',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80',
-    lastMessage: 'Thank you for your business! Looking forward to our next deal.',
-    time: 'Oct 20',
-    unreadCount: 0,
-    isOnline: false,
-  },
-]
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { getChatRooms } from '../../services/messageService'
 
 export default function MessagesScreen() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [rooms, setRooms] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const loadRooms = async () => {
+    setLoading(true)
+    try {
+      const res = await getChatRooms()
+      setRooms(res.rooms || [])
+    } catch (error) {
+      console.log('Load chat rooms error', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadRooms()
+  }, [])
+
+  const filteredRooms = rooms.filter((room) => {
+    const text = searchQuery.trim().toLowerCase()
+    if (!text) return true
+    const sellerName = room.sellerId?.shopName || room.sellerName || ''
+    const productName = room.productId?.title || room.productName || ''
+    return sellerName.toLowerCase().includes(text) || productName.toLowerCase().includes(text)
+  })
 
   return (
     <SafeAreaView style={styles.container}>
@@ -60,19 +49,19 @@ export default function MessagesScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backIcon}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Messages</Text>
         </View>
-        <TouchableOpacity style={styles.headerRight}>
-          <Text style={styles.menuIcon}>⚙️</Text>
+        <TouchableOpacity style={styles.headerRight} onPress={() => router.push('/(buyer)/help')}>
+          <MaterialCommunityIcons name="headset" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <MaterialCommunityIcons name="magnify" size={20} color="#999" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search conversations..."
@@ -84,80 +73,64 @@ export default function MessagesScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {/* Messages List */}
-        {MOCK_MESSAGES.map((msg) => (
-          <TouchableOpacity 
-            key={msg.id} 
-            style={styles.messageRow} 
-            activeOpacity={0.7}
-            onPress={() => {
-              // Usually would navigate to a specific chat window: router.push(`/chat/${msg.id}`)
-              alert(`Opening chat with ${msg.supplierName}`)
-            }}
-          >
-            <View style={styles.avatarContainer}>
-              <Image source={{ uri: msg.avatar }} style={styles.avatar} />
-              {msg.isOnline && <View style={styles.onlineDot} />}
-            </View>
-            
-            <View style={styles.messageContent}>
-              <View style={styles.messageHeader}>
-                <Text style={[styles.supplierName, msg.unreadCount > 0 && styles.supplierNameUnread]}>
-                  {msg.supplierName}
-                </Text>
-                <Text style={[styles.timeText, msg.unreadCount > 0 && styles.timeTextUnread]}>
-                  {msg.time}
-                </Text>
-              </View>
-              <View style={styles.messageFooter}>
-                <Text 
-                  style={[styles.lastMessage, msg.unreadCount > 0 && styles.lastMessageUnread]} 
-                  numberOfLines={1}
-                >
-                  {msg.lastMessage}
-                </Text>
-                {msg.unreadCount > 0 && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadCount}>{msg.unreadCount}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {filteredRooms.length > 0 ? (
+          filteredRooms.map((room) => {
+            const sellerName = room.sellerId?.shopName || room.sellerName || 'Seller'
+            const productName = room.productId?.title || room.productName || 'Product'
+            const lastMessage = room.lastMessage?.text || room.lastMessage || 'Tap to continue the conversation.'
+            const timeLabel = room.lastMessage?.createdAt
+              ? new Date(room.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : room.updatedAt
+                ? new Date(room.updatedAt).toLocaleDateString()
+                : ''
+            const unreadCount = room.unreadCount || 0
 
-        {MOCK_MESSAGES.length === 0 && (
+            return (
+              <TouchableOpacity
+                key={room._id}
+                style={styles.messageRow}
+                activeOpacity={0.8}
+                onPress={() => router.push({ pathname: '/(buyer)/chat', params: { roomId: room._id } })}
+              >
+                <View style={styles.avatarContainer}>
+                  <Image
+                    source={{ uri: room.sellerId?.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&q=80' }}
+                    style={styles.avatar}
+                  />
+                  <View style={styles.onlineDot} />
+                </View>
+                <View style={styles.messageContent}>
+                  <View style={styles.messageHeader}>
+                    <Text style={[styles.supplierName, unreadCount > 0 && styles.supplierNameUnread]} numberOfLines={1}>
+                      {sellerName}
+                    </Text>
+                    <Text style={[styles.timeText, unreadCount > 0 && styles.timeTextUnread]}>{timeLabel}</Text>
+                  </View>
+                  <Text style={styles.productName} numberOfLines={1}>{productName}</Text>
+                  <View style={styles.messageFooter}>
+                    <Text style={[styles.lastMessage, unreadCount > 0 && styles.lastMessageUnread]} numberOfLines={1}>
+                      {lastMessage}
+                    </Text>
+                    {unreadCount > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadCount}>{unreadCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )
+          })
+        ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateIcon}>📨</Text>
-            <Text style={styles.emptyStateTitle}>No Messages Yet</Text>
-            <Text style={styles.emptyStateDesc}>When you contact sellers, your conversations will appear here.</Text>
+            <Text style={styles.emptyStateTitle}>{loading ? 'Loading chats...' : 'No active conversations yet'}</Text>
+            <Text style={styles.emptyStateDesc}>When your contact request is connected, chats will appear here.</Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Bottom Nav */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/home')}>
-          <Text style={styles.navIcon}>⌂</Text>
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/messages')}>
-          <Text style={styles.navIconActive}>✉</Text>
-          <Text style={styles.navLabelActive}>Messages</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sellBtn} onPress={() => router.push('/(seller)/dashboard')}>
-          <Text style={styles.sellIcon}>+</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/products')}>
-          <Text style={styles.navIcon}>▦</Text>
-          <Text style={styles.navLabel}>Products</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(buyer)/profile')}>
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navLabel}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+
 
     </SafeAreaView>
   )
@@ -186,10 +159,6 @@ const styles = StyleSheet.create({
     marginRight: 16,
     padding: 4,
   },
-  backIcon: {
-    fontSize: 22,
-    color: '#000040',
-  },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
@@ -197,10 +166,6 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     padding: 4,
-  },
-  menuIcon: {
-    fontSize: 18,
-    color: '#000040',
   },
 
   // Search
@@ -217,11 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
   },
-  searchIcon: {
-    fontSize: 16,
-    color: '#888',
-    marginRight: 8,
-  },
+
   searchInput: {
     flex: 1,
     paddingVertical: 12,
@@ -279,6 +240,11 @@ const styles = StyleSheet.create({
   supplierNameUnread: {
     fontWeight: '800',
     color: '#000040',
+  },
+  productName: {
+    fontSize: 13,
+    color: '#5f6370',
+    marginBottom: 6,
   },
   timeText: {
     fontSize: 12,
@@ -340,61 +306,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Bottom Nav
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 8,
-  },
-  navItem: {
-    alignItems: 'center',
-    gap: 2,
-    flex: 1,
-  },
-  navIcon: {
-    fontSize: 22,
-    color: '#999',
-  },
-  navIconActive: {
-    fontSize: 22,
-    color: '#1a237e',
-  },
-  navLabel: {
-    fontSize: 10,
-    color: '#999',
-  },
-  navLabelActive: {
-    fontSize: 10,
-    color: '#1a237e',
-    fontWeight: '600',
-  },
-  sellBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#1a237e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#1a237e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  sellIcon: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: '300',
-    marginTop: -2,
-  },
+
 })

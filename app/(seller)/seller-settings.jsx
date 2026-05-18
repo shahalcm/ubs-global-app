@@ -96,7 +96,7 @@ export default function SellerSettings() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 20, paddingBottom: 120 },
+  content: { padding: 20, paddingBottom: 20 },
   section: { marginBottom: 24 },
   sectionTitle: { color: '#7a7a7a', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },

@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useTranslation } from "react-i18next";
 
 const NOTIFICATIONS = [
   {
@@ -15,7 +17,7 @@ const NOTIFICATIONS = [
     title: "Order Shipped",
     desc: "Your order #UBS8923 has been shipped and is on its way.",
     time: "2 hours ago",
-    icon: "📦",
+    icon: "package",
     read: false,
   },
   {
@@ -23,7 +25,7 @@ const NOTIFICATIONS = [
     title: "Payment Successful",
     desc: "We received your payment of $450.00 for order #UBS8923.",
     time: "1 day ago",
-    icon: "💳",
+    icon: "credit-card",
     read: true,
   },
   {
@@ -31,22 +33,23 @@ const NOTIFICATIONS = [
     title: "New Message",
     desc: "Seller 'Global Tech Exports' sent you a message.",
     time: "2 days ago",
-    icon: "✉",
+    icon: "email",
     read: true,
   },
 ];
 
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('Notifications')}</Text>
         <TouchableOpacity>
-          <Text style={styles.markReadText}>Read All</Text>
+          <Text style={styles.markReadText}>{t('Read All')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -57,12 +60,12 @@ export default function NotificationsScreen() {
             style={[styles.notificationCard, !item.read && styles.unreadCard]}
           >
             <View style={styles.iconBox}>
-              <Text style={styles.icon}>{item.icon}</Text>
+              <MaterialCommunityIcons name={item.icon} size={24} color="#666" />
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.desc}>{item.desc}</Text>
-              <Text style={styles.time}>{item.time}</Text>
+              <Text style={styles.title}>{t(item.title)}</Text>
+              <Text style={styles.desc}>{t(item.desc)}</Text>
+              <Text style={styles.time}>{t(item.time)}</Text>
             </View>
             {!item.read && <View style={styles.dot} />}
           </View>
@@ -90,10 +93,6 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 8,
     marginLeft: -8,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: "#333",
   },
   headerTitle: {
     fontSize: 18,
@@ -130,9 +129,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 16,
   },
-  icon: {
-    fontSize: 20,
-  },
+
   textContainer: {
     flex: 1,
   },

@@ -52,7 +52,7 @@ export default function SellerNotifications() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, padding: 20, paddingBottom: 100 },
+  container: { flex: 1, padding: 20, paddingBottom: 20 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },
   chip: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e3e3e3', marginRight: 10, marginBottom: 10 },
   activeChip: { backgroundColor: colors.primary, borderColor: colors.primary },

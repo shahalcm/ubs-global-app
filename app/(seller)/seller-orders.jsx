@@ -1,67 +1,109 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import SellerHeader from '../../components/seller/SellerHeader';
-import OrderCard from '../../components/seller/OrderCard';
-import { useSeller } from '../../context/SellerContext';
-import { colors } from '../../constants/colors';
+import React, { useState, useEffect } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { router } from 'expo-router'
+import { getSellerOrders, updateOrderStatus } from '../../services/orderService'
 
-const tabs = ['All', 'Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
+export default function SellerOrdersScreen() {
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
 
-export default function SellerOrders() {
-  const { orders, loading, updateOrderStatus } = useSeller();
-  const [activeTab, setActiveTab] = useState('All');
+  useEffect(() => {
+    loadOrders()
+  }, [])
 
-  const filtered = useMemo(() => {
-    if (!orders) return [];
-    if (activeTab === 'All') return orders;
-    return orders.filter((order) => order.status === activeTab);
-  }, [orders, activeTab]);
+  const loadOrders = async () => {
+    try {
+      setLoading(true)
+      const res = await getSellerOrders()
+      if (res.success) setOrders(res.orders)
+    } catch(err) {
+      console.log(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const handleAction = async (id, action) => {
-    let status = 'Confirmed';
-    if (action === 'reject') status = 'Cancelled';
-    if (action === 'ship') status = 'Shipped';
-    if (action === 'track') return;
-    await updateOrderStatus(id, { status });
-  };
+  const handleUpdateStatus = async (orderId, status) => {
+    try {
+      await updateOrderStatus(orderId, status)
+      loadOrders()
+    } catch(err) {
+      console.log(err)
+    }
+  }
 
   if (loading) {
-    return <ActivityIndicator style={styles.loader} size="large" color={colors.primary} />;
+    return <SafeAreaView style={styles.container}><ActivityIndicator style={{marginTop:50}} size="large" /></SafeAreaView>
   }
 
   return (
-    <View style={styles.screen}>
-      <SellerHeader title="My Orders" />
-      <View style={styles.container}>
-        <View style={styles.tabRow}>
-          {tabs.map((tab) => (
-            <TouchableOpacity key={tab} style={[styles.tabItem, activeTab === tab && styles.tabActive]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <OrderCard order={item} onPressAction={(action) => handleAction(item.id, action)} />}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No orders available in this category.</Text>}
-        />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <Text style={styles.headerTitle}>Manage Orders</Text>
+        <View style={{width:24}}/>
       </View>
-    </View>
-  );
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {orders.length === 0 ? (
+          <Text style={styles.emptyText}>No orders yet.</Text>
+        ) : orders.map((order) => (
+          <View key={order._id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.orderId}>#{order.orderNumber}</Text>
+              <View style={[styles.statusBadge, {backgroundColor: order.orderStatus === 'placed' ? '#fff3e0' : '#e8f5e9'}]}>
+                <Text style={[styles.statusText, {color: order.orderStatus === 'placed' ? '#f57c00' : '#2e7d32'}]}>
+                  {order.orderStatus.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.buyerInfo}>
+              <Text style={styles.buyerName}>Buyer: {order.buyerId?.name}</Text>
+              <Text style={styles.buyerContact}>{order.deliveryAddress?.phone} | {order.deliveryAddress?.city}, {order.deliveryAddress?.country}</Text>
+            </View>
+
+            <View style={styles.itemsList}>
+              {order.items.map((item, idx) => (
+                <Text key={idx} style={styles.itemText}>{item.quantity}x {item.productName}</Text>
+              ))}
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.totalText}>Earnings: ${order.sellerEarnings}</Text>
+              {order.orderStatus === 'placed' && (
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpdateStatus(order._id, 'shipped')}>
+                  <Text style={styles.actionBtnText}>Mark as Shipped</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
+  )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, padding: 20, paddingBottom: 100 },
-  loader: { flex: 1, justifyContent: 'center' },
-  tabRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },
-  tabItem: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: '#d9d9d9', marginRight: 10, marginBottom: 10, backgroundColor: '#fff' },
-  tabActive: { borderColor: colors.primary, backgroundColor: colors.primary + '11' },
-  tabLabel: { fontSize: 12, color: '#666', fontWeight: '700' },
-  tabLabelActive: { color: colors.primary },
-  list: { paddingBottom: 100 },
-  empty: { marginTop: 30, color: '#7a7a7a', textAlign: 'center', fontSize: 14 },
-});
+  container: { flex: 1, backgroundColor: '#f5f6f8' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eaeaea' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#000040' },
+  scrollContent: { padding: 16 },
+  emptyText: { textAlign: 'center', color: '#666', marginTop: 40 },
+  card: { backgroundColor: '#fff', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#eaeaea' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  orderId: { fontSize: 14, fontWeight: '700', color: '#1a237e' },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  statusText: { fontSize: 10, fontWeight: 'bold' },
+  buyerInfo: { backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 12 },
+  buyerName: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 },
+  buyerContact: { fontSize: 11, color: '#666' },
+  itemsList: { marginBottom: 12, borderBottomWidth: 1, borderColor: '#eee', paddingBottom: 12 },
+  itemText: { fontSize: 12, color: '#444', marginBottom: 4 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalText: { fontSize: 14, fontWeight: '800', color: '#008b8b' },
+  actionBtn: { backgroundColor: '#000040', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
+  actionBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' }
+})

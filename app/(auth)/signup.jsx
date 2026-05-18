@@ -12,8 +12,11 @@ import {
   ScrollView,
   Modal,
   FlatList,
+  Alert,
 } from 'react-native'
 import { router } from 'expo-router'
+import { sendOTP } from '../../services/authService'
+import { useTranslation } from 'react-i18next'
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -34,6 +37,7 @@ const COUNTRIES = [
 ]
 
 export default function SignupScreen() {
+  const { t } = useTranslation()
   const [phone, setPhone] = useState('')
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
   const [showPicker, setShowPicker] = useState(false)
@@ -43,13 +47,13 @@ export default function SignupScreen() {
     if (!phone || phone.length < 7) return
     setLoading(true)
     try {
-      // await api.post('/auth/send-otp', { phone: selectedCountry.code + phone })
+      await sendOTP(selectedCountry.code + phone)
       router.push({
         pathname: '/(auth)/otp',
         params: { phone: selectedCountry.code + phone }
       })
     } catch (error) {
-      console.log(error)
+      Alert.alert(t('Error'), error.response?.data?.message || t('Failed to send OTP. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -68,7 +72,7 @@ export default function SignupScreen() {
           {/* Header */}
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}
           >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
@@ -81,13 +85,13 @@ export default function SignupScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.title}>{t('Create Account')}</Text>
           <Text style={styles.subtitle}>
-            Enter your mobile number to get started
+            {t('Enter your mobile number to get started')}
           </Text>
 
           {/* Mobile Number Label */}
-          <Text style={styles.label}>Mobile Number</Text>
+          <Text style={styles.label}>{t('Mobile Number')}</Text>
 
           {/* Phone Input Row */}
           <View style={styles.phoneRow}>
@@ -105,7 +109,7 @@ export default function SignupScreen() {
             {/* Phone Input */}
             <TextInput
               style={styles.phoneInput}
-              placeholder="000-000-0000"
+              placeholder={t('000-000-0000')}
               placeholderTextColor="#aaa"
               keyboardType="phone-pad"
               value={phone}
@@ -121,18 +125,18 @@ export default function SignupScreen() {
             disabled={loading}
           >
             <Text style={styles.otpBtnText}>
-              {loading ? 'Sending...' : 'Send OTP  →'}
+              {loading ? t('Sending...') : t('Send OTP  →')}
             </Text>
           </TouchableOpacity>
 
           {/* Login Link */}
           <Text style={styles.loginText}>
-            Already have an account?{' '}
+            {t('Already have an account?')}{' '}
             <Text
               style={styles.loginLink}
               onPress={() => router.push('/(auth)/login')}
             >
-              Login
+              {t('Login')}
             </Text>
           </Text>
 
@@ -143,18 +147,17 @@ export default function SignupScreen() {
           <View style={styles.badgeRow}>
             <View style={styles.badge}>
               <Text style={styles.badgeIcon}>🛡️</Text>
-              <Text style={styles.badgeText}>SECURE TRADE</Text>
+              <Text style={styles.badgeText}>{t('SECURE TRADE')}</Text>
             </View>
             <View style={styles.badge}>
               <Text style={styles.badgeIcon}>🌍</Text>
-              <Text style={styles.badgeText}>GLOBAL REACH</Text>
+              <Text style={styles.badgeText}>{t('GLOBAL REACH')}</Text>
             </View>
           </View>
 
           {/* Terms */}
           <Text style={styles.terms}>
-            By continuing, you agree to UBS Global&apos;s Terms of Service and
-            Privacy Policy regarding international trade and data handling.
+            {t('By continuing, you agree to UBS Global\'s Terms of Service and Privacy Policy regarding international trade and data handling.')}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -171,7 +174,7 @@ export default function SignupScreen() {
           onPress={() => setShowPicker(false)}
         >
           <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Select Country</Text>
+            <Text style={styles.modalTitle}>{t('Select Country')}</Text>
             <FlatList
               data={COUNTRIES}
               keyExtractor={(item) => item.code + item.name}

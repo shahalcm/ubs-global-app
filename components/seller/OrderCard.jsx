@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 
 const statusStyles = {
@@ -45,7 +44,7 @@ export default function OrderCard({ order, onPressAction }) {
                 <Text style={styles.buttonLabel}>Accept</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={() => onPressAction('reject')}>
-                <Text style={styles.buttonLabel}>Reject</Text>
+                <Text style={[styles.buttonLabel, { color: colors.error }]}>Reject</Text>
               </TouchableOpacity>
             </>
           ) : order.status === 'Confirmed' ? (
@@ -78,7 +77,7 @@ const styles = StyleSheet.create({
   orderId: { fontSize: 14, fontWeight: '700', color: colors.text },
   date: { fontSize: 12, color: '#909090' },
   productRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  thumb: { width: 50, height: 50, borderRadius: 14, marginRight: 12 },
+  thumb: { width: 50, height: 50, borderRadius: 14, marginRight: 16 },
   productInfo: { flex: 1 },
   productName: { fontSize: 14, fontWeight: '700', color: colors.text },
   quantity: { fontSize: 12, color: '#7a7a7a', marginTop: 4 },
@@ -90,18 +89,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   customerName: { fontSize: 13, fontWeight: '700', color: colors.text },
   customerPhone: { fontSize: 12, color: '#7a7a7a', marginTop: 2 },
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  statusBadge: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
   statusText: { fontSize: 12, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: 8 },
   button: {
     borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   acceptButton: {
     borderWidth: 1,

@@ -9,6 +9,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { setRole } from '../../services/authService'
+import { useAuth } from '../../context/AuthContext'
 
 const ROLES = [
   {
@@ -30,11 +32,13 @@ const ROLES = [
 export default function RoleSelectScreen() {
   const [selectedRole, setSelectedRole] = useState('buyer')
   const [loading, setLoading] = useState(false)
+  const { updateUser } = useAuth()
 
   const handleContinue = async () => {
     setLoading(true)
     try {
-      // await api.patch('/auth/set-role', { role: selectedRole })
+      const res = await setRole(selectedRole)
+      if (res?.user) await updateUser(res.user)
       if (selectedRole === 'buyer') {
         router.replace('/(buyer)/home')
       } else {

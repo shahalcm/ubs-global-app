@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 const FAQS = [
   {
@@ -31,7 +32,7 @@ export default function HelpCenterScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help Center</Text>
         <View style={{ width: 40 }} />
@@ -40,7 +41,7 @@ export default function HelpCenterScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Search */}
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <MaterialCommunityIcons name="magnify" size={20} color="#888" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search for help..."
@@ -91,10 +92,6 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: -8,
   },
-  backIcon: {
-    fontSize: 24,
-    color: "#333",
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -113,10 +110,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dde3f0",
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 10,
-  },
+
   searchInput: {
     flex: 1,
     paddingVertical: 14,

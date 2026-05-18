@@ -9,13 +9,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { signUp } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function CompleteProfileScreen() {
+  const { t } = useTranslation();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,17 +32,19 @@ export default function CompleteProfileScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const { login } = useAuth();
+  const { phone } = useLocalSearchParams() || {};
 
   const validate = () => {
     const newErrors = {};
-    if (!fullName.trim()) newErrors.fullName = "Full name is required";
-    if (!email.trim()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Invalid email";
-    if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Min 6 characters";
-    if (!confirmPassword) newErrors.confirmPassword = "Please confirm password";
+    if (!fullName.trim()) newErrors.fullName = t("Full name is required");
+    if (!email.trim()) newErrors.email = t("Email is required");
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = t("Invalid email");
+    if (!password) newErrors.password = t("Password is required");
+    else if (password.length < 6) newErrors.password = t("Min 6 characters");
+    if (!confirmPassword) newErrors.confirmPassword = t("Please confirm password");
     else if (password !== confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match";
+      newErrors.confirmPassword = t("Passwords do not match");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -46,10 +53,16 @@ export default function CompleteProfileScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      // await api.post('/auth/complete-profile', { fullName, email, password, pincode })
+      const res = await signUp({
+        name: fullName,
+        email,
+        password,
+        phone: phone || `+91${Math.floor(Math.random() * 1000000000)}` 
+      });
+      await login(res.user, res.token);
       router.push("/(auth)/role-select");
     } catch (error) {
-      console.log(error);
+      Alert.alert(t('Error'), error.response?.data?.message || t('Signup failed'));
     } finally {
       setLoading(false);
     }
@@ -102,9 +115,9 @@ export default function CompleteProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Page Title */}
-          <Text style={styles.pageTitle}>Complete Your Profile</Text>
+          <Text style={styles.pageTitle}>{t('Complete Your Profile')}</Text>
           <Text style={styles.pageSubtitle}>
-            Join our global network of international traders.
+            {t('Join our global network of international traders.')}
           </Text>
 
           {/* Verification Notice */}
@@ -113,22 +126,20 @@ export default function CompleteProfileScreen() {
               <Text style={styles.noticeIconText}>i</Text>
             </View>
             <View style={styles.noticeTextBox}>
-              <Text style={styles.noticeTitle}>Verification Notice</Text>
+              <Text style={styles.noticeTitle}>{t('Verification Notice')}</Text>
               <Text style={styles.noticeDesc}>
-                Please ensure your Full Name matches the legal name on your
-                government-issued identification to prevent delays in shipping
-                and financial settlements.
+                {t('Please ensure your Full Name matches the legal name on your government-issued identification to prevent delays in shipping and financial settlements.')}
               </Text>
             </View>
           </View>
 
           {/* Full Name */}
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={styles.label}>{t('Full Name')}</Text>
           <View style={[styles.inputBox, errors.fullName && styles.inputError]}>
             <Text style={styles.inputIcon}>👤</Text>
             <TextInput
               style={styles.input}
-              placeholder="John Doe"
+              placeholder={t('John Doe')}
               placeholderTextColor="#bbb"
               value={fullName}
               onChangeText={(v) => {
@@ -143,12 +154,12 @@ export default function CompleteProfileScreen() {
           )}
 
           {/* Email */}
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label}>{t('Email Address')}</Text>
           <View style={[styles.inputBox, errors.email && styles.inputError]}>
             <Text style={styles.inputIcon}>✉️</Text>
             <TextInput
               style={styles.input}
-              placeholder="email@ubsglobal.com"
+              placeholder={t('email@ubsglobal.com')}
               placeholderTextColor="#bbb"
               value={email}
               onChangeText={(v) => {
@@ -162,12 +173,12 @@ export default function CompleteProfileScreen() {
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
           {/* Password */}
-          <Text style={styles.label}>Password</Text>
+          <Text style={styles.label}>{t('Password')}</Text>
           <View style={[styles.inputBox, errors.password && styles.inputError]}>
             <Text style={styles.inputIcon}>🔒</Text>
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder={t('••••••••')}
               placeholderTextColor="#bbb"
               value={password}
               onChangeText={(v) => {
@@ -193,7 +204,7 @@ export default function CompleteProfileScreen() {
           )}
 
           {/* Confirm Password */}
-          <Text style={styles.label}>Confirm Password</Text>
+          <Text style={styles.label}>{t('Confirm Password')}</Text>
           <View
             style={[
               styles.inputBox,
@@ -203,7 +214,7 @@ export default function CompleteProfileScreen() {
             <Text style={styles.inputIcon}>🔄</Text>
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder={t('••••••••')}
               placeholderTextColor="#bbb"
               value={confirmPassword}
               onChangeText={(v) => {
@@ -229,7 +240,7 @@ export default function CompleteProfileScreen() {
           )}
 
           {/* Location */}
-          <Text style={styles.label}>Location</Text>
+          <Text style={styles.label}>{t('Location')}</Text>
           <View style={styles.locationContainer}>
             <TouchableOpacity 
               style={[styles.locationBtn, locationGranted && styles.locationBtnSuccess]} 
@@ -238,13 +249,13 @@ export default function CompleteProfileScreen() {
             >
               <Ionicons name={locationGranted ? "checkmark-circle" : "location-outline"} size={20} color={locationGranted ? "#fff" : "#1a237e"} />
               <Text style={[styles.locationBtnText, locationGranted && styles.locationBtnTextSuccess]}>
-                {locationLoading ? "Fetching Location..." : locationGranted ? "Location Added" : "Use Current Location"}
+                {locationLoading ? t('Fetching Location...') : locationGranted ? t('Location Added') : t('Use Current Location')}
               </Text>
             </TouchableOpacity>
             
             <View style={styles.orRowLoc}>
               <View style={styles.orLine} />
-              <Text style={styles.orText}>OR</Text>
+              <Text style={styles.orText}>{t('OR')}</Text>
               <View style={styles.orLine} />
             </View>
 
@@ -252,7 +263,7 @@ export default function CompleteProfileScreen() {
               <Text style={styles.inputIcon}>📍</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter Pincode"
+                placeholder={t('Enter Pincode')}
                 placeholderTextColor="#bbb"
                 value={pincode}
                 onChangeText={setPincode}
@@ -265,7 +276,7 @@ export default function CompleteProfileScreen() {
           {/* OR Divider */}
           <View style={styles.orRow}>
             <View style={styles.orLine} />
-            <Text style={styles.orText}>OR</Text>
+            <Text style={styles.orText}>{t('OR')}</Text>
             <View style={styles.orLine} />
           </View>
 
@@ -277,7 +288,7 @@ export default function CompleteProfileScreen() {
             <View style={styles.googleIconBox}>
               <Text style={styles.googleIconText}>G</Text>
             </View>
-            <Text style={styles.googleBtnText}>Continue with Google</Text>
+            <Text style={styles.googleBtnText}>{t('Continue with Google')}</Text>
           </TouchableOpacity>
 
           {/* Spacer for sticky button */}
@@ -292,7 +303,7 @@ export default function CompleteProfileScreen() {
             disabled={loading}
           >
             <Text style={styles.continueBtnText}>
-              {loading ? "Please wait..." : "Continue"}
+              {loading ? t('Please wait...') : t('Continue')}
             </Text>
           </TouchableOpacity>
         </View>

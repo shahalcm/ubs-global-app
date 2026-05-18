@@ -1,17 +1,17 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useSellerLayout } from '../../context/SellerLayoutContext';
+import { useSellerDrawer } from '../../context/SellerLayoutContext';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
 
 export default function SellerHeader({ title, showShadow = true }) {
-  const { setDrawerOpen } = useSellerLayout();
+  const { toggleDrawer } = useSellerDrawer();
   const { unreadNotifications, seller } = useSeller();
 
   return (
     <View style={[styles.header, showShadow && styles.shadow]}>
-      <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.iconButton}>
+      <TouchableOpacity onPress={toggleDrawer} style={styles.iconButton}>
         <MaterialCommunityIcons name="menu" size={24} color={colors.primary} />
       </TouchableOpacity>
       <View style={styles.titleWrap}>

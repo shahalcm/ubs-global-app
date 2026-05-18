@@ -10,9 +10,12 @@ import {
   Platform,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
+import { verifyOTP, sendOTP, loginWithPhone } from '../../services/authService'
+import { useAuth } from '../../context/AuthContext'
 
 export default function OTPScreen() {
   const { phone } = useLocalSearchParams()
@@ -21,6 +24,7 @@ export default function OTPScreen() {
   const [canResend, setCanResend] = useState(false)
   const [loading, setLoading] = useState(false)
   const inputs = useRef([])
+  const { login } = useAuth()
 
   // Countdown timer
   useEffect(() => {
@@ -60,10 +64,26 @@ export default function OTPScreen() {
     if (otpString.length < 6) return
     setLoading(true)
     try {
-      // await api.post('/auth/verify-otp', { phone, otp: otpString })
-      router.push('/(auth)/complete-profile')
+      await verifyOTP(phone, otpString)
+      
+      try {
+        // Try to log in the user if they already exist
+        const loginRes = await loginWithPhone(phone)
+        if (loginRes.success) {
+          await login(loginRes.user, loginRes.token)
+          router.replace('/(buyer)/home')
+          return
+        }
+      } catch (loginError) {
+        // If user is not found (404), they are a new user
+        if (loginError.response?.status === 404) {
+          router.push({ pathname: '/(auth)/complete-profile', params: { phone } })
+          return
+        }
+        throw loginError // If it's a different error, throw it to the outer catch
+      }
     } catch (error) {
-      console.log(error)
+      Alert.alert('Error', error.response?.data?.message || 'Invalid OTP or network error')
     } finally {
       setLoading(false)
     }
@@ -76,9 +96,11 @@ export default function OTPScreen() {
     setOtp(['', '', '', '', '', ''])
     inputs.current[0]?.focus()
     try {
-      // await api.post('/auth/send-otp', { phone })
+      await sendOTP(phone)
+      Alert.alert('Success', 'A new OTP has been sent.')
     } catch (error) {
       console.log(error)
+      Alert.alert('Error', 'Failed to resend OTP.')
     }
   }
 
@@ -105,7 +127,7 @@ export default function OTPScreen() {
           <View style={styles.topBar}>
             <TouchableOpacity
               style={styles.backBtn}
-              onPress={() => router.back()}
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}
             >
               <Text style={styles.backArrow}>←</Text>
               <Text style={styles.topTitle}>UBS Global</Text>

@@ -49,7 +49,7 @@ export default function SellerEarnings() {
         </View>
 
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        <FlatList data={transactions} keyExtractor={(item) => item.id} renderItem={({ item, index }) => (<View style={[styles.transactionRow, index % 2 === 1 && styles.stripedRow]}><Text style={styles.txLabel}>{item.id}</Text><Text style={styles.txDate}>{item.date}</Text><View style={styles.txAmounts}><Text style={styles.txGross}>{item.gross}</Text><Text style={styles.txCommission}>{item.commission}</Text><Text style={styles.txNet}>{item.net}</Text></View></View>)} contentContainerStyle={{ paddingBottom: 120 }} />
+        <FlatList data={transactions} keyExtractor={(item) => item.id} renderItem={({ item, index }) => (<View style={[styles.transactionRow, index % 2 === 1 && styles.stripedRow]}><Text style={styles.txLabel}>{item.id}</Text><Text style={styles.txDate}>{item.date}</Text><View style={styles.txAmounts}><Text style={styles.txGross}>{item.gross}</Text><Text style={styles.txCommission}>{item.commission}</Text><Text style={styles.txNet}>{item.net}</Text></View></View>)} contentContainerStyle={{ paddingBottom: 20 }} />
       </ScrollView>
     </View>
   );
@@ -57,7 +57,7 @@ export default function SellerEarnings() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingBottom: 120 },
+  container: { padding: 20, paddingBottom: 20 },
   loader: { flex: 1, justifyContent: 'center' },
   balanceCard: { backgroundColor: colors.primary, borderRadius: 24, padding: 22, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, elevation: 7 },
   balanceLabel: { color: '#cfd9ff', fontSize: 13, fontWeight: '600' },

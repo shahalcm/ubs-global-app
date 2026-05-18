@@ -85,7 +85,7 @@ export default function OrderDetails() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingBottom: 100 },
+  container: { padding: 20, paddingBottom: 20 },
   timelineCard: { backgroundColor: '#fff', borderRadius: 22, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 14, elevation: 4 },
   detailCard: { backgroundColor: '#fff', borderRadius: 22, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 14, elevation: 4 },
   cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 12 },
