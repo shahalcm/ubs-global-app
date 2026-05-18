@@ -2,21 +2,23 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 const screenWidth = Dimensions.get('window').width - 40;
 
 export default function EarningsChart({ mode = 'week', onModeChange, data = {} }) {
-  const labels = data.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const { t } = useTranslation();
+  const labels = data.labels || [t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat'), t('Sun')];
   const values = data.values || [450, 700, 650, 900, 800, 950, 1100];
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Revenue Analytics</Text>
+        <Text style={styles.title}>{t('Revenue Analytics')}</Text>
         <View style={styles.toggleRow}>
           {['week', 'month', 'year'].map((option) => (
             <TouchableOpacity key={option} style={[styles.toggleButton, mode === option && styles.activeToggle]} onPress={() => onModeChange(option)}>
-              <Text style={[styles.toggleLabel, mode === option && styles.activeToggleLabel]}>{option.toUpperCase()}</Text>
+              <Text style={[styles.toggleLabel, mode === option && styles.activeToggleLabel]}>{t(option).toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
         </View>

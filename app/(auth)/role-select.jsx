@@ -11,28 +11,28 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { setRole } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
-
-const ROLES = [
-  {
-    id: 'buyer',
-    title: 'Buyer',
-    icon: '🛍️',
-    description:
-      'Browse and purchase products globally. Connect with verified international vendors and manage secure logistics for your business.',
-  },
-  {
-    id: 'seller',
-    title: 'Seller',
-    icon: '🏪',
-    description:
-      'List and sell your products worldwide. Gain access to a global network of importers and streamline your export operations.',
-  },
-]
+import { useTranslation } from 'react-i18next'
 
 export default function RoleSelectScreen() {
+  const { t } = useTranslation()
   const [selectedRole, setSelectedRole] = useState('buyer')
   const [loading, setLoading] = useState(false)
   const { updateUser } = useAuth()
+
+  const ROLES = [
+    {
+      id: 'buyer',
+      title: t('Buyer'),
+      icon: '🛍️',
+      description: t('Browse and purchase products globally. Connect with verified international vendors and manage secure logistics for your business.'),
+    },
+    {
+      id: 'seller',
+      title: t('Seller'),
+      icon: '🏪',
+      description: t('List and sell your products worldwide. Gain access to a global network of importers and streamline your export operations.'),
+    },
+  ]
 
   const handleContinue = async () => {
     setLoading(true)
@@ -70,9 +70,9 @@ export default function RoleSelectScreen() {
       >
 
         {/* Title */}
-        <Text style={styles.title}>How will you use UBS Global?</Text>
+        <Text style={styles.title}>{t('How will you use UBS Global?')}</Text>
         <Text style={styles.subtitle}>
-          Select the role that best matches your international trade objectives.
+          {t('Select the role that best matches your international trade objectives.')}
         </Text>
 
         {/* Role Cards */}
@@ -124,7 +124,7 @@ export default function RoleSelectScreen() {
           disabled={loading}
         >
           <Text style={styles.continueBtnText}>
-            {loading ? 'Please wait...' : 'Continue  →'}
+            {loading ? t('Please wait...') : t('Continue  →')}
           </Text>
         </TouchableOpacity>
       </View>

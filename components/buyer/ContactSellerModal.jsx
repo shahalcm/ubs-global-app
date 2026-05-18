@@ -13,17 +13,10 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { createContactRequest } from '../../services/contactService'
 import { useAuth } from '../../context/AuthContext'
-
-const requestTypes = [
-  { key: 'product_inquiry', label: 'Product Inquiry' },
-  { key: 'bulk_order', label: 'Bulk Order' },
-  { key: 'custom_order', label: 'Custom Order' },
-  { key: 'price_negotiation', label: 'Price Negotiation' },
-  { key: 'shipping_inquiry', label: 'Shipping' },
-  { key: 'other', label: 'Other' }
-]
+import { useTranslation } from 'react-i18next'
 
 export default function ContactSellerModal({ visible, onClose, product, seller }) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [requestType, setRequestType] = useState('product_inquiry')
   const [subject, setSubject] = useState('')
@@ -33,6 +26,15 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
   const [isUrgent, setIsUrgent] = useState(false)
   const [isBulkOrder, setIsBulkOrder] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const requestTypes = [
+    { key: 'product_inquiry', label: t('Product Inquiry') },
+    { key: 'bulk_order', label: t('Bulk Order') },
+    { key: 'custom_order', label: t('Custom Order') },
+    { key: 'price_negotiation', label: t('Price Negotiation') },
+    { key: 'shipping_inquiry', label: t('Shipping Inquiry') },
+    { key: 'other', label: t('Other') }
+  ]
 
   const handleSubmit = async () => {
     if (!subject.trim() || !message.trim()) return
@@ -71,14 +73,14 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
           <View style={styles.handle} />
           <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Contact Seller</Text>
+              <Text style={styles.title}>{t('Contact Seller')}</Text>
               <TouchableOpacity onPress={() => onClose(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#1a237e" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.subtitle}>{seller?.shopName || 'Seller Shop'}</Text>
+            <Text style={styles.subtitle}>{seller?.shopName || t('Seller Shop')}</Text>
 
-            <Text style={styles.sectionLabel}>Request Type</Text>
+            <Text style={styles.sectionLabel}>{t('Request Type')}</Text>
             <View style={styles.chipRow}>
               {requestTypes.map((item) => (
                 <TouchableOpacity
@@ -94,18 +96,18 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
               ))}
             </View>
 
-            <Text style={styles.label}>Subject</Text>
+            <Text style={styles.label}>{t('Subject')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter a short subject"
+              placeholder={t('Enter a short subject')}
               value={subject}
               onChangeText={setSubject}
             />
 
-            <Text style={styles.label}>Message</Text>
+            <Text style={styles.label}>{t('Message')}</Text>
             <TextInput
               style={[styles.input, styles.textarea]}
-              placeholder="Describe your requirements..."
+              placeholder={t('Describe your requirements...')}
               multiline
               numberOfLines={4}
               value={message}
@@ -114,20 +116,20 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
 
             <View style={styles.inlineRow}>
               <View style={styles.halfField}>
-                <Text style={styles.label}>Quantity</Text>
+                <Text style={styles.label}>{t('Quantity')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="How many units?"
+                  placeholder={t('How many units?')}
                   value={quantity}
                   onChangeText={setQuantity}
                   keyboardType="number-pad"
                 />
               </View>
               <View style={styles.halfField}>
-                <Text style={styles.label}>Budget</Text>
+                <Text style={styles.label}>{t('Budget')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Budget range"
+                  placeholder={t('Budget range')}
                   value={budget}
                   onChangeText={setBudget}
                 />
@@ -139,18 +141,18 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
                 <View style={[styles.checkbox, isBulkOrder && styles.checkboxChecked]}>
                   {isBulkOrder && <MaterialCommunityIcons name="check" size={16} color="#fff" />}
                 </View>
-                <Text style={styles.checkboxLabel}>This is a bulk order (50+ units)</Text>
+                <Text style={styles.checkboxLabel}>{t('This is a bulk order (50+ units)')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setIsUrgent(!isUrgent)} style={styles.checkboxWrap}>
                 <View style={[styles.checkbox, isUrgent && styles.checkboxChecked]}>
                   {isUrgent && <MaterialCommunityIcons name="check" size={16} color="#fff" />}
                 </View>
-                <Text style={styles.checkboxLabel}>Urgent request</Text>
+                <Text style={styles.checkboxLabel}>{t('Urgent request')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.previewCard}>
-              <Text style={styles.previewHeading}>Product Preview</Text>
+              <Text style={styles.previewHeading}>{t('Product Preview')}</Text>
               <View style={styles.productRow}>
                 <View style={styles.productImagePlaceholder}>
                   {product?.images?.[0] ? (
@@ -158,8 +160,8 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
                   ) : null}
                 </View>
                 <View style={styles.productInfo}>
-                  <Text style={styles.productTitle}>{product?.title || 'Product name'}</Text>
-                  <Text style={styles.productPrice}>{product?.price ? `$${product.price}` : 'Price not set'}</Text>
+                  <Text style={styles.productTitle}>{product?.title || t('Product name')}</Text>
+                  <Text style={styles.productPrice}>{product?.price ? `$${product.price}` : t('Price not set')}</Text>
                 </View>
               </View>
             </View>
@@ -168,10 +170,10 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitText}>Send Request →</Text>
+                <Text style={styles.submitText}>{t('Send Request →')}</Text>
               )}
             </TouchableOpacity>
-            <Text style={styles.noteText}>🔒 Admin will review and connect you with seller within 24 hours.</Text>
+            <Text style={styles.noteText}>🔒 {t('Admin will review and connect you with seller within 24 hours.')}</Text>
           </ScrollView>
         </View>
       </View>

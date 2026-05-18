@@ -3,8 +3,10 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 export default function ProductCard({ product, onEdit, onDelete }) {
+  const { t } = useTranslation();
   const rightActions = () => (
     <View style={styles.actionRow}>
       <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={onEdit}>
@@ -24,15 +26,15 @@ export default function ProductCard({ product, onEdit, onDelete }) {
           <Text style={styles.title}>{product.name}</Text>
           <View style={styles.badge}><Text style={styles.badgeText}>{product.category}</Text></View>
           <Text style={styles.price}>${product.price}</Text>
-          <Text style={[styles.stock, product.stock > 0 ? styles.inStock : styles.outStock]}>{product.stock > 0 ? 'In Stock' : 'Out of Stock'}</Text>
+          <Text style={[styles.stock, product.stock > 0 ? styles.inStock : styles.outStock]}>{product.stock > 0 ? t('In Stock') : t('Out of Stock')}</Text>
           <View style={styles.buttonsRow}>
             <TouchableOpacity style={styles.outlineButton} onPress={onEdit}>
               <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />
-              <Text style={styles.outlineLabel}>Edit</Text>
+              <Text style={styles.outlineLabel}>{t('Edit')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.outlineButton, styles.deleteOutline]} onPress={onDelete}>
               <MaterialCommunityIcons name="trash-can-outline" size={16} color={colors.error} />
-              <Text style={[styles.outlineLabel, styles.deleteLabel]}>Delete</Text>
+              <Text style={[styles.outlineLabel, styles.deleteLabel]}>{t('Delete')}</Text>
             </TouchableOpacity>
           </View>
         </View>

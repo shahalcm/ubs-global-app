@@ -4,8 +4,10 @@ import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSellerDrawer } from '../../context/SellerLayoutContext';
 import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 export default function SellerBottomNav() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { closeDrawer } = useSellerDrawer();
   const insets = useSafeAreaInsets();
@@ -22,7 +24,7 @@ export default function SellerBottomNav() {
         onPress={() => { closeDrawer(); router.push('/(seller)/dashboard'); }}
       >
         <Text style={[styles.icon, activeSegment === 'dashboard' && styles.activeIcon]}>⌂</Text>
-        <Text style={[styles.label, activeSegment === 'dashboard' && styles.activeLabel]}>Dashboard</Text>
+        <Text style={[styles.label, activeSegment === 'dashboard' && styles.activeLabel]}>{t('Dashboard')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -30,7 +32,7 @@ export default function SellerBottomNav() {
         onPress={() => { closeDrawer(); router.push('/(seller)/my-products'); }}
       >
         <Text style={[styles.icon, activeSegment === 'my-products' && styles.activeIcon]}>▦</Text>
-        <Text style={[styles.label, activeSegment === 'my-products' && styles.activeLabel]}>Products</Text>
+        <Text style={[styles.label, activeSegment === 'my-products' && styles.activeLabel]}>{t('Products')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -45,7 +47,7 @@ export default function SellerBottomNav() {
         onPress={() => { closeDrawer(); router.push('/(seller)/seller-messages'); }}
       >
         <Text style={[styles.icon, activeSegment === 'seller-messages' && styles.activeIcon]}>✉</Text>
-        <Text style={[styles.label, activeSegment === 'seller-messages' && styles.activeLabel]}>Messages</Text>
+        <Text style={[styles.label, activeSegment === 'seller-messages' && styles.activeLabel]}>{t('Messages')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -53,7 +55,7 @@ export default function SellerBottomNav() {
         onPress={() => { closeDrawer(); router.push('/(seller)/seller-profile'); }}
       >
         <Text style={[styles.icon, activeSegment === 'seller-profile' && styles.activeIcon]}>👤</Text>
-        <Text style={[styles.label, activeSegment === 'seller-profile' && styles.activeLabel]}>Profile</Text>
+        <Text style={[styles.label, activeSegment === 'seller-profile' && styles.activeLabel]}>{t('Profile')}</Text>
       </TouchableOpacity>
     </View>
   );

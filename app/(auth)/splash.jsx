@@ -10,11 +10,13 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 const SKY = "#38bdf8"; // Bright light blue matching the design
 const NAVY = "#0a1c6a"; // Dark navy matching the design
 
 export default function SplashScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const fade = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
@@ -96,7 +98,7 @@ export default function SplashScreen() {
             />
             <View style={[styles.loaderDot, { backgroundColor: SKY }]} />
           </View>
-          <Text style={styles.loadingText}>INITIALIZING GLOBAL NETWORK</Text>
+          <Text style={styles.loadingText}>{t("INITIALIZING GLOBAL NETWORK")}</Text>
         </View>
       </Animated.View>
     </View>

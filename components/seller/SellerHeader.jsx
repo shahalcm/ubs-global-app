@@ -4,8 +4,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSellerDrawer } from '../../context/SellerLayoutContext';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 export default function SellerHeader({ title, showShadow = true }) {
+  const { t } = useTranslation();
   const { toggleDrawer } = useSellerDrawer();
   const { unreadNotifications, seller } = useSeller();
 
@@ -15,7 +17,7 @@ export default function SellerHeader({ title, showShadow = true }) {
         <MaterialCommunityIcons name="menu" size={24} color={colors.primary} />
       </TouchableOpacity>
       <View style={styles.titleWrap}>
-        {title ? <Text style={styles.title}>{title}</Text> : <Text style={styles.brand}>UBS Global</Text>}
+        {title ? <Text style={styles.title}>{t(title)}</Text> : <Text style={styles.brand}>UBS Global</Text>}
       </View>
       <View style={styles.rightGroup}>
         <TouchableOpacity style={styles.bellButton}>

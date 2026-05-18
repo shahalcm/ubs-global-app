@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
 import { registerDrawerNavigation } from '../../context/SellerLayoutContext';
+import { useTranslation } from 'react-i18next';
 
 const menuItems = [
   { icon: 'home-outline', label: 'Dashboard', route: '/(seller)/dashboard' },
@@ -19,6 +20,7 @@ const menuItems = [
 ];
 
 export default function SellerDrawerContent(props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
@@ -51,7 +53,7 @@ export default function SellerDrawerContent(props) {
         </View>
         <View>
           <Text style={styles.brand}>UBS Global</Text>
-          <Text style={styles.subTitle}>Verified Seller</Text>
+          <Text style={styles.subTitle}>{t('Verified Seller')}</Text>
         </View>
       </View>
 
@@ -63,16 +65,16 @@ export default function SellerDrawerContent(props) {
             onPress={() => navigate(item.route)}
           >
             <MaterialCommunityIcons name={item.icon} size={20} color={colors.primary} />
-            <Text style={styles.menuText}>{item.label}</Text>
+            <Text style={styles.menuText}>{t(item.label)}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={styles.version}>{t('Version 1.0.0')}</Text>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <MaterialCommunityIcons name="logout" size={20} color={colors.error} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('Logout')}</Text>
         </TouchableOpacity>
       </View>
     </DrawerContentScrollView>

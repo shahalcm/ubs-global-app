@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 const statusStyles = {
   Pending: { backgroundColor: '#fff4e5', color: '#b26f00' },
@@ -11,6 +12,7 @@ const statusStyles = {
 };
 
 export default function OrderCard({ order, onPressAction }) {
+  const { t } = useTranslation();
   const statusStyle = statusStyles[order.status] || statusStyles.Pending;
 
   return (
@@ -23,7 +25,7 @@ export default function OrderCard({ order, onPressAction }) {
         <Image source={{ uri: order.image }} style={styles.thumb} />
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{order.product}</Text>
-          <Text style={styles.quantity}>Qty {order.quantity} • ${order.price}</Text>
+          <Text style={styles.quantity}>{t('Qty')} {order.quantity} • ${order.price}</Text>
         </View>
       </View>
       <View style={styles.customerRow}>
@@ -35,25 +37,25 @@ export default function OrderCard({ order, onPressAction }) {
       </View>
       <View style={styles.bottomRow}>
         <View style={[styles.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}> 
-          <Text style={[styles.statusText, { color: statusStyle.color }]}>{order.status}</Text>
+          <Text style={[styles.statusText, { color: statusStyle.color }]}>{t(order.status)}</Text>
         </View>
         <View style={styles.actions}> 
           {order.status === 'Pending' ? (
             <>
               <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={() => onPressAction('accept')}>
-                <Text style={styles.buttonLabel}>Accept</Text>
+                <Text style={styles.buttonLabel}>{t('Accept')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={() => onPressAction('reject')}>
-                <Text style={[styles.buttonLabel, { color: colors.error }]}>Reject</Text>
+                <Text style={[styles.buttonLabel, { color: colors.error }]}>{t('Reject')}</Text>
               </TouchableOpacity>
             </>
           ) : order.status === 'Confirmed' ? (
             <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={() => onPressAction('ship')}>
-              <Text style={[styles.buttonLabel, { color: '#fff' }]}>Mark Shipped</Text>
+              <Text style={[styles.buttonLabel, { color: '#fff' }]}>{t('Mark Shipped')}</Text>
             </TouchableOpacity>
           ) : order.status === 'Shipped' ? (
             <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={() => onPressAction('track')}>
-              <Text style={styles.buttonLabel}>Track</Text>
+              <Text style={styles.buttonLabel}>{t('Track')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
