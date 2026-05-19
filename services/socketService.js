@@ -2,10 +2,7 @@ import { io } from 'socket.io-client'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
-const baseApiUrl = process.env.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL.replace('/api', '') : ''
-const SOCKET_URL = baseApiUrl || (__DEV__
-  ? 'https://ubs-global-server.onrender.com'
-  : 'https://your-production-url.railway.app')
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'https://ubs-global-server.onrender.com'
 
 let socket = null
 

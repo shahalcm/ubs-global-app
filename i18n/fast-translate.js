@@ -1,14 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const delay = ms => new Promise(res => setTimeout(res, ms));
-
 async function translateText(text, targetLang) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
   const data = await response.json();
   let translatedText = '';
   if (data && data[0]) {
@@ -19,6 +15,22 @@ async function translateText(text, targetLang) {
   return translatedText || text;
 }
 
+// Simple concurrency limiter
+async function runWithConcurrency(tasks, concurrency) {
+  const results = [];
+  const executing = [];
+  for (const task of tasks) {
+    const p = task();
+    results.push(p);
+    const e = p.finally(() => executing.splice(executing.indexOf(e), 1));
+    executing.push(e);
+    if (executing.length >= concurrency) {
+      await Promise.race(executing);
+    }
+  }
+  return Promise.all(results);
+}
+
 (async () => {
   const enPath = path.join(__dirname, 'en.json');
   const enData = JSON.parse(fs.readFileSync(enPath, 'utf8'));
@@ -27,47 +39,48 @@ async function translateText(text, targetLang) {
   const langs = ['de', 'es', 'fr', 'hi', 'ja', 'ml', 'ru', 'tr', 'ur', 'zh'];
   
   for (const lang of langs) {
-    console.log(`\nTranslating to ${lang}...`);
+    console.log(`Translating to ${lang}...`);
     const langPath = path.join(__dirname, `${lang}.json`);
     let langData = {};
     if (fs.existsSync(langPath)) {
       langData = JSON.parse(fs.readFileSync(langPath, 'utf8'));
     }
     
-    let translatedCount = 0;
+    const tasks = [];
+    let toTranslate = 0;
+
     for (const key of keys) {
       if (typeof enData[key] !== 'string') continue;
       
-      // Skip strings that look like pure identifiers/placeholders or don't need translation
       if (key === '000-000-0000' || key === '0000 0000 0000 0000' || key === '•••' || key === '••••••••' || key === 'email@ubsglobal.com') {
         langData[key] = enData[key];
         continue;
       }
 
-      // Check if it's currently English
       if (!langData[key] || langData[key] === key || langData[key] === enData[key]) {
-        try {
-          const result = await translateText(enData[key], lang);
-          langData[key] = result;
-          translatedCount++;
-          process.stdout.write('.');
-          await delay(200); // 200ms delay to prevent rate limit
-        } catch (e) {
-          console.error(`\nError translating [${key}] to ${lang}:`, e.message);
-          langData[key] = enData[key]; // fallback to english
-          await delay(2000); 
-        }
+        toTranslate++;
+        tasks.push(async () => {
+          try {
+            const result = await translateText(enData[key], lang);
+            langData[key] = result;
+          } catch (e) {
+            langData[key] = enData[key];
+          }
+        });
       }
     }
     
-    // Sort keys alphabetically
+    if (toTranslate > 0) {
+      await runWithConcurrency(tasks, 15);
+    }
+
     const sortedData = {};
     Object.keys(langData).sort().forEach(k => {
       sortedData[k] = langData[k];
     });
 
     fs.writeFileSync(langPath, JSON.stringify(sortedData, null, 2) + '\n');
-    console.log(`\nFinished ${lang} with ${translatedCount} new translations`);
+    console.log(`Finished ${lang} with ${toTranslate} new translations.`);
   }
-  console.log('\nAll done!');
+  console.log('All done!');
 })();
