@@ -4,7 +4,7 @@ import { Platform } from 'react-native'
 
 const baseApiUrl = process.env.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL.replace('/api', '') : ''
 const SOCKET_URL = baseApiUrl || (__DEV__
-  ? 'http://192.168.1.33:5000'
+  ? 'https://ubs-global-server.onrender.com'
   : 'https://your-production-url.railway.app')
 
 let socket = null

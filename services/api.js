@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__
-  ? 'http://192.168.1.33:5000/api'
+  ? 'https://ubs-global-server.onrender.com/api'
   : 'https://your-production-url.railway.app/api')
 
 const api = axios.create({
