@@ -1,5 +1,5 @@
 // app/(buyer)/products.jsx
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -7,14 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  FlatList,
   SafeAreaView,
-  Dimensions,
 } from 'react-native'
 import { router } from 'expo-router'
-
-const { width } = Dimensions.get('window')
-const CARD_WIDTH = (width - 48) / 2
+import { getCategoryImage } from '../../constants/categories'
+import api from '../../services/api'
 
 const CATEGORIES = [
   {
@@ -93,38 +90,44 @@ const CATEGORIES = [
     id: '13',
     name: 'Spare Parts',
     count: '3.1k+ Products',
-    image: require("../../assets/images/spare_parts.png"),
+    image: 'Spare Parts',
   },
   {
     id: '14',
     name: 'Perfumes',
     count: '1.2k+ Products',
-    image: require("../../assets/images/perfumes.jpg"),
+    image: 'Perfumes',
   },
 ]
 
-const renderCategory = ({ item }) => (
-  <TouchableOpacity
-    style={styles.categoryCard}
-    onPress={() => router.push({
-      pathname: '/(buyer)/product-listing',
-      params: { category: item.name },
-    })}
-    activeOpacity={0.85}
-  >
-    <Image
-      source={typeof item.image === 'string' ? { uri: item.image } : item.image}
-      style={styles.categoryImage}
-      resizeMode="cover"
-    />
-    <View style={styles.categoryInfo}>
-      <Text style={styles.categoryName}>{item.name}</Text>
-      <Text style={styles.categoryCount}>{item.count}</Text>
-    </View>
-  </TouchableOpacity>
-)
-
 export default function ProductsScreen() {
+  const [categories, setCategories] = useState(CATEGORIES)
+
+  useEffect(() => {
+    loadCategories()
+  }, [])
+
+  const loadCategories = async () => {
+    try {
+      const res = await api.get('/categories')
+      if (res?.data?.categories) {
+        const apiCategories = res.data.categories
+        const merged = [...CATEGORIES]
+        apiCategories.forEach(apiCat => {
+          const index = merged.findIndex(c => c.name.toLowerCase() === apiCat.name.toLowerCase())
+          if (index !== -1) {
+            merged[index] = { ...merged[index], ...apiCat }
+          } else {
+            merged.push(apiCat)
+          }
+        })
+        setCategories(merged)
+      }
+    } catch (error) {
+      console.log('Products load error:', error)
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
 
@@ -155,15 +158,29 @@ export default function ProductsScreen() {
         </View>
 
         {/* Categories Grid */}
-        <FlatList
-          data={CATEGORIES}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          scrollEnabled={false}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.grid}
-        />
+        <View style={styles.gridContainer}>
+          {categories.map((item) => (
+            <TouchableOpacity
+              key={item._id || item.id || item.name}
+              style={styles.categoryCard}
+              onPress={() => router.push({
+                pathname: '/(buyer)/product-listing',
+                params: { category: item.name },
+              })}
+              activeOpacity={0.85}
+            >
+              <Image
+                source={getCategoryImage(item.name, item.image)}
+                style={styles.categoryImage}
+                resizeMode="cover"
+              />
+              <View style={styles.categoryInfo}>
+                <Text style={styles.categoryName}>{item.name}</Text>
+                <Text style={styles.categoryCount}>{item.count || 'View Products'}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {/* Can't find card */}
         <View style={styles.findCard}>
@@ -179,10 +196,7 @@ export default function ProductsScreen() {
           </TouchableOpacity>
         </View>
 
-
       </ScrollView>
-
-
 
     </SafeAreaView>
   )
@@ -220,7 +234,7 @@ const styles = StyleSheet.create({
   },
 
   scroll: {
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
 
   // Page Header
@@ -243,22 +257,22 @@ const styles = StyleSheet.create({
   },
 
   // Grid
-  grid: {
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 16,
-  },
-  row: {
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
 
   // Category Card
   categoryCard: {
-    width: CARD_WIDTH,
+    width: '48%',
     backgroundColor: '#fff',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#eee',
+    marginBottom: 16,
   },
   categoryImage: {
     width: '100%',

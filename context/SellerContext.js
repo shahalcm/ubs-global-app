@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '../services/api';
-import { socket } from '../services/socketService';
+import api from '../services/api';
+import { getSocket } from '../services/socketService';
 
 const SellerContext = createContext(null);
 
@@ -43,10 +43,10 @@ function reducer(state, action) {
     case 'UPDATE_PRODUCT':
       return {
         ...state,
-        products: state.products.map((item) => (item.id === action.payload.id ? action.payload : item)),
+        products: state.products.map((item) => ((item._id || item.id) === (action.payload._id || action.payload.id) ? action.payload : item)),
       };
     case 'DELETE_PRODUCT':
-      return { ...state, products: state.products.filter((item) => item.id !== action.payload) };
+      return { ...state, products: state.products.filter((item) => (item._id || item.id) !== action.payload) };
     case 'UPDATE_ORDER':
       return {
         ...state,
@@ -90,7 +90,7 @@ export function SellerProvider({ children }) {
         api.get('/notifications'),
       ]);
       dispatch({ type: 'SET_STATS', payload: statsRes.data });
-      dispatch({ type: 'SET_PRODUCTS', payload: productsRes.data });
+      dispatch({ type: 'SET_PRODUCTS', payload: productsRes.data.products || [] });
       dispatch({ type: 'SET_ORDERS', payload: ordersRes.data });
       dispatch({ type: 'SET_MESSAGES', payload: messagesRes.data || [] });
       dispatch({ type: 'SET_NOTIFICATIONS', payload: notificationsRes.data || [] });
@@ -163,16 +163,18 @@ export function SellerProvider({ children }) {
   useEffect(() => {
     loadProfile();
     loadDashboard();
-    if (socket) {
-      socket.on('newOrder', loadDashboard);
-      socket.on('receiveMessage', loadDashboard);
-      socket.on('orderStatusChanged', loadDashboard);
+    const activeSocket = getSocket();
+    if (activeSocket) {
+      activeSocket.on('newOrder', loadDashboard);
+      activeSocket.on('receiveMessage', loadDashboard);
+      activeSocket.on('orderStatusChanged', loadDashboard);
     }
     return () => {
-      if (socket) {
-        socket.off('newOrder', loadDashboard);
-        socket.off('receiveMessage', loadDashboard);
-        socket.off('orderStatusChanged', loadDashboard);
+      const activeSocket = getSocket();
+      if (activeSocket) {
+        activeSocket.off('newOrder', loadDashboard);
+        activeSocket.off('receiveMessage', loadDashboard);
+        activeSocket.off('orderStatusChanged', loadDashboard);
       }
     };
   }, [loadDashboard, loadProfile]);

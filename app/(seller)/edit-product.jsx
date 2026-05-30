@@ -1,29 +1,42 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, router } from 'expo-router';
 import SellerHeader from '../../components/seller/SellerHeader';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
 
 export default function EditProduct() {
-  const { products, updateProduct } = useSeller();
-  const [product, setProduct] = useState(products?.[0] || null);
+  const { products, updateProduct, deleteProduct } = useSeller();
+  const { id } = useLocalSearchParams();
+  const [product, setProduct] = useState(null);
   const [form, setForm] = useState({ title: '', description: '', sku: '', price: '', comparePrice: '', cost: '', category: '', subcategory: '', stock: '10', alertThreshold: '3', inStock: true, weight: '', length: '', width: '', height: '', freeShipping: false, shippingFee: '' });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (id && products) {
+      const found = products.find((item) => (item._id || item.id) === id);
+      if (found) {
+        setProduct(found);
+      }
+    } else if (products && products.length > 0) {
+      setProduct(products[0]);
+    }
+  }, [id, products]);
+
+  useEffect(() => {
     if (product) {
       setForm({
-        title: product.name || '',
+        title: product.title || product.name || '',
         description: product.description || '',
         sku: product.sku || '',
         price: String(product.price || ''),
         comparePrice: String(product.comparePrice || ''),
         cost: String(product.cost || ''),
-        category: product.category || '',
+        category: product.category?.name || product.category || '',
         subcategory: product.subcategory || '',
         stock: String(product.stock ?? 0),
         alertThreshold: String(product.alertThreshold ?? 3),
@@ -51,13 +64,44 @@ export default function EditProduct() {
     setLoading(true);
     setError(null);
     try {
-      await updateProduct(product.id, { ...form, images });
-      alert('Product updated successfully.');
+      await updateProduct(product._id || product.id, { ...form, images });
+      Alert.alert('Success', 'Product updated successfully.', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
     } catch (err) {
       setError(err.message || 'Update failed.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!product) return;
+    Alert.alert(
+      'Delete Product',
+      'Are you sure you want to delete this product?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              await deleteProduct(product._id || product.id);
+              Alert.alert('Success', 'Product deleted successfully.', [
+                { text: 'OK', onPress: () => router.back() }
+              ]);
+            } catch (err) {
+              setError(err.message || 'Delete failed.');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -87,8 +131,8 @@ export default function EditProduct() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Category</Text>
-          <TouchableOpacity style={styles.input} onPress={() => alert('Select category')}><Text style={styles.selectLabel}>{form.category || 'Select category'}</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.input} onPress={() => alert('Select subcategory')}><Text style={styles.selectLabel}>{form.subcategory || 'Select subcategory'}</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.input} onPress={() => Alert.alert('Select category')}><Text style={styles.selectLabel}>{form.category || 'Select category'}</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.input} onPress={() => Alert.alert('Select subcategory')}><Text style={styles.selectLabel}>{form.subcategory || 'Select subcategory'}</Text></TouchableOpacity>
         </View>
 
         <View style={styles.card}>
@@ -105,7 +149,7 @@ export default function EditProduct() {
           {!form.freeShipping && <TextInput style={styles.input} placeholder="Shipping fee" keyboardType="decimal-pad" value={form.shippingFee} onChangeText={(shippingFee) => setForm({ ...form, shippingFee })} />}
         </View>
 
-        <TouchableOpacity style={styles.deleteButton}><MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} /><Text style={styles.deleteLabel}>Delete Product</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} disabled={loading}><MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} /><Text style={styles.deleteLabel}>Delete Product</Text></TouchableOpacity>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={loading}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveLabel}>Update Product</Text>}</TouchableOpacity>
       </ScrollView>

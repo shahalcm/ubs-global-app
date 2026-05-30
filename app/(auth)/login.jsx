@@ -1,22 +1,30 @@
 // app/(auth)/login.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Modal,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { sendOTP } from '../../services/authService'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../../context/AuthContext'
+import * as WebBrowser from 'expo-web-browser'
+import * as Google from 'expo-auth-session/providers/google'
+import * as AuthSession from 'expo-auth-session'
+import { Ionicons } from '@expo/vector-icons'
+
+WebBrowser.maybeCompleteAuthSession()
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -40,6 +48,77 @@ export default function LoginScreen() {
   const [showPicker, setShowPicker] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const { loginWithGoogle } = useAuth()
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  // Configure Google Auth Request (fall back to web client ID and force useProxy to make it work in Expo Go)
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '522208568376-placeholder.apps.googleusercontent.com'
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || webClientId,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || webClientId,
+    projectNameForProxy: '@shahalsonu1818/client',
+    useProxy: true,
+    redirectUri: 'https://auth.expo.io/@shahalsonu1818/client',
+  })
+
+  // Log the redirect URI so the developer can copy-paste it into Google Cloud Console
+  useEffect(() => {
+    if (request?.redirectUri) {
+      console.log('====== GOOGLE OAUTH REDIRECT URI ======')
+      console.log(request.redirectUri)
+      console.log('=======================================')
+    }
+  }, [request])
+
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const idToken = response.authentication?.idToken || response.params?.id_token
+      if (idToken) {
+        handleGoogleAuthSuccess(idToken)
+      } else {
+        setGoogleLoading(false)
+        Alert.alert(t('Error'), t('Failed to retrieve authentication token from Google.'))
+      }
+    } else if (response?.type === 'error') {
+      setGoogleLoading(false)
+      Alert.alert(t('Error'), response.error?.message || t('Google sign in error.'))
+    }
+  }, [response])
+
+  const handleGoogleAuthSuccess = async (idToken) => {
+    setGoogleLoading(true)
+    try {
+      const result = await loginWithGoogle(idToken)
+      if (result?.success) {
+        router.replace('/(auth)/role-select')
+      }
+    } catch (error) {
+      console.error('Firebase/Backend Google Login Error:', error)
+      Alert.alert(t('Error'), t('Failed to authenticate with Google. Please try again.'))
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true)
+    try {
+      const result = await promptAsync({
+        useProxy: true,
+        projectNameForProxy: '@shahalsonu1818/client',
+      })
+      if (result?.type !== 'success') {
+        setGoogleLoading(false)
+      }
+    } catch (error) {
+      console.error('Google login trigger error:', error)
+      setGoogleLoading(false)
+      Alert.alert(t('Error'), t('Failed to launch Google authentication.'))
+    }
+  }
+
   const handleContinue = async () => {
     if (!phone || phone.length < 7) return
     setLoading(true)
@@ -55,14 +134,6 @@ export default function LoginScreen() {
       Alert.alert(t('Error'), t('Failed to send OTP. Please try again.'))
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleGoogleLogin = async () => {
-    try {
-      // google sign in logic here
-    } catch (error) {
-      console.log(error)
     }
   }
 
@@ -131,14 +202,18 @@ export default function LoginScreen() {
 
             {/* Google Button */}
             <TouchableOpacity
-              style={styles.googleBtn}
+              style={[styles.googleBtn, (googleLoading || loading) && { opacity: 0.6 }]}
               onPress={handleGoogleLogin}
+              disabled={googleLoading || loading}
             >
-              {/* Google G icon using colored text */}
-              <View style={styles.googleIconBox}>
-                <Text style={styles.googleIconText}>G</Text>
-              </View>
-              <Text style={styles.googleBtnText}>{t('Continue with Google')}</Text>
+              {googleLoading ? (
+                <ActivityIndicator color="#1a237e" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={18} color="#4285F4" />
+                  <Text style={styles.googleBtnText}>{t('Continue with Google')}</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Sign Up Link */}

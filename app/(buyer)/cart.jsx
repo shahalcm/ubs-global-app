@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +8,7 @@ import { getCart, removeFromCart, updateCartItem } from '../../services/cartServ
 
 export default function CartScreen() {
   const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
   const [cartData, setCartData] = useState({ items: [], subtotal: 0, shippingTotal: 0, tax: 0, grandTotal: 0 })
   const [loading, setLoading] = useState(true)
 
@@ -48,7 +49,7 @@ export default function CartScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>{t('Shopping Cart')} ({cartData.items.length})</Text>

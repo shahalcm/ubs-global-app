@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import RazorpayCheckout from 'react-native-razorpay'
 import { verifyPayment } from '../../services/paymentService'
@@ -7,34 +8,42 @@ import { useAuth } from '../../context/AuthContext'
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function PaymentScreen() {
+  const insets = useSafeAreaInsets()
   const { user } = useAuth()
   const { razorpayOrderId, amount, orderId, orderNumber, grandTotal, key } = useLocalSearchParams()
   const [loading, setLoading] = useState(false)
 
   const handlePayNow = async () => {
-    const options = {
-      description: `UBS Global Order #${orderNumber}`,
-      image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
-      currency: 'USD',
-      key: key,
-      amount: amount,
-      name: 'UBS Global',
-      order_id: razorpayOrderId,
-      prefill: {
-        email: user?.email || '',
-        contact: user?.phone || '',
-        name: user?.name || ''
-      },
-      theme: { color: '#1a237e' }
-    }
-
     setLoading(true)
     try {
-      const data = await RazorpayCheckout.open(options)
+      let paymentId = 'pay_mock_' + Math.random().toString(36).substring(7)
+      let signature = 'sig_mock_' + Math.random().toString(36).substring(7)
+
+      if (key && key !== 'rzp_test_your_key_id' && razorpayOrderId && !razorpayOrderId.startsWith('order_mock_')) {
+        const options = {
+          description: `UBS Global Order #${orderNumber}`,
+          image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
+          currency: 'USD',
+          key: key,
+          amount: amount,
+          name: 'UBS Global',
+          order_id: razorpayOrderId,
+          prefill: {
+            email: user?.email || '',
+            contact: user?.phone || '',
+            name: user?.name || ''
+          },
+          theme: { color: '#1a237e' }
+        }
+        const data = await RazorpayCheckout.open(options)
+        paymentId = data.razorpay_payment_id
+        signature = data.razorpay_signature
+      }
+
       const verifyRes = await verifyPayment({
         razorpayOrderId: razorpayOrderId,
-        razorpayPaymentId: data.razorpay_payment_id,
-        razorpaySignature: data.razorpay_signature,
+        razorpayPaymentId: paymentId,
+        razorpaySignature: signature,
         orderId: orderId
       })
 
@@ -55,6 +64,7 @@ export default function PaymentScreen() {
       if (error.code === 2 || error.code === 0) {
         Alert.alert('Cancelled', 'Payment was cancelled')
       } else {
+        console.log('Payment error details:', error)
         Alert.alert('Failed', 'Payment failed. Please try again.')
       }
     } finally {
@@ -91,7 +101,7 @@ export default function PaymentScreen() {
         </View>
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 20 }]}>
         <TouchableOpacity style={styles.payBtn} onPress={handlePayNow} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Pay Now ${grandTotal}</Text>}
         </TouchableOpacity>

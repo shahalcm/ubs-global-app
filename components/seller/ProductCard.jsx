@@ -18,15 +18,25 @@ export default function ProductCard({ product, onEdit, onDelete }) {
     </View>
   );
 
+  const imageUrl = (product.images && product.images.length > 0)
+    ? product.images[0]
+    : (product.image || 'https://via.placeholder.com/150');
+  const displayTitle = product.title || product.name || '';
+  const displayCategory = product.category?.name || product.category || t('Uncategorized');
+
   return (
     <Swipeable renderRightActions={rightActions}>
       <View style={styles.card}>
-        <Image source={{ uri: product.image }} style={styles.image} />
+        <Image source={{ uri: imageUrl }} style={styles.image} />
         <View style={styles.info}>
-          <Text style={styles.title}>{product.name}</Text>
-          <View style={styles.badge}><Text style={styles.badgeText}>{product.category}</Text></View>
+          <Text style={styles.title}>{displayTitle}</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{displayCategory}</Text>
+          </View>
           <Text style={styles.price}>${product.price}</Text>
-          <Text style={[styles.stock, product.stock > 0 ? styles.inStock : styles.outStock]}>{product.stock > 0 ? t('In Stock') : t('Out of Stock')}</Text>
+          <Text style={[styles.stock, product.stock > 0 ? styles.inStock : styles.outStock]}>
+            {product.stock > 0 ? t('In Stock') : t('Out of Stock')}
+          </Text>
           <View style={styles.buttonsRow}>
             <TouchableOpacity style={styles.outlineButton} onPress={onEdit}>
               <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />

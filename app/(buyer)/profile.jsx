@@ -21,8 +21,11 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login')
   }
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 90 }]}
+      >
         
         {/* Profile Header */}
         <View style={styles.profileHeader}>

@@ -37,7 +37,7 @@ export default function WishlistScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>{t('My Wishlist')} ({products.length})</Text>
@@ -53,7 +53,10 @@ export default function WishlistScreen() {
           <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/(buyer)/home')}><Text style={styles.browseBtnText}>{t('Browse Products')}</Text></TouchableOpacity>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 90 }]}
+        >
           <View style={styles.grid}>
             {products.map((item) => (
               <View key={item._id} style={styles.card}>

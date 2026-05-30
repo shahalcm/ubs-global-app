@@ -1,11 +1,26 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { colors } from '../../constants/colors';
+import { getCategoryImage } from '../../constants/categories';
 
-export function CategoryCard({ label, onPress }) {
+export function CategoryCard({ label, image, onPress, variant = 'circle' }) {
+  if (variant === 'pill') {
+    return (
+      <TouchableOpacity style={styles.pill} onPress={onPress} activeOpacity={0.85}>
+        <Text style={styles.label}>{label}</Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
-    <TouchableOpacity style={styles.pill} onPress={onPress} activeOpacity={0.85}>
-      <Text style={styles.label}>{label}</Text>
+    <TouchableOpacity style={styles.categoryItem} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.categoryCircle}>
+        <Image
+          source={getCategoryImage(label, image)}
+          style={styles.categoryImage}
+        />
+      </View>
+      <Text style={styles.categoryName} numberOfLines={2}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -20,6 +35,31 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: { fontSize: 14, fontWeight: '500', color: colors.primary },
+  categoryItem: {
+    width: "25%",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingHorizontal: 2,
+  },
+  categoryCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: "hidden",
+    backgroundColor: "#e8ecf4",
+    marginBottom: 6,
+  },
+  categoryImage: {
+    width: "100%",
+    height: "100%",
+  },
+  categoryName: {
+    fontSize: 11,
+    color: "#444",
+    textAlign: "center",
+    lineHeight: 15,
+  },
 });
 
 export default CategoryCard;
+

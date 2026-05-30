@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Image,
   Alert,
@@ -14,10 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import { Picker } from '@react-native-picker/picker'
 import api from '../../services/api'
+import { useSeller } from '../../context/SellerContext'
 
 const CATEGORIES = [
   { label: 'Select Category', value: '' },
@@ -38,6 +39,7 @@ const CATEGORIES = [
 ]
 
 export default function AddProductScreen() {
+  const { loadDashboard } = useSeller()
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -182,9 +184,10 @@ export default function AddProductScreen() {
       )
 
       if (response.data.success) {
+        loadDashboard()
         Alert.alert(
-          '✅ Product Submitted!',
-          'Your product has been submitted for admin approval. It will be visible to buyers once approved.',
+          '✅ Product Created!',
+          'Your product has been created and is now visible to buyers.',
           [
             {
               text: 'Add Another',
@@ -383,7 +386,7 @@ export default function AddProductScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            <Text style={styles.helperText}>Customers won't see this</Text>
+            <Text style={styles.helperText}>{"Customers won't see this"}</Text>
           </View>
 
           {/* CATEGORY SECTION */}

@@ -1,29 +1,53 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import SellerHeader from '../../components/seller/SellerHeader';
 import ProductCard from '../../components/seller/ProductCard';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
+import { SellerProductCardSkeleton } from '../../components/seller/SellerSkeleton';
 
 const filters = ['All', 'Active', 'Out of Stock', 'Draft', 'Featured'];
 
 export default function MyProducts() {
-  const { products, loading, deleteProduct } = useSeller();
+  const { products, loading, deleteProduct, loadDashboard } = useSeller();
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadDashboard();
+    } catch (error) {
+      console.error('Error refreshing products:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadDashboard]);
 
   const filteredProducts = useMemo(() => {
     let list = products || [];
-    if (activeFilter === 'Active') list = list.filter((item) => item.stock > 0);
+    if (activeFilter === 'Active') list = list.filter((item) => item.status === 'active' && item.stock > 0);
     if (activeFilter === 'Out of Stock') list = list.filter((item) => item.stock === 0);
-    if (search) list = list.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
+    if (activeFilter === 'Draft') list = list.filter((item) => item.status === 'draft');
+    if (activeFilter === 'Featured') list = list.filter((item) => item.isFeatured === true);
+    if (search) {
+      list = list.filter((item) => 
+        (item.title || item.name || '').toLowerCase().includes(search.toLowerCase())
+      );
+    }
     return list;
   }, [products, activeFilter, search]);
 
-  if (loading) {
-    return <ActivityIndicator style={styles.loader} size="large" color={colors.primary} />;
-  }
+  const handleDelete = useCallback(async (id) => {
+    try {
+      await deleteProduct(id);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
+  }, [deleteProduct]);
 
   return (
     <View style={styles.screen}>
@@ -41,16 +65,32 @@ export default function MyProducts() {
           ))}
         </View>
 
-        <FlatList
-          data={filteredProducts}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <ProductCard product={item} onEdit={() => {}} onDelete={() => deleteProduct(item.id)} />
-          )}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No products found. Add a new product to get started.</Text>}
-        />
-        <TouchableOpacity style={styles.fab}>
+        {loading && (!products || products.length === 0) ? (
+          <View style={{ gap: 16 }}>
+            <SellerProductCardSkeleton />
+            <SellerProductCardSkeleton />
+            <SellerProductCardSkeleton />
+            <SellerProductCardSkeleton />
+          </View>
+        ) : (
+          <FlatList
+            data={filteredProducts}
+            keyExtractor={(item, index) => (item._id || item.id || index).toString()}
+            renderItem={({ item }) => (
+              <ProductCard 
+                product={item} 
+                onEdit={() => router.push({ pathname: '/(seller)/edit-product', params: { id: item._id || item.id } })} 
+                onDelete={() => handleDelete(item._id || item.id)} 
+              />
+            )}
+            contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+            }
+            ListEmptyComponent={<Text style={styles.empty}>No products found. Add a new product to get started.</Text>}
+          />
+        )}
+        <TouchableOpacity style={styles.fab} onPress={() => router.push('/(seller)/add-product')}>
           <MaterialCommunityIcons name="plus" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -69,7 +109,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 13, color: '#676767' },
   chipTextActive: { color: '#fff' },
-  list: { paddingBottom: 20 },
+  list: { paddingBottom: 100 },
   empty: { fontSize: 14, color: '#7a7a7a', textAlign: 'center', marginTop: 40 },
   fab: { position: 'absolute', right: 24, bottom: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 12, elevation: 7 },
 });

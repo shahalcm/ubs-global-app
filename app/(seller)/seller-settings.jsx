@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Switch, FlatList } from 'reac
 import SellerHeader from '../../components/seller/SellerHeader';
 import { colors } from '../../constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const sections = [
   {
@@ -12,6 +13,7 @@ const sections = [
       { label: 'Shop Description', icon: 'text-box-outline', value: 'Import & export marketplace' },
       { label: 'Business Hours', icon: 'clock-outline', value: '9 AM - 9 PM' },
       { label: 'Holiday Mode', icon: 'briefcase-off-outline', toggle: true, stateKey: 'holidayMode' },
+      { label: 'AI Bot Settings', icon: 'robot', route: '/(seller)/bot-settings' },
     ],
   },
   {
@@ -43,6 +45,7 @@ const sections = [
 ];
 
 export default function SellerSettings() {
+  const router = useRouter();
   const [toggles, setToggles] = useState({ holidayMode: false, orderAlerts: true, messageAlerts: true, paymentAlerts: true, promotional: false, twoFactor: true });
 
   const handleToggle = (key) => setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -57,7 +60,18 @@ export default function SellerSettings() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{item.title}</Text>
             {item.items.map((row) => (
-              <TouchableOpacity key={row.label} style={styles.row} activeOpacity={row.toggle ? 1 : 0.7} onPress={() => !row.toggle && alert(row.label)}>
+              <TouchableOpacity
+                key={row.label}
+                style={styles.row}
+                activeOpacity={row.toggle ? 1 : 0.7}
+                onPress={() => {
+                  if (row.route) {
+                    router.push(row.route)
+                  } else if (!row.toggle) {
+                    alert(row.label)
+                  }
+                }}
+              >
                 <View style={styles.rowLeft}>
                   <View style={[styles.iconWrap, { backgroundColor: '#eef2ff' }]}>
                     <MaterialCommunityIcons name={row.icon} size={20} color={colors.primary} />

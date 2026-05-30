@@ -1,5 +1,4 @@
-// app/(buyer)/home.jsx
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import api from "../../services/api";
+import { CategoryCard } from "../../components/shared/CategoryCard";
 
 const { width } = Dimensions.get("window");
 
@@ -62,19 +63,19 @@ const CATEGORIES = [
   },
   {
     id: "8",
-    name: "Home &\nKitchen",
+    name: "Home & Kitchen",
     image:
       "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&q=80",
   },
   {
     id: "9",
     name: "Spare Parts",
-    image: require("../../assets/images/spare_parts.png"),
+    image: "Spare Parts",
   },
   {
     id: "10",
     name: "Perfumes",
-    image: require("../../assets/images/perfumes.jpg"),
+    image: "Perfumes",
   },
   {
     id: "11",
@@ -90,7 +91,7 @@ const CATEGORIES = [
   },
   {
     id: "13",
-    name: "Building\nMaterials",
+    name: "Building Materials",
     image:
       "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200&q=80",
   },
@@ -159,9 +160,7 @@ const BANNERS = [
   },
 ];
 
-import { getCategories } from "../../services/categoryService";
-import { getProducts } from "../../services/productService";
-import api from "../../services/api";
+
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -169,49 +168,46 @@ export default function HomeScreen() {
   const [activeBanner, setActiveBanner] = useState(0);
   const [categories, setCategories] = useState(CATEGORIES);
   const [featuredProducts, setFeaturedProducts] = useState(FEATURED_PRODUCTS);
-  const [loading, setLoading] = useState(false);
 
+  const handleSearch = () => {
+    if (!search.trim()) return;
+    router.push({
+      pathname: "/(buyer)/product-listing",
+      params: { search: search.trim() },
+    });
+  };
   React.useEffect(() => {
     loadHomeData();
   }, []);
 
   const loadHomeData = async () => {
     try {
-      setLoading(true);
       const [categoriesRes, productsRes] = await Promise.all([
         api.get('/categories'),
         api.get('/products?limit=10&sort=newest')
       ]);
-      if (categoriesRes?.data?.categories) setCategories(categoriesRes.data.categories);
+      if (categoriesRes?.data?.categories) {
+        const apiCategories = categoriesRes.data.categories;
+        const merged = [...CATEGORIES];
+        apiCategories.forEach(apiCat => {
+          const index = merged.findIndex(c => 
+            c.name.replace(/\s+/g, ' ').toLowerCase() === apiCat.name.replace(/\s+/g, ' ').toLowerCase()
+          );
+          if (index !== -1) {
+            merged[index] = { ...merged[index], ...apiCat, name: merged[index].name };
+          } else {
+            merged.push(apiCat);
+          }
+        });
+        setCategories(merged);
+      }
       if (productsRes?.data?.products) setFeaturedProducts(productsRes.data.products);
     } catch (error) {
       console.log("Home load error:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const renderCategory = ({ item }) => (
-    <TouchableOpacity
-      style={styles.categoryItem}
-      onPress={() =>
-        router.push({
-          pathname: "/(buyer)/product-listing",
-          params: { category: item.name },
-        })
-      }
-    >
-      <View style={styles.categoryCircle}>
-        <Image
-          source={
-            typeof item.image === "string" ? { uri: item.image } : item.image
-          }
-          style={styles.categoryImage}
-        />
-      </View>
-      <Text style={styles.categoryName}>{t(item.name)}</Text>
-    </TouchableOpacity>
-  );
+
 
   const renderFeaturedProduct = ({ item }) => (
     <TouchableOpacity
@@ -242,7 +238,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Top Navigation Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.push("/(buyer)/drawer")}>
@@ -270,13 +266,17 @@ export default function HomeScreen() {
         {/* Search Bar */}
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <TouchableOpacity onPress={handleSearch}>
+              <Text style={styles.searchIcon}>🔍</Text>
+            </TouchableOpacity>
             <TextInput
               style={styles.searchInput}
               placeholder={t('search_placeholder')}
               placeholderTextColor="#aaa"
               value={search}
               onChangeText={setSearch}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
             />
           </View>
           <TouchableOpacity style={styles.filterBtn}>
@@ -286,15 +286,25 @@ export default function HomeScreen() {
 
         {/* Browse by Category */}
         <Text style={styles.sectionTitle}>{t('browse_category')}</Text>
-        <FlatList
-          data={categories}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item.id}
-          numColumns={4}
-          scrollEnabled={false}
-          columnWrapperStyle={styles.categoryRow}
-          contentContainerStyle={styles.categoryGrid}
-        />
+        <View style={styles.categoryGridContainer}>
+          {categories.map((item) => (
+            <CategoryCard
+              key={item._id || item.id || item.name}
+              label={t(item.name)}
+              image={item.image}
+              onPress={() => {
+                if (item.name && item.name.toLowerCase() === 'real estate') {
+                  router.push("/(buyer)/real-estate");
+                } else {
+                  router.push({
+                    pathname: "/(buyer)/product-listing",
+                    params: { category: item.name },
+                  });
+                }
+              }}
+            />
+          ))}
+        </View>
 
         {/* Banner Slider */}
         <ScrollView
@@ -303,7 +313,7 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => {
             const index = Math.round(
-              e.nativeEvent.contentOffset.x / (width - 40),
+              e.nativeEvent.contentOffset.x / (width - 32),
             );
             setActiveBanner(index);
           }}
@@ -348,7 +358,7 @@ export default function HomeScreen() {
         <FlatList
           data={featuredProducts}
           renderItem={renderFeaturedProduct}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => (item._id || item.id || index).toString()}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.featuredList}
@@ -383,7 +393,6 @@ export default function HomeScreen() {
   );
 }
 
-const ITEM_WIDTH = (width - 40) / 4;
 
 const styles = StyleSheet.create({
   container: {
@@ -442,7 +451,7 @@ const styles = StyleSheet.create({
 
   scroll: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 90,
   },
 
   // Search
@@ -513,17 +522,17 @@ const styles = StyleSheet.create({
   },
 
   // Categories
-  categoryGrid: {
-    paddingHorizontal: 16,
-  },
-  categoryRow: {
+  categoryGridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
     justifyContent: "flex-start",
-    gap: 0,
   },
   categoryItem: {
-    width: ITEM_WIDTH,
+    width: "25%",
     alignItems: "center",
     marginBottom: 16,
+    paddingHorizontal: 2,
   },
   categoryCircle: {
     width: 64,
@@ -551,7 +560,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   bannerCard: {
-    width: width - 40,
+    width: width - 32,
     height: 160,
     borderRadius: 16,
     overflow: "hidden",

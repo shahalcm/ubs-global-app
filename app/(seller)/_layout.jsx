@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Drawer } from 'expo-router/drawer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSegments } from 'expo-router';
 import { SellerProvider } from '../../context/SellerContext';
 import SellerDrawerContent from '../../components/seller/SellerDrawerContent';
 import SellerBottomNav from '../../components/seller/SellerBottomNav';
@@ -16,11 +17,17 @@ const hiddenDrawerOptions = {
 };
 
 export default function SellerLayout() {
+  const insets = useSafeAreaInsets();
+  const segments = useSegments();
+  const activeSegment = segments[segments.length - 1] || 'dashboard';
+  const hasBottomNav = !['become-seller', 'add-product', 'edit-product', 'order-details'].includes(activeSegment);
+  const bottomPadding = 70 + (insets.bottom > 0 ? insets.bottom - 8 : 0);
+
   return (
     <SellerProvider>
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-          <View style={styles.main}>
+          <View style={[styles.main, hasBottomNav && { paddingBottom: bottomPadding }]}>
             <Drawer
               drawerContent={(props) => <SellerDrawerContent {...props} />}
               screenOptions={{

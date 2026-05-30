@@ -11,12 +11,6 @@
 
     "userInterfaceStyle": "automatic",
 
-    "splash": {
-      "image": "./assets/images/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
-
     "ios": {
       "icon": "./assets/images/logo.png",
       "supportsTablet": true
@@ -24,6 +18,8 @@
 
     "android": {
       "package": "com.shahalsonu1818.client",
+
+      "googleServicesFile": "./google-services.json",
 
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
@@ -42,6 +38,15 @@
       "expo-router",
 
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
+
+      [
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "",
@@ -51,7 +56,15 @@
 
       "expo-localization",
 
-      "expo-web-browser"
+      "expo-web-browser",
+
+      [
+        "react-native-webrtc",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera.",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for voice calls."
+        }
+      ]
     ],
 
     "experiments": {

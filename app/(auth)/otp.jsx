@@ -18,7 +18,8 @@ import { verifyOTP, sendOTP, loginWithPhone } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
 
 export default function OTPScreen() {
-  const { phone } = useLocalSearchParams()
+  const { phone: rawPhone } = useLocalSearchParams()
+  const phone = rawPhone ? rawPhone.replace(/ /g, '+') : ''
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [timer, setTimer] = useState(30)
   const [canResend, setCanResend] = useState(false)

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Image, TextInput } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { getProduct } from '../../services/productService'
 import { createRazorpayOrder } from '../../services/paymentService'
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function OrderSummaryScreen() {
+  const insets = useSafeAreaInsets()
   const { productId, quantity, sellerId } = useLocalSearchParams()
   const [product, setProduct] = useState(null)
   const [address, setAddress] = useState({
@@ -75,7 +77,7 @@ export default function OrderSummaryScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}>
         <View style={styles.card}>
           <Image source={{uri: product.images[0]}} style={styles.pImg} />
           <View style={styles.pInfo}>
@@ -118,7 +120,7 @@ export default function OrderSummaryScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 16 }]}>
         <TouchableOpacity style={styles.payBtn} onPress={handleContinueToPayment} disabled={loading}>
           <Text style={styles.payBtnText}>{loading ? 'Processing...' : 'Continue to Payment →'}</Text>
         </TouchableOpacity>

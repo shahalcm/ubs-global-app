@@ -38,13 +38,13 @@ export default function MessagesScreen() {
   const filteredRooms = rooms.filter((room) => {
     const text = searchQuery.trim().toLowerCase()
     if (!text) return true
-    const sellerName = room.sellerId?.shopName || room.sellerName || ''
-    const productName = room.productId?.title || room.productName || ''
+    const sellerName = room.sellerId?.shopName || room.sellerId?.name || room.sellerName || ''
+    const productName = room.productId?.title || room.productName || room.meta?.propertyTitle || ''
     return sellerName.toLowerCase().includes(text) || productName.toLowerCase().includes(text)
   })
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -72,11 +72,14 @@ export default function MessagesScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 90 }]}
+      >
         {filteredRooms.length > 0 ? (
           filteredRooms.map((room) => {
-            const sellerName = room.sellerId?.shopName || room.sellerName || 'Seller'
-            const productName = room.productId?.title || room.productName || 'Product'
+            const sellerName = room.sellerId?.shopName || room.sellerId?.name || room.sellerName || 'Seller'
+            const productName = room.productId?.title || room.productName || room.meta?.propertyTitle || 'Product'
             const lastMessage = room.lastMessage?.text || room.lastMessage || 'Tap to continue the conversation.'
             const timeLabel = room.lastMessage?.createdAt
               ? new Date(room.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -94,7 +97,7 @@ export default function MessagesScreen() {
               >
                 <View style={styles.avatarContainer}>
                   <Image
-                    source={{ uri: room.sellerId?.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&q=80' }}
+                    source={{ uri: room.sellerId?.avatar || room.sellerId?.shopLogo || room.meta?.propertyImage || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&q=80' }}
                     style={styles.avatar}
                   />
                   <View style={styles.onlineDot} />

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { getProducts } from '../../services/productService'
+import { ProductGridSkeleton } from '../../components/buyer/BuyerSkeleton'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -89,17 +90,18 @@ const getCategoryData = (category) => {
 }
 
 export default function ProductListingScreen() {
-  const { category } = useLocalSearchParams()
-  const categoryData = getCategoryData(category)
+  const { category, search } = useLocalSearchParams()
+  const categoryData = getCategoryData(category || search)
   const [activeTab, setActiveTab] = useState(categoryData.subcategories[0])
   const [wishlist, setWishlist] = useState({})
   const [products, setProducts] = useState([])
   const [pagination, setPagination] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isRelated, setIsRelated] = useState(false)
 
   React.useEffect(() => {
     loadProducts()
-  }, [category])
+  }, [category, search])
 
   const loadProducts = async () => {
     try {
@@ -107,12 +109,14 @@ export default function ProductListingScreen() {
       setProducts([]) // clear previous products
       const res = await getProducts({
         category: category,
+        search: search,
         page: 1,
         limit: 20
       })
       if (res?.products) {
         setProducts(res.products)
         setPagination(res.pagination)
+        setIsRelated(res.isRelated || false)
       }
     } catch (error) {
       console.log(error)
@@ -184,7 +188,7 @@ export default function ProductListingScreen() {
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.topTitle} numberOfLines={1}>
-          {category || 'Logistics Equipment'}
+          {search ? `Search: "${search}"` : (category || 'Logistics Equipment')}
         </Text>
         <View style={styles.topRight}>
           <TouchableOpacity style={styles.topIconBtn}>
@@ -230,15 +234,27 @@ export default function ProductListingScreen() {
 
       {/* Results Count + Sort */}
       <View style={styles.resultsRow}>
-        <Text style={styles.resultsText}>Showing {products.length} items</Text>
+        <Text style={styles.resultsText}>
+          {isRelated ? 'Showing related items' : `Showing ${products.length} items`}
+        </Text>
         <TouchableOpacity style={styles.sortBtn}>
           <Text style={styles.sortIcon}>≡</Text>
           <Text style={styles.sortText}>Sort</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Product Grid or Empty State */}
-      {!loading && products.length === 0 ? (
+      {isRelated && (
+        <View style={styles.relatedBanner}>
+          <Text style={styles.relatedBannerText}>
+            ℹ️ No exact matches found. Showing related products:
+          </Text>
+        </View>
+      )}
+
+      {/* Product Grid, Loading Skeleton, or Empty State */}
+      {loading ? (
+        <ProductGridSkeleton />
+      ) : products.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>📦</Text>
           <Text style={styles.emptyTitle}>No Products Found</Text>
@@ -521,6 +537,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-
-
+  relatedBanner: {
+    backgroundColor: '#fff9db',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffe3e3',
+    marginHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  relatedBannerText: {
+    fontSize: 12,
+    color: '#856404',
+    fontWeight: '600',
+  },
 })

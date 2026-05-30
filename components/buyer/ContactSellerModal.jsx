@@ -11,13 +11,13 @@ import {
   Image
 } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { createContactRequest } from '../../services/contactService'
-import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from 'react-i18next'
 
 export default function ContactSellerModal({ visible, onClose, product, seller }) {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const insets = useSafeAreaInsets()
   const [requestType, setRequestType] = useState('product_inquiry')
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
@@ -71,7 +71,14 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { paddingBottom: Math.max(insets.bottom + 20, 32) }
+            ]}
+          >
             <View style={styles.headerRow}>
               <Text style={styles.title}>{t('Contact Seller')}</Text>
               <TouchableOpacity onPress={() => onClose(false)}>
@@ -201,9 +208,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginVertical: 12
   },
-  content: {
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 32
+    paddingTop: 8,
   },
   headerRow: {
     flexDirection: 'row',

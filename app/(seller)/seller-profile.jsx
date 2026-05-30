@@ -110,6 +110,14 @@ export default function SellerProfile() {
               </View>
             </View>
 
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.primary, marginBottom: 12 }]} 
+              onPress={() => router.push('/(seller)/bot-settings')}
+            >
+              <MaterialCommunityIcons name="robot" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14, marginLeft: 8 }}>AI Bot Settings</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={[styles.actionButton, styles.danger]} onPress={handleLogout}>
               <MaterialCommunityIcons name="logout" size={16} color={colors.error} />
               <Text style={styles.dangerLabel}>Logout</Text>

@@ -18,7 +18,10 @@ export default function SellerBottomNav() {
   if (hiddenScreens.includes(activeSegment)) return null;
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.container, { 
+      height: 70 + (insets.bottom > 0 ? insets.bottom - 8 : 0),
+      paddingBottom: Math.max(insets.bottom, 8) 
+    }]}>
       <TouchableOpacity
         style={styles.tab}
         onPress={() => { closeDrawer(); router.push('/(seller)/dashboard'); }}

@@ -1,5 +1,5 @@
 // app/(buyer)/order-tracking.jsx
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -8,12 +8,148 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
+  ActivityIndicator,
+  Alert
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { trackOrder } from '../../services/orderService'
 
 export default function OrderTrackingScreen() {
+  const { orderId } = useLocalSearchParams()
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (orderId) {
+      loadOrder()
+    }
+  }, [orderId])
+
+  const loadOrder = async () => {
+    try {
+      setLoading(true)
+      const res = await trackOrder(orderId)
+      if (res.success) {
+        setOrder(res.order)
+      }
+    } catch (err) {
+      console.log('Error tracking order:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStepState = (stepName) => {
+    if (!order) return 'pending';
+    const statusOrder = ['placed', 'confirmed', 'packed', 'shipped', 'delivered'];
+    const currentIdx = statusOrder.indexOf(order.orderStatus);
+    const stepIdx = statusOrder.indexOf(stepName);
+
+    if (currentIdx >= stepIdx) {
+      return 'completed';
+    } else if (currentIdx + 1 === stepIdx) {
+      return 'current';
+    } else {
+      return 'pending';
+    }
+  }
+
+  const getTimelineTime = (status) => {
+    if (!order || !order.timeline) return '';
+    const event = order.timeline.find(t => t.status === status);
+    if (!event) return '';
+    return new Date(event.timestamp).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  const handleCopyTrackingNumber = () => {
+    if (order?.trackingNumber) {
+      Alert.alert('Copied', `Tracking number ${order.trackingNumber} copied to clipboard!`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#1a237e" />
+        <Text style={{ marginTop: 12, color: '#666' }}>Loading order tracking...</Text>
+      </SafeAreaView>
+    )
+  }
+
+  if (!order) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#ff4444" />
+        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: 'bold', color: '#333' }}>Order Not Found</Text>
+        <TouchableOpacity 
+          style={{ marginTop: 20, backgroundColor: '#1a237e', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }} 
+          onPress={() => router.replace('/(buyer)/home')}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Back to Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    )
+  }
+
+  const renderStep = (stepName, stepNum, titleText, iconName, defaultNote) => {
+    const state = getStepState(stepName)
+    const timeText = getTimelineTime(stepName)
+
+    let circleStyle = styles.circleGray
+    let lineStyle = styles.lineGray
+    let titleStyle = styles.stepTitleGray
+    let nameStyle = styles.stepNameGray
+    let iconElement = <Text style={styles.boxIcon}>○</Text>
+
+    if (state === 'completed') {
+      circleStyle = styles.circleGreen
+      lineStyle = styles.lineGreen
+      titleStyle = styles.stepTitleGreen
+      nameStyle = styles.stepName
+      iconElement = <MaterialCommunityIcons name="check" size={16} color="#4caf50" />
+    } else if (state === 'current') {
+      circleStyle = styles.circleBlue
+      lineStyle = styles.lineGray
+      titleStyle = styles.stepTitleBlue
+      nameStyle = styles.stepName
+      iconElement = <MaterialCommunityIcons name={iconName} size={16} color="#008b8b" />
+    }
+
+    if (state === 'completed' && stepName === 'delivered') {
+      iconElement = <Text style={styles.boxIcon}>📦</Text>
+    }
+
+    return (
+      <View style={styles.timelineRow}>
+        <View style={styles.timelineIconCol}>
+          <View style={[styles.circle, circleStyle]}>
+            {iconElement}
+          </View>
+          {stepNum < 5 && <View style={[styles.line, lineStyle, state === 'current' && { borderStyle: 'dashed' }]} />}
+        </View>
+        <View style={styles.timelineContent}>
+          <Text style={titleStyle}>{state === 'completed' ? `Step 0${stepNum}` : state === 'current' ? 'In Progress' : 'Pending'}</Text>
+          <Text style={nameStyle}>{titleText}</Text>
+          {state === 'completed' && timeText ? (
+            <Text style={styles.stepTime}>{timeText}</Text>
+          ) : state === 'current' && defaultNote ? (
+            <Text style={styles.stepNameBold}>{defaultNote}</Text>
+          ) : !timeText && stepName === 'delivered' && order?.estimatedDelivery ? (
+            <Text style={styles.stepTime}>Expected by {new Date(order.estimatedDelivery).toLocaleDateString()}</Text>
+          ) : null}
+        </View>
+      </View>
+    )
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -24,7 +160,7 @@ export default function OrderTrackingScreen() {
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Track Order</Text>
-            <Text style={styles.headerSubtitle}>#UBS-00123</Text>
+            <Text style={styles.headerSubtitle}>{order.orderNumber}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.headerRight}>
@@ -44,7 +180,11 @@ export default function OrderTrackingScreen() {
             <View style={styles.mapOverlay}>
               <View style={styles.etaBox}>
                 <Text style={styles.etaLabel}>ESTIMATED{'\n'}ARRIVAL</Text>
-                <Text style={styles.etaTime}>14:30 - 15:00</Text>
+                <Text style={styles.etaTime}>
+                  {order.estimatedDelivery 
+                    ? new Date(order.estimatedDelivery).toLocaleDateString()
+                    : 'Expected Soon'}
+                </Text>
               </View>
               <TouchableOpacity style={styles.liveTrackBtn} activeOpacity={0.8}>
                 <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#fff" />
@@ -59,81 +199,11 @@ export default function OrderTrackingScreen() {
           <Text style={styles.cardTitle}>Delivery Progress</Text>
           
           <View style={styles.timeline}>
-            
-            {/* Step 1 */}
-            <View style={styles.timelineRow}>
-              <View style={styles.timelineIconCol}>
-                <View style={[styles.circle, styles.circleGreen]}>
-                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                </View>
-                <View style={[styles.line, styles.lineGreen]} />
-              </View>
-              <View style={styles.timelineContent}>
-                <Text style={styles.stepTitleGreen}>Step 01</Text>
-                <Text style={styles.stepName}>Order Placed</Text>
-                <Text style={styles.stepTime}>Oct 24, 2023 • 09:15 AM</Text>
-              </View>
-            </View>
-
-            {/* Step 2 */}
-            <View style={styles.timelineRow}>
-              <View style={styles.timelineIconCol}>
-                <View style={[styles.circle, styles.circleGreen]}>
-                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                </View>
-                <View style={[styles.line, styles.lineGreen]} />
-              </View>
-              <View style={styles.timelineContent}>
-                <Text style={styles.stepTitleGreen}>Step 02</Text>
-                <Text style={styles.stepName}>Order Confirmed</Text>
-                <Text style={styles.stepTime}>Oct 24, 2023 • 10:30 AM</Text>
-              </View>
-            </View>
-
-            {/* Step 3 */}
-            <View style={styles.timelineRow}>
-              <View style={styles.timelineIconCol}>
-                <View style={[styles.circle, styles.circleGreen]}>
-                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                </View>
-                <View style={[styles.line, styles.lineGray]} />
-              </View>
-              <View style={styles.timelineContent}>
-                <Text style={styles.stepTitleGreen}>Step 03</Text>
-                <Text style={styles.stepName}>Packed & Ready</Text>
-                <Text style={styles.stepTime}>Oct 25, 2023 • 08:00 AM</Text>
-              </View>
-            </View>
-
-            {/* Step 4 (Current) */}
-            <View style={styles.timelineRow}>
-              <View style={styles.timelineIconCol}>
-                <View style={[styles.circle, styles.circleBlue]}>
-                  <MaterialCommunityIcons name="truck" size={20} color="#fff" />
-                </View>
-                <View style={[styles.line, styles.lineGray, { borderStyle: 'dashed' }]} />
-              </View>
-              <View style={styles.timelineContent}>
-                <Text style={styles.stepTitleBlue}>In Progress</Text>
-                <Text style={styles.stepName}>Out for Delivery</Text>
-                <Text style={styles.stepNameBold}>Your order is on the way</Text>
-              </View>
-            </View>
-
-            {/* Step 5 */}
-            <View style={[styles.timelineRow, { marginBottom: 0 }]}>
-              <View style={styles.timelineIconCol}>
-                <View style={[styles.circle, styles.circleGray]}>
-                  <Text style={styles.boxIcon}>📦</Text>
-                </View>
-              </View>
-              <View style={styles.timelineContent}>
-                <Text style={styles.stepTitleGray}>Pending</Text>
-                <Text style={styles.stepNameGray}>Delivered</Text>
-                <Text style={styles.stepTime}>Expected by today, 05:00 PM</Text>
-              </View>
-            </View>
-
+            {renderStep('placed', 1, 'Order Placed', 'check', 'Order created')}
+            {renderStep('confirmed', 2, 'Order Confirmed', 'check-all', 'Order confirmed by seller')}
+            {renderStep('packed', 3, 'Packed & Ready', 'package-variant', 'Your order is being packed')}
+            {renderStep('shipped', 4, 'Out for Delivery', 'truck', 'Your order is on the way')}
+            {renderStep('delivered', 5, 'Delivered', 'check-circle', 'Expected soon')}
           </View>
         </View>
 
@@ -145,19 +215,21 @@ export default function OrderTrackingScreen() {
               <Text style={styles.courierLogoText}>❖</Text>
             </View>
             <View style={styles.courierInfo}>
-              <Text style={styles.courierName}>Global Express Logistics</Text>
-              <Text style={styles.courierId}>ID: Courier_9942</Text>
+              <Text style={styles.courierName}>{order.courierName || 'Global Express Logistics'}</Text>
+              <Text style={styles.courierId}>ID: {order.trackingNumber ? `Courier_${order.trackingNumber.substring(0, 5)}` : 'Courier_Pending'}</Text>
             </View>
           </View>
 
           <View style={styles.trackingBox}>
             <View>
               <Text style={styles.trackingLabel}>TRACKING NUMBER</Text>
-              <Text style={styles.trackingNumber}>UBS7729910023</Text>
+              <Text style={styles.trackingNumber}>{order.trackingNumber || 'Pending Assignment'}</Text>
             </View>
-            <TouchableOpacity style={styles.copyBtn}>
-              <MaterialCommunityIcons name="content-copy" size={20} color="#666" />
-            </TouchableOpacity>
+            {order.trackingNumber && (
+              <TouchableOpacity style={styles.copyBtn} onPress={handleCopyTrackingNumber}>
+                <MaterialCommunityIcons name="content-copy" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -168,42 +240,57 @@ export default function OrderTrackingScreen() {
             <Text style={styles.cardTitleLine}>Delivery Address</Text>
           </View>
           <View style={styles.addressBox}>
-            <Text style={styles.addressName}>Sarah Jenkins</Text>
-            <Text style={styles.addressText}>482 Tech Valley Boulevard, Suite 900</Text>
-            <Text style={styles.addressText}>San Francisco, CA 94105</Text>
-            <Text style={styles.addressPhone}>+1 (555) 012-3456</Text>
+            <Text style={styles.addressName}>{order.deliveryAddress?.fullName}</Text>
+            <Text style={styles.addressText}>{order.deliveryAddress?.street}</Text>
+            <Text style={styles.addressText}>
+              {order.deliveryAddress?.city}, {order.deliveryAddress?.state || ''} {order.deliveryAddress?.zipCode || ''}
+            </Text>
+            <Text style={styles.addressText}>{order.deliveryAddress?.country}</Text>
+            {order.deliveryAddress?.phone && (
+              <Text style={styles.addressPhone}>{order.deliveryAddress.phone}</Text>
+            )}
           </View>
         </View>
 
         {/* Order Summary */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Order Summary</Text>
-          <View style={styles.productRow}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&q=80' }}
-              style={styles.productImg}
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>Elite Series Pro Headphones</Text>
-              <Text style={styles.productMeta}>Midnight Black • Qty: 1</Text>
-              <Text style={styles.productPrice}>$299.00</Text>
+          {order.items?.map((item, idx) => (
+            <View key={item._id || idx} style={[styles.productRow, idx > 0 && { marginTop: 12 }]}>
+              <Image
+                source={{ uri: item.productImage || 'https://via.placeholder.com/150' }}
+                style={styles.productImg}
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{item.productName}</Text>
+                <Text style={styles.productMeta}>Qty: {item.quantity}</Text>
+                <Text style={styles.productPrice}>${(item.price || 0).toFixed(2)}</Text>
+              </View>
             </View>
-          </View>
+          ))}
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>$299.00</Text>
+            <Text style={styles.summaryValue}>${(order.subtotal || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValueGreen}>Free</Text>
+            <Text style={order.shippingFee === 0 ? styles.summaryValueGreen : styles.summaryValue}>
+              {order.shippingFee === 0 ? 'Free' : `$${(order.shippingFee || 0).toFixed(2)}`}
+            </Text>
           </View>
+          {order.tax > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Tax (5%)</Text>
+              <Text style={styles.summaryValue}>${(order.tax || 0).toFixed(2)}</Text>
+            </View>
+          )}
 
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>$299.00</Text>
+            <Text style={styles.totalValue}>${(order.grandTotal || 0).toFixed(2)}</Text>
           </View>
         </View>
 
