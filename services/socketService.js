@@ -2,7 +2,7 @@ import { io } from 'socket.io-client'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
-const SOCKET_URL = 'http://10.213.25.184:5000'
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'https://ubs-global-server-production.up.railway.app'
 
 let socket = null
 
