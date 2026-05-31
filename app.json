@@ -48,6 +48,14 @@
         }
       ],
 
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Allow UBS Global to access your camera",
+          "microphonePermission": "Allow UBS Global to access your microphone"
+        }
+      ],
+
       "expo-localization",
       "expo-web-browser"
     ],
