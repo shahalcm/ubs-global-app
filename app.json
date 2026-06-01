@@ -15,8 +15,7 @@
 
     "ios": {
       "icon": "./assets/images/icon.png",
-      "supportsTablet": true,
-      "statusBarStyle": "light-content"
+      "supportsTablet": true
     },
 
     "android": {
