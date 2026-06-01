@@ -1,6 +1,5 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -71,7 +70,6 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="dark" />
       <Animated.View style={[styles.contentContainer, { opacity: fade }]}>
         {/* Center Block for Logo and Text grouped tightly */}
         <View style={styles.centerBlock}>

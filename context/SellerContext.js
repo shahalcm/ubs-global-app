@@ -163,11 +163,19 @@ export function SellerProvider({ children }) {
   useEffect(() => {
     loadProfile();
     loadDashboard();
+  }, [loadDashboard, loadProfile]);
+
+  useEffect(() => {
     const activeSocket = getSocket();
     if (activeSocket) {
       activeSocket.on('newOrder', loadDashboard);
       activeSocket.on('receiveMessage', loadDashboard);
       activeSocket.on('orderStatusChanged', loadDashboard);
+
+      if (state.seller?._id) {
+        activeSocket.emit('joinRoom', state.seller._id.toString());
+        console.log('Joined seller socket room:', state.seller._id);
+      }
     }
     return () => {
       const activeSocket = getSocket();
@@ -177,7 +185,7 @@ export function SellerProvider({ children }) {
         activeSocket.off('orderStatusChanged', loadDashboard);
       }
     };
-  }, [loadDashboard, loadProfile]);
+  }, [state.seller?._id, loadDashboard]);
 
   const value = useMemo(
     () => ({

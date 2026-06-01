@@ -1,45 +1,116 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useTranslation } from "react-i18next";
-
-const NOTIFICATIONS = [
-  {
-    id: 1,
-    title: "Order Shipped",
-    desc: "Your order #UBS8923 has been shipped and is on its way.",
-    time: "2 hours ago",
-    icon: "package",
-    read: false,
-  },
-  {
-    id: 2,
-    title: "Payment Successful",
-    desc: "We received your payment of $450.00 for order #UBS8923.",
-    time: "1 day ago",
-    icon: "credit-card",
-    read: true,
-  },
-  {
-    id: 3,
-    title: "New Message",
-    desc: "Seller 'Global Tech Exports' sent you a message.",
-    time: "2 days ago",
-    icon: "email",
-    read: true,
-  },
-];
+import { getNotifications, markAllRead, markAsRead } from "../../services/notificationService";
 
 export default function NotificationsScreen() {
   const { t } = useTranslation();
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async (showLoader = true) => {
+    try {
+      if (showLoader) setLoading(true);
+      const data = await getNotifications();
+      // Ensure mapped format is set
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log("Error loading notifications:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadNotifications(false);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      console.log("Error marking all as read:", err);
+    }
+  };
+
+  const handleNotificationPress = async (item) => {
+    // Mark as read on the backend first if it is unread
+    if (!item.read) {
+      try {
+        await markAsRead(item._id);
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === item._id ? { ...n, read: true } : n))
+        );
+      } catch (err) {
+        console.log("Error marking notification read:", err);
+      }
+    }
+
+    // Redirect user to the corresponding flow based on type
+    if (item.type === "order" && item.data?.orderId) {
+      router.push({
+        pathname: "/(buyer)/order-tracking",
+        params: { orderId: item.data.orderId },
+      });
+    } else if (item.type === "message") {
+      router.push("/(buyer)/messages");
+    }
+  };
+
+  const getIconName = (type) => {
+    switch (type) {
+      case "order":
+        return "package-variant-closed";
+      case "payment":
+        return "credit-card-outline";
+      case "message":
+        return "message-text-outline";
+      case "system":
+        return "cog-outline";
+      case "promotion":
+        return "tag-outline";
+      case "contact_request":
+        return "account-box-outline";
+      default:
+        return "bell-outline";
+    }
+  };
+
+  const formatTimeElapsed = (dateString) => {
+    if (!dateString) return "";
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return t("Just now");
+    if (diffMins < 60) return `${diffMins}${t("m ago")}`;
+    if (diffHours < 24) return `${diffHours}${t("h ago")}`;
+    if (diffDays === 1) return t("Yesterday");
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -48,29 +119,50 @@ export default function NotificationsScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('Notifications')}</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={handleMarkAllRead}>
           <Text style={styles.markReadText}>{t('Read All')}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {NOTIFICATIONS.map((item) => (
-          <View
-            key={item.id}
-            style={[styles.notificationCard, !item.read && styles.unreadCard]}
-          >
-            <View style={styles.iconBox}>
-              <MaterialCommunityIcons name={item.icon} size={24} color="#666" />
+      {loading ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#000033" />
+        </View>
+      ) : (
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={["#000033"]} />
+          }
+        >
+          {notifications.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="bell-off-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyTitle}>{t('No Notifications')}</Text>
+              <Text style={styles.emptyDesc}>{t("We'll let you know when we have updates for you.")}</Text>
             </View>
-            <View style={styles.textContainer}>
-              <Text style={styles.title}>{t(item.title)}</Text>
-              <Text style={styles.desc}>{t(item.desc)}</Text>
-              <Text style={styles.time}>{t(item.time)}</Text>
-            </View>
-            {!item.read && <View style={styles.dot} />}
-          </View>
-        ))}
-      </ScrollView>
+          ) : (
+            notifications.map((item) => (
+              <TouchableOpacity
+                key={item._id}
+                style={[styles.notificationCard, !item.read && styles.unreadCard]}
+                onPress={() => handleNotificationPress(item)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.iconBox}>
+                  <MaterialCommunityIcons name={getIconName(item.type)} size={24} color="#666" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.title}>{t(item.title)}</Text>
+                  <Text style={styles.desc}>{item.message}</Text>
+                  <Text style={styles.time}>{formatTimeElapsed(item.createdAt)}</Text>
+                </View>
+                {!item.read && <View style={styles.dot} />}
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -106,6 +198,12 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    flexGrow: 1,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationCard: {
     flexDirection: "row",
@@ -129,7 +227,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 16,
   },
-
   textContainer: {
     flex: 1,
   },
@@ -155,5 +252,24 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#c62828",
     marginTop: 6,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#000033",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyDesc: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
 });

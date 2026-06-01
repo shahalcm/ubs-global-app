@@ -20,7 +20,9 @@ export function CategoryCard({ label, image, onPress, variant = 'circle' }) {
           style={styles.categoryImage}
         />
       </View>
-      <Text style={styles.categoryName} numberOfLines={2}>{label}</Text>
+      <View style={styles.categoryNameContainer}>
+        <Text style={styles.categoryName} numberOfLines={2}>{label}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -38,13 +40,13 @@ const styles = StyleSheet.create({
   categoryItem: {
     width: "25%",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
     paddingHorizontal: 2,
   },
   categoryCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     overflow: "hidden",
     backgroundColor: "#e8ecf4",
     marginBottom: 6,
@@ -53,13 +55,18 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  categoryNameContainer: {
+    height: 32,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    width: '100%',
+  },
   categoryName: {
     fontSize: 11,
     color: "#444",
     textAlign: "center",
-    lineHeight: 15,
+    lineHeight: 14,
   },
 });
 
 export default CategoryCard;
-

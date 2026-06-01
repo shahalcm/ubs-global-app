@@ -8,8 +8,15 @@ const screenWidth = Dimensions.get('window').width - 40;
 
 export default function EarningsChart({ mode = 'week', onModeChange, data = {} }) {
   const { t } = useTranslation();
-  const labels = data.labels || [t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat'), t('Sun')];
-  const values = data.values || [450, 700, 650, 900, 800, 950, 1100];
+  
+  const labels = (data.labels && data.labels.length > 0)
+    ? data.labels
+    : [t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat'), t('Sun')];
+    
+  const hasData = data.values && data.values.length > 0 && data.values.some(v => v > 0);
+  const values = hasData
+    ? data.values
+    : [450, 700, 650, 900, 800, 950, 1100];
 
   return (
     <View style={styles.card}>

@@ -9,17 +9,22 @@ import {
   Image,
   ImageBackground,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal,
+  TextInput
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { trackOrder } from '../../services/orderService'
+import { trackOrder, cancelOrder } from '../../services/orderService'
 
 export default function OrderTrackingScreen() {
   const { orderId } = useLocalSearchParams()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isCancelModalVisible, setIsCancelModalVisible] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     if (orderId) {
@@ -38,6 +43,31 @@ export default function OrderTrackingScreen() {
       console.log('Error tracking order:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCancelSubmit = async () => {
+    if (!cancelReason || cancelReason.trim().length < 5) {
+      Alert.alert('Error', 'Please enter a valid reason (at least 5 characters).')
+      return
+    }
+
+    try {
+      setCancelling(true)
+      const res = await cancelOrder(orderId, cancelReason.trim())
+      if (res.success) {
+        Alert.alert('Cancelled', 'Your order has been cancelled successfully.')
+        setIsCancelModalVisible(false)
+        setCancelReason('')
+        loadOrder()
+      } else {
+        Alert.alert('Error', res.message || 'Failed to cancel order.')
+      }
+    } catch (err) {
+      console.log('Error cancelling order:', err)
+      Alert.alert('Error', 'An unexpected error occurred.')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -179,20 +209,45 @@ export default function OrderTrackingScreen() {
           >
             <View style={styles.mapOverlay}>
               <View style={styles.etaBox}>
-                <Text style={styles.etaLabel}>ESTIMATED{'\n'}ARRIVAL</Text>
+                <Text style={styles.etaLabel}>{order.orderStatus === 'cancelled' ? 'STATUS' : 'ESTIMATED\nARRIVAL'}</Text>
                 <Text style={styles.etaTime}>
-                  {order.estimatedDelivery 
-                    ? new Date(order.estimatedDelivery).toLocaleDateString()
-                    : 'Expected Soon'}
+                  {order.orderStatus === 'cancelled' 
+                    ? 'CANCELLED' 
+                    : order.estimatedDelivery 
+                      ? new Date(order.estimatedDelivery).toLocaleDateString()
+                      : 'Expected Soon'}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.liveTrackBtn} activeOpacity={0.8}>
-                <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#fff" />
-                <Text style={styles.liveTrackText}>Live{'\n'}Track</Text>
-              </TouchableOpacity>
+              {order.orderStatus !== 'cancelled' && (
+                <TouchableOpacity style={styles.liveTrackBtn} activeOpacity={0.8}>
+                  <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#fff" />
+                  <Text style={styles.liveTrackText}>Live{'\n'}Track</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </ImageBackground>
         </View>
+
+        {/* Cancellation Info Banner */}
+        {order.orderStatus === 'cancelled' && (
+          <View style={styles.cancelledBanner}>
+            <View style={styles.cancelledHeader}>
+              <MaterialCommunityIcons name="close-circle" size={32} color="#c62828" />
+              <View style={styles.cancelledTextContainer}>
+                <Text style={styles.cancelledTitle}>Order Cancelled</Text>
+                <Text style={styles.cancelledTime}>
+                  {getTimelineTime('cancelled') || new Date(order.updatedAt).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.cancelledBody}>
+              <Text style={styles.cancelledLabel}>Reason for Cancellation:</Text>
+              <Text style={styles.cancelledReason}>
+                "{order.timeline?.find(t => t.status === 'cancelled')?.note || 'No reason provided.'}"
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Delivery Progress */}
         <View style={styles.card}>
@@ -294,6 +349,24 @@ export default function OrderTrackingScreen() {
           </View>
         </View>
 
+        {/* Cancel Order Card */}
+        {['placed', 'confirmed', 'packed'].includes(order.orderStatus) && (
+          <View style={styles.cancelCard}>
+            <Text style={styles.cancelCardTitle}>Order Actions</Text>
+            <Text style={styles.cancelCardDesc}>
+              Changed your mind? You can cancel this order before it is shipped.
+            </Text>
+            <TouchableOpacity 
+              style={styles.cancelOrderBtn}
+              onPress={() => setIsCancelModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="close-circle-outline" size={20} color="#fff" />
+              <Text style={styles.cancelOrderBtnText}>Cancel Order</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
       </ScrollView>
 
       {/* Bottom Fixed Bar */}
@@ -307,6 +380,74 @@ export default function OrderTrackingScreen() {
           <Text style={styles.contactText}>Contact Seller</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Cancellation Reason Modal */}
+      <Modal
+        visible={isCancelModalVisible}
+        transparent={true}
+        animationType="slide"
+        statusBarTranslucent={true}
+        onRequestClose={() => setIsCancelModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cancel Order</Text>
+              <TouchableOpacity onPress={() => {
+                setIsCancelModalVisible(false)
+                setCancelReason('')
+              }}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              <Text style={styles.modalInstruction}>
+                Please state your reason for cancelling this order. Your cancellation will update the stock levels and notify the seller/admin immediately.
+              </Text>
+              
+              <TextInput
+                style={styles.reasonInput}
+                placeholder="Reason (minimum 5 characters)..."
+                placeholderTextColor="#999"
+                value={cancelReason}
+                onChangeText={setCancelReason}
+                multiline={true}
+                numberOfLines={4}
+                maxLength={250}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalCancelBtn} 
+                onPress={() => {
+                  setIsCancelModalVisible(false)
+                  setCancelReason('')
+                }}
+                disabled={cancelling}
+              >
+                <Text style={styles.modalCancelBtnText}>Go Back</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.modalSubmitBtn, 
+                  (!cancelReason || cancelReason.trim().length < 5) && styles.modalSubmitBtnDisabled
+                ]} 
+                onPress={handleCancelSubmit}
+                disabled={cancelling || !cancelReason || cancelReason.trim().length < 5}
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalSubmitBtnText}>Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -716,6 +857,180 @@ const styles = StyleSheet.create({
   contactText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // Cancel Card & Modal Styles
+  cancelledBanner: {
+    backgroundColor: '#ffebee',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
+    padding: 16,
+    marginBottom: 20,
+  },
+  cancelledHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  cancelledTextContainer: {
+    flex: 1,
+  },
+  cancelledTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#c62828',
+  },
+  cancelledTime: {
+    fontSize: 12,
+    color: '#b71c1c',
+    marginTop: 2,
+  },
+  cancelledBody: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
+  },
+  cancelledLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#555',
+    marginBottom: 4,
+  },
+  cancelledReason: {
+    fontSize: 13,
+    color: '#333',
+    fontStyle: 'italic',
+  },
+
+  cancelCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ffebee',
+  },
+  cancelCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000040',
+    marginBottom: 8,
+  },
+  cancelCardDesc: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  cancelOrderBtn: {
+    backgroundColor: '#c62828',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  cancelOrderBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000040',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalInstruction: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  reasonInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 13,
+    color: '#333',
+    minHeight: 100,
+    textAlignVertical: 'top',
+    backgroundColor: '#fafafa',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    color: '#666',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#c62828',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitBtnDisabled: {
+    backgroundColor: '#ef9a9a',
+  },
+  modalSubmitBtnText: {
+    color: '#fff',
+    fontSize: 13,
     fontWeight: '700',
   },
 })

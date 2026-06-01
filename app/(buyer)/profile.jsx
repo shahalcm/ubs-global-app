@@ -7,6 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
+  Linking
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -15,6 +17,27 @@ import { useAuth } from '../../context/AuthContext'
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth()
+
+  const handleContactSupport = () => {
+    Alert.alert(
+      "Connect Support",
+      "We offer 24/7 global trade assistance. How would you like to connect?",
+      [
+        {
+          text: "Email Support",
+          onPress: () => Linking.openURL('mailto:support@ubsglobalapp.com?subject=UBS Global Support Request')
+        },
+        {
+          text: "Call Hotline",
+          onPress: () => Linking.openURL('tel:+18005550199')
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    )
+  }
 
   const handleLogout = async () => {
     await logout()
@@ -50,7 +73,10 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.editProfileBtn}>
+          <TouchableOpacity 
+            style={styles.editProfileBtn}
+            onPress={() => router.push('/(buyer)/edit-profile')}
+          >
             <MaterialCommunityIcons name="account" size={16} color="#fff" />
             <Text style={styles.editProfileBtnText}>Edit Profile</Text>
           </TouchableOpacity>
@@ -93,15 +119,15 @@ export default function ProfileScreen() {
               <MaterialCommunityIcons name="package" size={24} color="#3f51b5" />
             </View>
             <Text style={styles.dashCardTitle}>My Orders</Text>
-            <Text style={[styles.dashCardSub, { color: '#008b8b', fontWeight: '700' }]}>4 Active</Text>
+            <Text style={[styles.dashCardSub, { color: '#008b8b', fontWeight: '700' }]}>View orders</Text>
           </TouchableOpacity>
           {/* Card 2 */}
-          <TouchableOpacity style={styles.dashCard} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/wishlist')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#e0f7fa' }]}>
               <MaterialCommunityIcons name="heart" size={24} color="#006064" />
             </View>
             <Text style={styles.dashCardTitle}>Wishlist</Text>
-            <Text style={styles.dashCardSub}>12 Items</Text>
+            <Text style={styles.dashCardSub}>{user?.wishlist?.length || 0} Items</Text>
           </TouchableOpacity>
           {/* Card 3 */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/messages')} activeOpacity={0.8}>
@@ -122,19 +148,23 @@ export default function ProfileScreen() {
             <Text style={styles.dashCardSub}>Track approvals</Text>
           </TouchableOpacity>
           {/* Card 4 */}
-          <TouchableOpacity style={styles.dashCard} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/notifications')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#f3e5f5' }]}>
               <MaterialCommunityIcons name="bell" size={24} color="#6a1b9a" />
             </View>
             <Text style={styles.dashCardTitle}>Notifications</Text>
-            <Text style={styles.dashCardSub}>Update Ready</Text>
+            <Text style={styles.dashCardSub}>View updates</Text>
           </TouchableOpacity>
         </View>
 
         {/* Account Settings */}
         <Text style={styles.sectionTitle}>Account Settings</Text>
         <View style={styles.listContainer}>
-          <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.listItem} 
+            activeOpacity={0.7}
+            onPress={() => router.push('/(buyer)/payment')}
+          >
             <Text style={styles.listIcon}>💳</Text>
             <View style={styles.listTextCol}>
               <Text style={styles.listTitle}>Payment Methods</Text>
@@ -143,7 +173,11 @@ export default function ProfileScreen() {
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
           <View style={styles.listDivider} />
-          <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.listItem} 
+            activeOpacity={0.7}
+            onPress={() => Alert.alert("Shipping Address", "Primary: London Gateway Port\n\nTo update your delivery address, you can configure it during checkout.")}
+          >
             <Text style={styles.listIcon}>📍</Text>
             <View style={styles.listTextCol}>
               <Text style={styles.listTitle}>Shipping Addresses</Text>
@@ -152,11 +186,15 @@ export default function ProfileScreen() {
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
           <View style={styles.listDivider} />
-          <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.listItem} 
+            activeOpacity={0.7}
+            onPress={() => router.push('/(buyer)/settings')}
+          >
             <Text style={styles.listIcon}>🛡</Text>
             <View style={styles.listTextCol}>
               <Text style={styles.listTitle}>Security & Privacy</Text>
-              <Text style={styles.listSub}>2FA enabled, Password updated 2m ago</Text>
+              <Text style={styles.listSub}>Password, preferences & security</Text>
             </View>
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
@@ -165,7 +203,11 @@ export default function ProfileScreen() {
         {/* Support */}
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.listContainer}>
-          <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.listItem} 
+            activeOpacity={0.7}
+            onPress={() => router.push('/(buyer)/help')}
+          >
             <Text style={styles.listIcon}>❓</Text>
             <View style={styles.listTextCol}>
               <Text style={styles.listTitle}>Help Center</Text>
@@ -174,7 +216,11 @@ export default function ProfileScreen() {
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
           <View style={styles.listDivider} />
-          <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.listItem} 
+            activeOpacity={0.7}
+            onPress={handleContactSupport}
+          >
             <Text style={styles.listIcon}>🎧</Text>
             <View style={styles.listTextCol}>
               <Text style={styles.listTitle}>Contact Support</Text>

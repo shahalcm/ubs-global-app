@@ -10,7 +10,7 @@ export const connectSocket = async () => {
   const userId = await AsyncStorage.getItem('userId')
   
   socket = io(SOCKET_URL, {
-    transports: ['websocket', 'polling'], // Enable polling fallback if websocket handshake fails
+    transports: ['polling', 'websocket'], // Try polling first for robust handshakes, then upgrade to websocket
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,

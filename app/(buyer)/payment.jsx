@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import RazorpayCheckout from 'react-native-razorpay'
@@ -80,7 +80,11 @@ export default function PaymentScreen() {
         <View style={{width: 24}}/>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.secureCard}>
           <MaterialCommunityIcons name="shield-lock" size={32} color="#4CAF50" />
           <Text style={styles.secureText}>Secure Payment via Razorpay</Text>
@@ -99,7 +103,7 @@ export default function PaymentScreen() {
           <Text style={styles.methodTitle}>Pay with Razorpay</Text>
           <Text style={styles.methodDesc}>Cards, UPI, Net Banking, Wallets</Text>
         </View>
-      </View>
+      </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 20 }]}>
         <TouchableOpacity style={styles.payBtn} onPress={handlePayNow} disabled={loading}>
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f4f5f8' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
   headerLogo: { fontSize: 18, fontWeight: '800', color: '#000040' },
-  content: { padding: 20 },
+  scrollContent: { padding: 20, paddingBottom: 150 },
   secureCard: { alignItems: 'center', backgroundColor: '#e8f5e9', padding: 20, borderRadius: 12, marginBottom: 20 },
   secureText: { fontSize: 16, fontWeight: '700', color: '#2e7d32', marginTop: 10 },
   subText: { fontSize: 12, color: '#4caf50' },

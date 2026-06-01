@@ -1,5 +1,5 @@
 // app/(buyer)/products.jsx
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import {
   View,
   Text,
@@ -7,18 +7,21 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  FlatList,
   SafeAreaView,
+  Dimensions,
 } from 'react-native'
 import { router } from 'expo-router'
-import { getCategoryImage } from '../../constants/categories'
-import api from '../../services/api'
+
+const { width } = Dimensions.get('window')
+const CARD_WIDTH = (width - 48) / 2
 
 const CATEGORIES = [
   {
     id: '1',
     name: 'Fashion',
     count: '2.4k+ Products',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&q=80',
   },
   {
     id: '2',
@@ -36,7 +39,7 @@ const CATEGORIES = [
     id: '4',
     name: 'Industrial',
     count: '3.2k+ Products',
-    image: 'https://images.unsplash.com/photo-1581092160562-40aa08e49be4?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80',
   },
   {
     id: '5',
@@ -71,14 +74,14 @@ const CATEGORIES = [
   {
     id: '10',
     name: 'Real Estate',
-    count: '500+ Products',
+    count: '500+ Listings',
     image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&q=80',
   },
   {
     id: '11',
     name: 'Machinery',
     count: '1.6k+ Products',
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1565793979139-d2957e040c42?w=400&q=80',
   },
   {
     id: '12',
@@ -86,117 +89,102 @@ const CATEGORIES = [
     count: '400+ Products',
     image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&q=80',
   },
-  {
-    id: '13',
-    name: 'Spare Parts',
-    count: '3.1k+ Products',
-    image: 'Spare Parts',
-  },
-  {
-    id: '14',
-    name: 'Perfumes',
-    count: '1.2k+ Products',
-    image: 'Perfumes',
-  },
 ]
 
 export default function ProductsScreen() {
-  const [categories, setCategories] = useState(CATEGORIES)
-
-  useEffect(() => {
-    loadCategories()
-  }, [])
-
-  const loadCategories = async () => {
-    try {
-      const res = await api.get('/categories')
-      if (res?.data?.categories) {
-        const apiCategories = res.data.categories
-        const merged = [...CATEGORIES]
-        apiCategories.forEach(apiCat => {
-          const index = merged.findIndex(c => c.name.toLowerCase() === apiCat.name.toLowerCase())
-          if (index !== -1) {
-            merged[index] = { ...merged[index], ...apiCat }
-          } else {
-            merged.push(apiCat)
-          }
-        })
-        setCategories(merged)
-      }
-    } catch (error) {
-      console.log('Products load error:', error)
+  const handleCategoryPress = (item) => {
+    if (item.name === 'Real Estate') {
+      router.push('/(buyer)/real-estate')
+    } else {
+      router.push({
+        pathname: '/(buyer)/product-listing',
+        params: { category: item.name },
+      })
     }
   }
+
+  const renderCategory = ({ item }) => (
+    <TouchableOpacity
+      style={styles.categoryCard}
+      onPress={() => handleCategoryPress(item)}
+      activeOpacity={0.85}
+    >
+      <Image
+        source={{ uri: item.image }}
+        style={styles.categoryImage}
+        resizeMode="cover"
+      />
+      <View style={styles.categoryInfo}>
+        <Text style={styles.categoryName}>
+          {item.name}
+        </Text>
+        <Text style={styles.categoryCount}>
+          {item.count}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  )
 
   return (
     <SafeAreaView style={styles.container}>
 
       {/* Top Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/(buyer)/drawer')}>
+        <TouchableOpacity
+          onPress={() => router.push('/(buyer)/drawer')}
+        >
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.topTitle}>UBS Global</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <TouchableOpacity onPress={() => router.push('/(buyer)/notifications')}>
-            <Text style={styles.cartIcon}>🔔</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/(buyer)/cart')}
+        >
+          <Text style={styles.bellIcon}>🔔</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={CATEGORIES}
+        renderItem={renderCategory}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        ListHeaderComponent={
+          <View style={styles.pageHeader}>
+            <Text style={styles.pageTitle}>
+              All Categories
+            </Text>
+            <Text style={styles.pageSubtitle}>
+              Explore a world of products curated for
+              international logistics and global trade
+              excellence.
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          <>
+            {/* Can't find card */}
+            <View style={styles.findCard}>
+              <Text style={styles.findTitle}>
+                Can't find what you're looking for?
+              </Text>
+              <Text style={styles.findDesc}>
+                Our global network of verified vendors
+                can source specific wholesale products
+                for your business needs.
+              </Text>
+              <TouchableOpacity style={styles.findBtn}>
+                <Text style={styles.findBtnText}>
+                  Request a Quote
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 20 }} />
+          </>
+        }
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* Page Header */}
-        <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>All Categories</Text>
-          <Text style={styles.pageSubtitle}>
-            Explore a world of products curated for international logistics
-            and global trade excellence.
-          </Text>
-        </View>
-
-        {/* Categories Grid */}
-        <View style={styles.gridContainer}>
-          {categories.map((item) => (
-            <TouchableOpacity
-              key={item._id || item.id || item.name}
-              style={styles.categoryCard}
-              onPress={() => router.push({
-                pathname: '/(buyer)/product-listing',
-                params: { category: item.name },
-              })}
-              activeOpacity={0.85}
-            >
-              <Image
-                source={getCategoryImage(item.name, item.image)}
-                style={styles.categoryImage}
-                resizeMode="cover"
-              />
-              <View style={styles.categoryInfo}>
-                <Text style={styles.categoryName}>{item.name}</Text>
-                <Text style={styles.categoryCount}>{item.count || 'View Products'}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Can't find card */}
-        <View style={styles.findCard}>
-          <Text style={styles.findTitle}>
-            Can&apos;t find what you&apos;re looking for?
-          </Text>
-          <Text style={styles.findDesc}>
-            Our global network of verified vendors can source specific
-            wholesale products for your business needs.
-          </Text>
-          <TouchableOpacity style={styles.findBtn}>
-            <Text style={styles.findBtnText}>Request a Quote</Text>
-          </TouchableOpacity>
-        </View>
-
-      </ScrollView>
+      />
 
     </SafeAreaView>
   )
@@ -228,21 +216,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1a237e',
   },
-  cartIcon: {
+  bellIcon: {
     fontSize: 22,
-    color: '#1a237e',
   },
 
-  scroll: {
-    paddingBottom: 120,
+  // List
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
   },
 
   // Page Header
   pageHeader: {
-    paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 16,
-    backgroundColor: '#f5f7fc',
   },
   pageTitle: {
     fontSize: 30,
@@ -256,23 +243,20 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Grid
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
+  // Grid Row
+  row: {
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
 
   // Category Card
   categoryCard: {
-    width: '48%',
+    width: CARD_WIDTH,
     backgroundColor: '#fff',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#eee',
-    marginBottom: 16,
   },
   categoryImage: {
     width: '100%',
@@ -295,11 +279,11 @@ const styles = StyleSheet.create({
 
   // Find Card
   findCard: {
-    marginHorizontal: 16,
-    marginTop: 8,
     backgroundColor: '#1a237e',
     borderRadius: 20,
     padding: 24,
+    marginTop: 8,
+    marginBottom: 16,
   },
   findTitle: {
     fontSize: 20,
@@ -325,6 +309,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-
-
-})  
+})

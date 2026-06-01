@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { getSellerOrders, updateOrderStatus } from '../../services/orderService'
+import { onOrderStatusChanged, removeListener } from '../../services/socketService'
 
 export default function SellerOrdersScreen() {
   const [orders, setOrders] = useState([])
@@ -11,6 +12,13 @@ export default function SellerOrdersScreen() {
 
   useEffect(() => {
     loadOrders()
+    
+    // Listen for order status updates dynamically
+    onOrderStatusChanged(loadOrders)
+    
+    return () => {
+      removeListener('orderStatusChanged')
+    }
   }, [])
 
   const loadOrders = async () => {
@@ -34,6 +42,19 @@ export default function SellerOrdersScreen() {
     }
   }
 
+  const getStatusStyle = (status) => {
+    switch(status) {
+      case 'placed': return { bg: '#fff3e0', text: '#f57c00' }
+      case 'confirmed': return { bg: '#e1f5fe', text: '#0288d1' }
+      case 'packed': return { bg: '#fffde7', text: '#fbc02d' }
+      case 'shipped': return { bg: '#e8f5e9', text: '#2e7d32' }
+      case 'delivered': return { bg: '#e8f5e9', text: '#2e7d32' }
+      case 'cancelled': return { bg: '#ffebee', text: '#c62828' }
+      case 'returned': return { bg: '#eceff1', text: '#455a64' }
+      default: return { bg: '#f5f5f5', text: '#666' }
+    }
+  }
+
   if (loading) {
     return <SafeAreaView style={styles.container}><ActivityIndicator style={{marginTop:50}} size="large" /></SafeAreaView>
   }
@@ -43,44 +64,47 @@ export default function SellerOrdersScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Orders</Text>
-        <View style={{width:24}}/>
+        <TouchableOpacity onPress={loadOrders}><MaterialCommunityIcons name="refresh" size={24} color="#333" /></TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {orders.length === 0 ? (
           <Text style={styles.emptyText}>No orders yet.</Text>
-        ) : orders.map((order) => (
-          <View key={order._id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.orderId}>#{order.orderNumber}</Text>
-              <View style={[styles.statusBadge, {backgroundColor: order.orderStatus === 'placed' ? '#fff3e0' : '#e8f5e9'}]}>
-                <Text style={[styles.statusText, {color: order.orderStatus === 'placed' ? '#f57c00' : '#2e7d32'}]}>
-                  {order.orderStatus.toUpperCase()}
-                </Text>
+        ) : orders.map((order) => {
+          const statusStyle = getStatusStyle(order.orderStatus)
+          return (
+            <View key={order._id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.orderId}>#{order.orderNumber}</Text>
+                <View style={[styles.statusBadge, {backgroundColor: statusStyle.bg}]}>
+                  <Text style={[styles.statusText, {color: statusStyle.text}]}>
+                    {order.orderStatus.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.buyerInfo}>
+                <Text style={styles.buyerName}>Buyer: {order.buyerId?.name}</Text>
+                <Text style={styles.buyerContact}>{order.deliveryAddress?.phone} | {order.deliveryAddress?.city}, {order.deliveryAddress?.country}</Text>
+              </View>
+
+              <View style={styles.itemsList}>
+                {order.items.map((item, idx) => (
+                  <Text key={idx} style={styles.itemText}>{item.quantity}x {item.productName}</Text>
+                ))}
+              </View>
+
+              <View style={styles.footer}>
+                <Text style={styles.totalText}>Earnings: ${order.sellerEarnings}</Text>
+                {order.orderStatus === 'placed' && (
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpdateStatus(order._id, 'shipped')}>
+                    <Text style={styles.actionBtnText}>Mark as Shipped</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-
-            <View style={styles.buyerInfo}>
-              <Text style={styles.buyerName}>Buyer: {order.buyerId?.name}</Text>
-              <Text style={styles.buyerContact}>{order.deliveryAddress?.phone} | {order.deliveryAddress?.city}, {order.deliveryAddress?.country}</Text>
-            </View>
-
-            <View style={styles.itemsList}>
-              {order.items.map((item, idx) => (
-                <Text key={idx} style={styles.itemText}>{item.quantity}x {item.productName}</Text>
-              ))}
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.totalText}>Earnings: ${order.sellerEarnings}</Text>
-              {order.orderStatus === 'placed' && (
-                <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpdateStatus(order._id, 'shipped')}>
-                  <Text style={styles.actionBtnText}>Mark as Shipped</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        ))}
+          )
+        })}
       </ScrollView>
     </SafeAreaView>
   )

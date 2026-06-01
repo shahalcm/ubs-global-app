@@ -12,6 +12,12 @@ export const markAllRead = async () => {
   return res.data
 }
 
+// Mark single notification read
+export const markAsRead = async (id) => {
+  const res = await api.patch(`/notifications/${id}/read`)
+  return res.data
+}
+
 // Update FCM token
 export const updateFCMToken = async (fcmToken) => {
   const res = await api.patch('/users/fcm-token', { fcmToken })

@@ -1,9 +1,9 @@
-import {
-  RTCPeerConnection,
-  RTCIceCandidate,
-  RTCSessionDescription,
-  mediaDevices
-} from 'react-native-webrtc'
+let WebRTC = null
+try {
+  WebRTC = require('react-native-webrtc')
+} catch (error) {
+  console.warn('react-native-webrtc native module is missing or failed to evaluate. WebRTC functionality will be disabled.', error)
+}
 
 const getIceServers = () => {
   const iceServers = [
@@ -40,7 +40,11 @@ class WebRTCManager {
         return this.localStream
       }
       
-      const stream = await mediaDevices.getUserMedia({
+      if (!WebRTC?.mediaDevices) {
+        throw new Error('WebRTC mediaDevices is not available on this platform')
+      }
+      
+      const stream = await WebRTC.mediaDevices.getUserMedia({
         audio: true,
         video: false
       })
@@ -58,7 +62,11 @@ class WebRTCManager {
       iceServers: getIceServers()
     }
     
-    this.peerConnection = new RTCPeerConnection(pcConfig)
+    if (!WebRTC?.RTCPeerConnection) {
+      throw new Error('WebRTC RTCPeerConnection is not available on this platform')
+    }
+    
+    this.peerConnection = new WebRTC.RTCPeerConnection(pcConfig)
 
     // Add local tracks to peer connection
     if (this.localStream) {
@@ -121,7 +129,10 @@ class WebRTCManager {
       if (!this.peerConnection) {
         throw new Error('PeerConnection is not initialized')
       }
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(remoteOffer))
+      if (!WebRTC?.RTCSessionDescription) {
+        throw new Error('WebRTC RTCSessionDescription is not available on this platform')
+      }
+      await this.peerConnection.setRemoteDescription(new WebRTC.RTCSessionDescription(remoteOffer))
       const answer = await this.peerConnection.createAnswer()
       await this.peerConnection.setLocalDescription(answer)
       return answer
@@ -137,7 +148,10 @@ class WebRTCManager {
       if (!this.peerConnection) {
         throw new Error('PeerConnection is not initialized')
       }
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(remoteAnswer))
+      if (!WebRTC?.RTCSessionDescription) {
+        throw new Error('WebRTC RTCSessionDescription is not available on this platform')
+      }
+      await this.peerConnection.setRemoteDescription(new WebRTC.RTCSessionDescription(remoteAnswer))
     } catch (error) {
       console.error('WebRTC Service: setAnswer error:', error)
       throw error
@@ -148,7 +162,10 @@ class WebRTCManager {
   async addIceCandidate(candidate) {
     try {
       if (this.peerConnection) {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+        if (!WebRTC?.RTCIceCandidate) {
+          throw new Error('WebRTC RTCIceCandidate is not available on this platform')
+        }
+        await this.peerConnection.addIceCandidate(new WebRTC.RTCIceCandidate(candidate))
       }
     } catch (error) {
       console.error('WebRTC Service: addIceCandidate error:', error)

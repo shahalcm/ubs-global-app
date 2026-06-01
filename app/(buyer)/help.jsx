@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Alert,
+  Linking
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -27,6 +29,27 @@ const FAQS = [
 ];
 
 export default function HelpCenterScreen() {
+  const handleContactSupport = () => {
+    Alert.alert(
+      "Connect Support",
+      "We offer 24/7 global trade assistance. How would you like to connect?",
+      [
+        {
+          text: "Email Support",
+          onPress: () => Linking.openURL('mailto:support@ubsglobalapp.com?subject=UBS Global Support Request')
+        },
+        {
+          text: "Call Hotline",
+          onPress: () => Linking.openURL('tel:+18005550199')
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    )
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -55,7 +78,7 @@ export default function HelpCenterScreen() {
           <Text style={styles.contactDesc}>
             Our support team is available 24/7 to assist you.
           </Text>
-          <TouchableOpacity style={styles.contactBtn}>
+          <TouchableOpacity style={styles.contactBtn} onPress={handleContactSupport}>
             <Text style={styles.contactBtnText}>Contact Support</Text>
           </TouchableOpacity>
         </View>

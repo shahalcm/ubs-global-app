@@ -8,19 +8,50 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useAuth } from "../../context/AuthContext";
+import { updateProfile } from "../../services/userService";
 
 export default function EditProfileScreen() {
-  const [name, setName] = useState("UBS Global User");
-  const [email, setEmail] = useState("user.global@ubsexports.com");
-  const [phone, setPhone] = useState("+1 234 567 8900");
+  const { user, updateUser } = useAuth();
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    // Save logic
-    router.back();
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert(t("Error"), t("Name is required"));
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      const res = await updateProfile({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim()
+      });
+      
+      if (res.success) {
+        // Sync context state
+        await updateUser(res.user);
+        Alert.alert("Success", "Profile updated successfully.");
+        router.back();
+      } else {
+        Alert.alert("Error", res.message || "Failed to update profile.");
+      }
+    } catch (err) {
+      console.log("Error updating profile:", err);
+      Alert.alert("Error", "An unexpected error occurred.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -45,6 +76,7 @@ export default function EditProfileScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Enter full name"
+            editable={!saving}
           />
 
           <Text style={styles.label}>Email Address</Text>
@@ -54,6 +86,7 @@ export default function EditProfileScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             placeholder="Enter email"
+            editable={!saving}
           />
 
           <Text style={styles.label}>Phone Number</Text>
@@ -63,13 +96,22 @@ export default function EditProfileScreen() {
             onChangeText={setPhone}
             keyboardType="phone-pad"
             placeholder="Enter phone number"
+            editable={!saving}
           />
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save Changes</Text>
+        <TouchableOpacity 
+          style={[styles.saveBtn, saving && styles.saveBtnDisabled]} 
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.saveBtnText}>Save Changes</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -131,6 +173,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+  },
+  saveBtnDisabled: {
+    backgroundColor: "#90caf9",
   },
   saveBtnText: {
     color: "#fff",

@@ -1,5 +1,5 @@
 // app/(buyer)/orders.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -7,67 +7,86 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-
-const MOCK_ORDERS = [
-  {
-    id: 'UBS-00123',
-    date: 'Oct 24, 2023',
-    total: '$299.00',
-    status: 'In Progress',
-    items: 1,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&q=80',
-    title: 'Elite Series Pro Headphones',
-  },
-  {
-    id: 'UBS-00122',
-    date: 'Oct 20, 2023',
-    total: '$1,250.00',
-    status: 'Delivered',
-    items: 5,
-    image: 'https://images.unsplash.com/photo-1509391366360-1e97b524c08b?w=200&q=80',
-    title: 'High-Efficiency Bifacial 600W Solar Module',
-  },
-  {
-    id: 'UBS-00119',
-    date: 'Oct 15, 2023',
-    total: '$4,150.00',
-    status: 'Processing',
-    items: 1,
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=200&q=80',
-    title: 'Bulk Industrial Lathes',
-  },
-  {
-    id: 'UBS-00110',
-    date: 'Oct 05, 2023',
-    total: '$85.00',
-    status: 'Cancelled',
-    items: 2,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80',
-    title: 'Smart Watch Series 5',
-  }
-]
+import { getMyOrders } from '../../services/orderService'
+import { onOrderStatusChanged, removeListener } from '../../services/socketService'
 
 export default function MyOrdersScreen() {
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('All')
   
   const tabs = ['All', 'Processing', 'In Progress', 'Delivered', 'Cancelled']
   
-  const filteredOrders = activeTab === 'All' 
-    ? MOCK_ORDERS 
-    : MOCK_ORDERS.filter(o => o.status === activeTab)
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'Delivered': return { bg: '#e8f5e9', text: '#2e7d32' }
-      case 'In Progress': return { bg: '#e1f5fe', text: '#0288d1' }
-      case 'Processing': return { bg: '#fff3e0', text: '#f57c00' }
-      case 'Cancelled': return { bg: '#ffebee', text: '#c62828' }
-      default: return { bg: '#f5f5f5', text: '#666' }
+  useEffect(() => {
+    loadOrders()
+    
+    // Listen for order status updates dynamically
+    onOrderStatusChanged(loadOrders)
+    
+    return () => {
+      removeListener('orderStatusChanged')
     }
+  }, [])
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true)
+      const res = await getMyOrders()
+      if (res.success) {
+        setOrders(res.orders || [])
+      }
+    } catch (err) {
+      console.log('Error loading orders:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const mapDbStatusToTabStatus = (dbStatus) => {
+    switch(dbStatus) {
+      case 'placed':
+      case 'confirmed':
+      case 'packed':
+        return 'Processing'
+      case 'shipped':
+        return 'In Progress'
+      case 'delivered':
+        return 'Delivered'
+      case 'cancelled':
+      case 'returned':
+        return 'Cancelled'
+      default:
+        return 'Processing'
+    }
+  }
+
+  const getStatusDetails = (status) => {
+    switch(status) {
+      case 'placed': return { bg: '#e1f5fe', text: '#0288d1', label: 'Placed' }
+      case 'confirmed': return { bg: '#e8f1ff', text: '#1a237e', label: 'Confirmed' }
+      case 'packed': return { bg: '#fffde7', text: '#fbc02d', label: 'Packed' }
+      case 'shipped': return { bg: '#e8f5e9', text: '#2e7d32', label: 'Shipped' }
+      case 'delivered': return { bg: '#e8f5e9', text: '#2e7d32', label: 'Delivered' }
+      case 'cancelled': return { bg: '#ffebee', text: '#c62828', label: 'Cancelled' }
+      case 'returned': return { bg: '#eceff1', text: '#455a64', label: 'Returned' }
+      default: return { bg: '#f5f5f5', text: '#666', label: status?.toUpperCase() || '' }
+    }
+  }
+
+  const filteredOrders = activeTab === 'All' 
+    ? orders 
+    : orders.filter(o => mapDbStatusToTabStatus(o.orderStatus) === activeTab)
+
+  const handleNavigateToDetails = (orderId) => {
+    router.push({
+      pathname: '/(buyer)/order-tracking',
+      params: { orderId }
+    })
   }
 
   return (
@@ -80,8 +99,8 @@ export default function MyOrdersScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Orders</Text>
         </View>
-        <TouchableOpacity style={styles.headerRight}>
-          <MaterialCommunityIcons name="magnify" size={24} color="#333" />
+        <TouchableOpacity style={styles.headerRight} onPress={loadOrders}>
+          <MaterialCommunityIcons name="refresh" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -103,59 +122,102 @@ export default function MyOrdersScreen() {
       </View>
 
       {/* Orders List */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {filteredOrders.length === 0 ? (
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="package-variant-closed" size={48} color="#ccc" />
-            <Text style={styles.emptyTitle}>No Orders Found</Text>
-            <Text style={styles.emptyDesc}>You have no orders in this category.</Text>
-          </View>
-        ) : (
-          filteredOrders.map((order) => {
-            const statusStyle = getStatusColor(order.status)
-            return (
-              <View key={order.id} style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <View>
-                    <Text style={styles.orderId}>Order #{order.id}</Text>
-                    <Text style={styles.orderDate}>{order.date}</Text>
+      {loading && orders.length === 0 ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#000040" />
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {filteredOrders.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="package-variant-closed" size={48} color="#ccc" />
+              <Text style={styles.emptyTitle}>No Orders Found</Text>
+              <Text style={styles.emptyDesc}>You have no orders in this category.</Text>
+            </View>
+          ) : (
+            filteredOrders.map((order) => {
+              const statusDetails = getStatusDetails(order.orderStatus)
+              const firstItem = order.items?.[0]
+              const totalItemsCount = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+              
+              return (
+                <View key={order._id} style={styles.orderCard}>
+                  <View style={styles.orderHeader}>
+                    <View>
+                      <Text style={styles.orderId} numberOfLines={1}>Order #{order.orderNumber || order._id}</Text>
+                      <Text style={styles.orderDate}>
+                        {new Date(order.createdAt).toLocaleDateString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: statusDetails.bg }]}>
+                      <Text style={[styles.statusText, { color: statusDetails.text }]}>{statusDetails.label}</Text>
+                    </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.statusText, { color: statusStyle.text }]}>{order.status}</Text>
-                  </View>
-                </View>
 
-                <View style={styles.orderBody}>
-                  <Image source={{ uri: order.image }} style={styles.orderImage} />
-                  <View style={styles.orderInfo}>
-                    <Text style={styles.orderTitle} numberOfLines={2}>{order.title}</Text>
-                    <Text style={styles.orderMeta}>Items: {order.items}</Text>
-                    <Text style={styles.orderTotal}>Total: {order.total}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.orderFooter}>
-                  <TouchableOpacity style={styles.outlineBtn}>
-                    <Text style={styles.outlineBtnText}>Details</Text>
+                  {/* Clicking the body routes to details/tracking screen */}
+                  <TouchableOpacity 
+                    style={styles.orderBody}
+                    onPress={() => handleNavigateToDetails(order._id)}
+                    activeOpacity={0.7}
+                  >
+                    <Image 
+                      source={{ uri: firstItem?.productImage || 'https://via.placeholder.com/150' }} 
+                      style={styles.orderImage} 
+                    />
+                    <View style={styles.orderInfo}>
+                      <Text style={styles.orderTitle} numberOfLines={2}>
+                        {firstItem?.productName || 'Order Item'}
+                      </Text>
+                      {order.items?.length > 1 && (
+                        <Text style={styles.additionalItemsText}>
+                          + {order.items.length - 1} other item{order.items.length - 1 > 1 ? 's' : ''}
+                        </Text>
+                      )}
+                      <Text style={styles.orderMeta}>Total Items: {totalItemsCount}</Text>
+                      <Text style={styles.orderTotal}>Total: ${(order.grandTotal || 0).toFixed(2)}</Text>
+                    </View>
                   </TouchableOpacity>
-                  {(order.status === 'In Progress' || order.status === 'Processing') ? (
+
+                  <View style={styles.orderFooter}>
                     <TouchableOpacity 
-                      style={styles.primaryBtn}
-                      onPress={() => router.push('/(buyer)/order-tracking')}
+                      style={styles.outlineBtn}
+                      onPress={() => handleNavigateToDetails(order._id)}
                     >
-                      <Text style={styles.primaryBtnText}>Track Order</Text>
+                      <Text style={styles.outlineBtnText}>Details</Text>
                     </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={styles.primaryBtn}>
-                      <Text style={styles.primaryBtnText}>Buy Again</Text>
-                    </TouchableOpacity>
-                  )}
+                    {(order.orderStatus === 'placed' || order.orderStatus === 'confirmed' || order.orderStatus === 'packed' || order.orderStatus === 'shipped') ? (
+                      <TouchableOpacity 
+                        style={styles.primaryBtn}
+                        onPress={() => handleNavigateToDetails(order._id)}
+                      >
+                        <Text style={styles.primaryBtnText}>Track Order</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.primaryBtn}
+                        onPress={() => {
+                          if (firstItem?.productId) {
+                            router.push({
+                              pathname: '/(buyer)/product-details',
+                              params: { id: firstItem.productId }
+                            })
+                          }
+                        }}
+                      >
+                        <Text style={styles.primaryBtnText}>Buy Again</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-              </View>
-            )
-          })
-        )}
-      </ScrollView>
+              )
+            })
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
@@ -191,7 +253,11 @@ const styles = StyleSheet.create({
   headerRight: {
     padding: 4,
   },
-
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   tabsContainer: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,
@@ -251,6 +317,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000040',
     marginBottom: 2,
+    maxWidth: 200,
   },
   orderDate: {
     fontSize: 12,
@@ -285,6 +352,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
+    marginBottom: 2,
+  },
+  additionalItemsText: {
+    fontSize: 11,
+    color: '#008b8b',
+    fontWeight: '700',
     marginBottom: 4,
   },
   orderMeta: {
