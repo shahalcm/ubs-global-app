@@ -43,3 +43,6 @@ app-example
 /android
 
 .env
+
+# portable node
+node_portable/

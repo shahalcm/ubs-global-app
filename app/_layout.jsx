@@ -20,20 +20,20 @@ export default function RootLayout() {
     initI18n().then(() => setI18nLoaded(true))
   }, [])
 
-  if (!i18nLoaded) return null
-
   return (
-    <SafeAreaProvider>
-      <I18nextProvider i18n={i18n}>
-        <AuthProvider>
+    <AuthProvider>
+      <SafeAreaProvider>
+        <I18nextProvider i18n={i18n}>
           <CallProvider>
             <CartProvider>
-              <Slot />
+              {i18nLoaded ? (
+                <Slot />
+              ) : null}
               <CustomAlertContainer />
             </CartProvider>
           </CallProvider>
-        </AuthProvider>
-      </I18nextProvider>
-    </SafeAreaProvider>
+        </I18nextProvider>
+      </SafeAreaProvider>
+    </AuthProvider>
   )
 }

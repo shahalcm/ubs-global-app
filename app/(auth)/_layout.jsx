@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 
 export default function AuthLayout() {
   const { isAuthenticated, user, loading } = useAuth()
+  console.log("AuthLayout Rendered, loading:", loading, "isAuthenticated:", isAuthenticated)
   const segments = useSegments()
 
   if (loading) return null

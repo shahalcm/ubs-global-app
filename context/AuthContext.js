@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }) => {
   console.log("AuthProvider rendered!");
 
   useEffect(() => {
+    console.log("AuthProvider Mounted");
     // 1. Initial load from AsyncStorage for instant loading
     const initializeSession = async () => {
       try {
@@ -202,6 +203,7 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser)
   }
 
+  console.log("AuthProvider is rendering children. Context value is defined.");
   return (
     <AuthContext.Provider value={{
       user,
@@ -220,8 +222,10 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+  console.log("useAuth Called");
+  console.log("Auth Context Value:", context);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider. Is the component wrapped in AuthProvider?');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
