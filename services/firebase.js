@@ -14,21 +14,32 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase App
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+let app = null;
+let auth = null;
 
-// Initialize Firebase Auth dynamically depending on platform support
-let auth;
-if (Platform.OS === 'web') {
-  auth = getAuth(app);
-} else {
-  if (typeof getReactNativePersistence === 'function') {
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } else {
-    auth = getAuth(app);
+// Safeguard Firebase initialization against missing/incomplete configuration in production builds
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+if (isConfigValid) {
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    if (Platform.OS === 'web') {
+      auth = getAuth(app);
+    } else {
+      if (typeof getReactNativePersistence === 'function') {
+        auth = initializeAuth(app, {
+          persistence: getReactNativePersistence(AsyncStorage),
+        });
+      } else {
+        auth = getAuth(app);
+      }
+    }
+    console.log("🔥 Firebase Initialized Successfully");
+  } catch (error) {
+    console.error("💥 Firebase initialization failed during startup:", error);
   }
+} else {
+  console.warn("⚠️ Firebase environment variables are missing! Firebase Auth will be disabled.");
 }
 
 export { app, auth };

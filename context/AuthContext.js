@@ -49,53 +49,58 @@ export const AuthProvider = ({ children }) => {
     initializeSession()
 
     // 2. Subscribe to Firebase Auth changes for Google users
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        const storedProvider = await AsyncStorage.getItem('authProvider')
-        
-        if (firebaseUser) {
-          // If logged in via Google but local state is missing, sync it
-          if (storedProvider === 'google') {
-            const storedToken = await AsyncStorage.getItem('token')
-            const storedUser = await AsyncStorage.getItem('user')
-            
-            if (!storedToken || !storedUser) {
-              try {
-                const backendData = {
-                  googleId: firebaseUser.uid,
-                  name: firebaseUser.displayName || 'Google User',
-                  email: firebaseUser.email,
-                  avatar: firebaseUser.photoURL,
+    let unsubscribe = () => {}
+    if (auth) {
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        try {
+          const storedProvider = await AsyncStorage.getItem('authProvider')
+          
+          if (firebaseUser) {
+            // If logged in via Google but local state is missing, sync it
+            if (storedProvider === 'google') {
+              const storedToken = await AsyncStorage.getItem('token')
+              const storedUser = await AsyncStorage.getItem('user')
+              
+              if (!storedToken || !storedUser) {
+                try {
+                  const backendData = {
+                    googleId: firebaseUser.uid,
+                    name: firebaseUser.displayName || 'Google User',
+                    email: firebaseUser.email,
+                    avatar: firebaseUser.photoURL,
+                  }
+                  const res = await googleAuth(backendData)
+                  if (res?.user && res?.token) {
+                    await AsyncStorage.setItem('token', res.token)
+                    await AsyncStorage.setItem('user', JSON.stringify(res.user))
+                    await AsyncStorage.setItem('userId', res.user._id)
+                    setUser(res.user)
+                    setToken(res.token)
+                    setIsAuthenticated(true)
+                    await connectSocket()
+                  }
+                } catch (error) {
+                  console.error('Firebase session restore sync error:', error)
                 }
-                const res = await googleAuth(backendData)
-                if (res?.user && res?.token) {
-                  await AsyncStorage.setItem('token', res.token)
-                  await AsyncStorage.setItem('user', JSON.stringify(res.user))
-                  await AsyncStorage.setItem('userId', res.user._id)
-                  setUser(res.user)
-                  setToken(res.token)
-                  setIsAuthenticated(true)
-                  await connectSocket()
-                }
-              } catch (error) {
-                console.error('Firebase session restore sync error:', error)
               }
             }
+          } else {
+            // If Firebase says no user, but we are supposed to be logged in via Google, log out!
+            if (storedProvider === 'google') {
+              setUser(null)
+              setToken(null)
+              setIsAuthenticated(false)
+              await AsyncStorage.multiRemove(['token', 'user', 'userId', 'authProvider'])
+              disconnectSocket()
+            }
           }
-        } else {
-          // If Firebase says no user, but we are supposed to be logged in via Google, log out!
-          if (storedProvider === 'google') {
-            setUser(null)
-            setToken(null)
-            setIsAuthenticated(false)
-            await AsyncStorage.multiRemove(['token', 'user', 'userId', 'authProvider'])
-            disconnectSocket()
-          }
+        } catch (error) {
+          console.error('onAuthStateChanged handler error:', error)
         }
-      } catch (error) {
-        console.error('onAuthStateChanged handler error:', error)
-      }
-    })
+      })
+    } else {
+      console.warn("⚠️ Firebase Auth is not initialized. Skipping Auth state listener.");
+    }
 
     return () => unsubscribe()
   }, [])
@@ -115,6 +120,10 @@ export const AuthProvider = ({ children }) => {
   }
 
   const loginWithGoogle = async (idToken) => {
+    if (!auth) {
+      console.error("💥 loginWithGoogle failed: Firebase Auth not initialized");
+      return { success: false, error: 'Firebase Auth not initialized' }
+    }
     setLoading(true)
     try {
       const credential = GoogleAuthProvider.credential(idToken)
@@ -178,7 +187,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true)
     try {
       const storedProvider = await AsyncStorage.getItem('authProvider')
-      if (storedProvider === 'google') {
+      if (storedProvider === 'google' && auth) {
         await signOut(auth)
       }
     } catch (error) {

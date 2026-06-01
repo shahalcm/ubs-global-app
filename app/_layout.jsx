@@ -13,6 +13,19 @@ import * as WebBrowser from 'expo-web-browser'
 import { StatusBar } from 'expo-status-bar'
 import { View, Platform } from 'react-native'
 
+// Startup logs & Global Native Crash Handler
+console.log("📱 [App Status] App Started and Bundle Evaluating...");
+
+if (global.ErrorUtils) {
+  const previousHandler = global.ErrorUtils.getGlobalHandler();
+  global.ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error("💥 [Fatal Native Crash Caught]", error);
+    if (previousHandler) {
+      previousHandler(error, isFatal);
+    }
+  });
+}
+
 WebBrowser.maybeCompleteAuthSession()
 
 function RootLayoutInner() {
