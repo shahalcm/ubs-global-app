@@ -1,6 +1,12 @@
 const { withProjectBuildGradle } = require('@expo/config-plugins');
 
 module.exports = function withCMakeStaging(config) {
+  // Only apply on Windows local builds where MAX_PATH is an issue.
+  // EAS Build (Linux) and macOS do not suffer from the 260 character path limit.
+  if (process.platform !== 'win32') {
+    return config;
+  }
+
   return withProjectBuildGradle(config, (config) => {
     if (config.modResults.language === 'groovy') {
       const customCode = `
