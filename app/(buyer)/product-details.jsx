@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,6 +9,7 @@ import { toggleWishlist } from "../../services/wishlistService";
 import { useCart } from "../../context/CartContext";
 import { useTranslation } from "react-i18next";
 import ContactSellerModal from "../../components/buyer/ContactSellerModal";
+import { getProductReviews, submitReview } from "../../services/reviewService";
 
 const { width } = Dimensions.get("window");
 
@@ -26,8 +27,17 @@ export default function ProductDetailsScreen() {
   const [quantity, setQuantity] = useState(1);
   const { refreshCart } = useCart();
 
+  // Reviews states
+  const [reviews, setReviews] = useState([]);
+  const [ratingInput, setRatingInput] = useState(0);
+  const [commentInput, setCommentInput] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   useEffect(() => {
-    if (id) loadProduct();
+    if (id) {
+      loadProduct();
+      loadReviews();
+    }
   }, [id]);
 
   const loadProduct = async () => {
@@ -43,6 +53,49 @@ export default function ProductDetailsScreen() {
       Alert.alert('Error', 'Failed to load product');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReviews = async () => {
+    try {
+      const res = await getProductReviews(id);
+      if (res?.success) {
+        setReviews(res.reviews);
+      }
+    } catch (err) {
+      console.log("Error loading reviews:", err);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (ratingInput === 0) {
+      Alert.alert('Validation Error', 'Please select a star rating');
+      return;
+    }
+    try {
+      setSubmittingReview(true);
+      const res = await submitReview({
+        productId: product._id,
+        rating: ratingInput,
+        comment: commentInput
+      });
+      if (res?.success) {
+        Alert.alert('Success', 'Thank you for your review!');
+        setCommentInput('');
+        setRatingInput(0);
+        
+        // Refresh product to see updated rating
+        const updatedProd = await getProduct(id);
+        if (updatedProd?.product) {
+          setProduct(updatedProd.product);
+          setSeller(updatedProd.product.sellerId);
+        }
+        loadReviews();
+      }
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -188,6 +241,99 @@ export default function ProductDetailsScreen() {
           <TouchableOpacity style={styles.secondaryBtn} onPress={() => setContactVisible(true)}>
             <Text style={styles.secondaryBtnText}>{t("Contact Seller")}</Text>
           </TouchableOpacity>
+
+          {/* Categories & Tags Display Section */}
+          <View style={styles.sectionDivider} />
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>{t("Category & Tags")}</Text>
+            <View style={styles.tagsContainer}>
+              <View style={styles.categoryChip}>
+                <MaterialCommunityIcons name="tag" size={14} color="#008b8b" />
+                <Text style={styles.categoryChipText}>{product.category?.name || t("General")}</Text>
+              </View>
+              {product.tags && product.tags.map((tag, i) => (
+                <View key={i} style={styles.tagChip}>
+                  <Text style={styles.tagChipText}>#{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Write a Review Form Section */}
+          <View style={styles.sectionDivider} />
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>{t("Write a Review")}</Text>
+            <View style={styles.ratingInputRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setRatingInput(star)}>
+                  <MaterialCommunityIcons 
+                    name={star <= ratingInput ? "star" : "star-outline"} 
+                    size={30} 
+                    color="#fbc02d" 
+                    style={{ marginRight: 6 }}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput 
+              style={styles.reviewTextInput}
+              placeholder={t("Share your thoughts about this product...")}
+              placeholderTextColor="#999"
+              value={commentInput}
+              onChangeText={setCommentInput}
+              multiline
+              numberOfLines={4}
+            />
+            <TouchableOpacity 
+              style={[styles.submitReviewBtn, submittingReview && { opacity: 0.7 }]} 
+              onPress={handleSubmitReview}
+              disabled={submittingReview}
+            >
+              {submittingReview ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.submitReviewBtnText}>{t("Submit Review")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Customer Reviews Section */}
+          <View style={styles.sectionDivider} />
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>{t("Customer Reviews")} ({reviews.length})</Text>
+            {reviews.length === 0 ? (
+              <Text style={styles.noReviewsText}>{t("No reviews yet. Be the first to review this product!")}</Text>
+            ) : (
+              reviews.map((rev) => (
+                <View key={rev._id} style={styles.reviewCard}>
+                  <Image 
+                    source={{ uri: rev.buyerId?.avatar || 'https://via.placeholder.com/150' }} 
+                    style={styles.reviewAvatar} 
+                  />
+                  <View style={styles.reviewContent}>
+                    <View style={styles.reviewHeaderRow}>
+                      <Text style={styles.reviewBuyerName}>{rev.buyerId?.name || t("Anonymous")}</Text>
+                      <Text style={styles.reviewDate}>{new Date(rev.createdAt).toLocaleDateString()}</Text>
+                    </View>
+                    <View style={styles.reviewStarsRow}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <MaterialCommunityIcons 
+                          key={star} 
+                          name={star <= rev.rating ? "star" : "star-outline"} 
+                          size={12} 
+                          color="#fbc02d" 
+                          style={{ marginRight: 2 }}
+                        />
+                      ))}
+                    </View>
+                    {rev.comment ? (
+                      <Text style={styles.reviewComment}>{rev.comment}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
         </View>
 
         <ContactSellerModal
@@ -240,5 +386,28 @@ const styles = StyleSheet.create({
   solidBtn: { backgroundColor: "#1a237e", borderRadius: 8, paddingVertical: 16, alignItems: "center", marginBottom: 12 },
   solidBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   secondaryBtn: { borderRadius: 8, paddingVertical: 16, alignItems: "center", backgroundColor: "#29b6f6", marginBottom: 24 },
-  secondaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" }
+  secondaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+
+  // New review and category styles
+  sectionDivider: { height: 1, backgroundColor: '#eef0f2', marginVertical: 16 },
+  sectionContainer: { marginBottom: 8 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1a237e', marginBottom: 12 },
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e0f2f1', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
+  categoryChipText: { fontSize: 12, color: '#008b8b', fontWeight: '600' },
+  tagChip: { backgroundColor: '#f0f0f5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  tagChipText: { fontSize: 12, color: '#666', fontWeight: '500' },
+  ratingInputRow: { flexDirection: 'row', marginBottom: 12 },
+  reviewTextInput: { borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 8, padding: 12, fontSize: 14, color: '#212121', backgroundColor: '#fff', textAlignVertical: 'top', minHeight: 80, marginBottom: 12 },
+  submitReviewBtn: { backgroundColor: '#1a237e', borderRadius: 8, paddingVertical: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 },
+  submitReviewBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  noReviewsText: { fontSize: 13, color: '#888', fontStyle: 'italic', marginVertical: 8 },
+  reviewCard: { flexDirection: 'row', backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#f0f0f5', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  reviewAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 12, backgroundColor: '#eee' },
+  reviewContent: { flex: 1 },
+  reviewHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  reviewBuyerName: { fontSize: 13, fontWeight: '600', color: '#212121' },
+  reviewDate: { fontSize: 10, color: '#999' },
+  reviewStarsRow: { flexDirection: 'row', marginBottom: 6 },
+  reviewComment: { fontSize: 13, color: '#444', lineHeight: 18 }
 });
