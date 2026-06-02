@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform, AppState } from 'react-native'
 import { getEnv } from '../utils/env'
 
-const SOCKET_URL = getEnv('EXPO_PUBLIC_SOCKET_URL', 'https://ubs-global-server-production.up.railway.app')
+const SOCKET_URL = getEnv('EXPO_PUBLIC_SOCKET_URL', 'https://api.ubsglobalapp.com')
 console.log('🔌 [Socket Config] Active Socket URL:', SOCKET_URL)
 
 let socket = null
@@ -27,7 +27,7 @@ export const connectSocket = async () => {
   
   console.log('🔌 [Socket] Establishing new connection to:', SOCKET_URL)
   socket = io(SOCKET_URL, {
-    transports: ['websocket', 'polling'], // Prioritize websocket, fallback to polling
+    transports: ['polling', 'websocket'], // Start with polling for maximum compatibility, then upgrade to websocket
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,

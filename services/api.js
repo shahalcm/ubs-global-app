@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 import { getEnv } from '../utils/env'
 
-const BASE_URL = getEnv('EXPO_PUBLIC_API_URL', 'https://ubs-global-server-production.up.railway.app/api')
+const BASE_URL = getEnv('EXPO_PUBLIC_API_URL', 'https://api.ubsglobalapp.com/api')
 console.log('🔌 [API Config] Active API Base URL:', BASE_URL)
 
 const api = axios.create({

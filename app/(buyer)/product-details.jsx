@@ -10,6 +10,7 @@ import { useCart } from "../../context/CartContext";
 import { useTranslation } from "react-i18next";
 import ContactSellerModal from "../../components/buyer/ContactSellerModal";
 import { getProductReviews, submitReview } from "../../services/reviewService";
+import api from "../../services/api";
 
 const { width } = Dimensions.get("window");
 
@@ -19,6 +20,7 @@ export default function ProductDetailsScreen() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState("Reviews");
   const [contactVisible, setContactVisible] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const [product, setProduct] = useState(null);
   const [seller, setSeller] = useState(null);
@@ -130,6 +132,24 @@ export default function ProductDetailsScreen() {
     }
   };
 
+  const handleStartChat = async () => {
+    setChatLoading(true);
+    try {
+      const res = await api.post(`/products/${product._id}/chat`);
+      if (res.data.success && res.data.chatRoomId) {
+        router.push({
+          pathname: '/(buyer)/chat',
+          params: { roomId: res.data.chatRoomId }
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      Alert.alert('Chat Error', err.response?.data?.message || 'Could not start chat with seller.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -238,8 +258,16 @@ export default function ProductDetailsScreen() {
           <TouchableOpacity style={styles.solidBtn} onPress={handleBuyNow}>
             <Text style={styles.solidBtnText}>{t("Buy Now")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => setContactVisible(true)}>
-            <Text style={styles.secondaryBtnText}>{t("Contact Seller")}</Text>
+          <TouchableOpacity 
+            style={[styles.secondaryBtn, chatLoading && { opacity: 0.7 }]} 
+            onPress={handleStartChat}
+            disabled={chatLoading}
+          >
+            {chatLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.secondaryBtnText}>{t("Contact Seller")}</Text>
+            )}
           </TouchableOpacity>
 
           {/* Categories & Tags Display Section */}
