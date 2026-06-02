@@ -9,6 +9,7 @@ import {
   FlatList,
   ScrollView,
   Dimensions,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -84,7 +85,7 @@ const getCategoryData = (category) => {
       { id: '1', name: `${fallbackLabel} Pro Item 1`, rating: 4.9, reviews: 124, price: '$12,499.00', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&q=80' },
       { id: '2', name: `Smart Modular ${fallbackLabel}`, rating: 4.7, reviews: 89, price: '$4,250.00', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&q=80' },
       { id: '3', name: `Electric ${fallbackLabel} 3000`, rating: 4.8, reviews: 215, price: '$2,899.00', image: 'https://images.unsplash.com/photo-1581092160562-40aa08e49be4?w=400&q=80' },
-      { id: '4', name: `Heavy Duty ${fallbackLabel}`, rating: 5.0, reviews: 56, price: '$850.00', image: 'https://images.unsplash.com/photo-1565793979139-d2957e040c42?w=400&q=80' },
+      { id: '4', name: `Heavy Duty ${fallbackLabel}`, rating: 5.0, reviews: 56, price: '$850.00', image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80' },
     ]
   }
 }
@@ -98,6 +99,13 @@ export default function ProductListingScreen() {
   const [pagination, setPagination] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isRelated, setIsRelated] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true)
+    await loadProducts()
+    setRefreshing(false)
+  }, [category, search])
 
   React.useEffect(() => {
     loadProducts()
@@ -271,6 +279,16 @@ export default function ProductListingScreen() {
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#1a237e']}
+              tintColor="#1a237e"
+            />
+          }
         />
       )}
 

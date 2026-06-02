@@ -17,7 +17,7 @@ export const CATEGORY_IMAGES = {
   'Real Estate': { uri: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&q=80' },
   'Building Materials': { uri: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200&q=80' },
   'Machinery': { uri: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=200&q=80' },
-  'Oils': { uri: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&q=80' },
+  'Oils': { uri: 'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=200&q=80' },
   'Job Portal': { uri: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=200&q=80' },
   'Industrial': { uri: 'https://images.unsplash.com/photo-1581092160562-40aa08e49be4?w=400&q=80' },
   'Logistics': { uri: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?w=700&q=80' },

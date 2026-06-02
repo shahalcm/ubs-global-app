@@ -10,6 +10,7 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -84,13 +85,13 @@ const CATEGORIES = [
     id: '11',
     name: 'Machinery',
     count: '1.6k+ Products',
-    image: 'https://images.unsplash.com/photo-1565793979139-d2957e040c42?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80',
   },
   {
     id: '12',
     name: 'Oils',
     count: '400+ Products',
-    image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=400&q=80',
   },
 ]
 
@@ -98,6 +99,13 @@ export default function ProductsScreen() {
   const insets = useSafeAreaInsets()
   const [categories, setCategories] = useState(CATEGORIES)
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true)
+    await loadCategories()
+    setRefreshing(false)
+  }, [])
 
   useEffect(() => {
     loadCategories()
@@ -190,6 +198,16 @@ export default function ProductsScreen() {
         keyExtractor={(item) => item.id || item._id}
         numColumns={2}
         columnWrapperStyle={styles.row}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1a237e']}
+            tintColor="#1a237e"
+          />
+        }
         ListHeaderComponent={
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle}>

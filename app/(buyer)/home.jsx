@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -105,7 +106,7 @@ const CATEGORIES = [
     id: "15",
     name: "Oils",
     image:
-      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&q=80",
+      "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=200&q=80",
   },
   {
     id: "16",
@@ -168,6 +169,13 @@ export default function HomeScreen() {
   const [activeBanner, setActiveBanner] = useState(0);
   const [categories, setCategories] = useState(CATEGORIES);
   const [featuredProducts, setFeaturedProducts] = useState(FEATURED_PRODUCTS);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadHomeData();
+    setRefreshing(false);
+  }, []);
 
   const handleSearch = () => {
     if (!search.trim()) return;
@@ -262,6 +270,14 @@ export default function HomeScreen() {
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1a237e']}
+            tintColor="#1a237e"
+          />
+        }
       >
         {/* Search Bar */}
         <View style={styles.searchRow}>
@@ -329,7 +345,10 @@ export default function HomeScreen() {
               <View style={styles.bannerOverlay}>
                 <Text style={styles.bannerSubtitle}>{t(banner.subtitle)}</Text>
                 <Text style={styles.bannerTitle}>{t(banner.title)}</Text>
-                <TouchableOpacity style={styles.bannerBtn}>
+                <TouchableOpacity 
+                  style={styles.bannerBtn}
+                  onPress={() => router.push("/(buyer)/products")}
+                >
                   <Text style={styles.bannerBtnText}>{t(banner.btn)}</Text>
                 </TouchableOpacity>
               </View>
