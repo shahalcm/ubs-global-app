@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f4f5f8' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
   headerLogo: { fontSize: 18, fontWeight: '800', color: '#000040' },
-  scrollContent: { padding: 20, paddingBottom: 150 },
+  scrollContent: { padding: 20, paddingBottom: 20 },
   secureCard: { alignItems: 'center', backgroundColor: '#e8f5e9', padding: 20, borderRadius: 12, marginBottom: 20 },
   secureText: { fontSize: 16, fontWeight: '700', color: '#2e7d32', marginTop: 10 },
   subText: { fontSize: 12, color: '#4caf50' },
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   methodCard: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 12, borderWidth: 1, borderColor: '#eaeaea' },
   methodTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginTop: 10 },
   methodDesc: { fontSize: 12, color: '#666', marginTop: 5 },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: '#fff' },
+  footer: { padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#eaeaea' },
   payBtn: { backgroundColor: '#1a237e', paddingVertical: 18, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
   payBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   tosText: { textAlign: 'center', fontSize: 11, color: '#888' }
