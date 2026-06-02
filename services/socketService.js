@@ -1,42 +1,89 @@
 import { io } from 'socket.io-client'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Platform } from 'react-native'
+import { Platform, AppState } from 'react-native'
+import { getEnv } from '../utils/env'
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'https://ubs-global-server-production.up.railway.app'
+const SOCKET_URL = getEnv('EXPO_PUBLIC_SOCKET_URL', 'https://ubs-global-server-production.up.railway.app')
+console.log('🔌 [Socket Config] Active Socket URL:', SOCKET_URL)
 
 let socket = null
+let appStateSubscription = null
 
 export const connectSocket = async () => {
   const userId = await AsyncStorage.getItem('userId')
   
+  if (socket) {
+    console.log('🔌 [Socket] Instance already exists. Status connected:', socket.connected)
+    if (!socket.connected) {
+      console.log('🔄 [Socket] Reconnecting existing socket instance...')
+      socket.connect()
+    }
+    if (userId) {
+      console.log('🔌 [Socket] Emitting join room for user:', userId)
+      socket.emit('join', userId)
+    }
+    return socket
+  }
+  
+  console.log('🔌 [Socket] Establishing new connection to:', SOCKET_URL)
   socket = io(SOCKET_URL, {
-    transports: ['polling', 'websocket'], // Try polling first for robust handshakes, then upgrade to websocket
+    transports: ['websocket', 'polling'], // Prioritize websocket, fallback to polling
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    timeout: 20000
+    timeout: 30000 // 30 seconds connection timeout
   })
 
   socket.on('connect', () => {
-    console.log('✅ Socket connected:', socket.id, 'using transport:', socket.io.engine.transport.name)
+    console.log('✅ [Socket] Connected successfully! Socket ID:', socket.id, 'Transport:', socket.io.engine.transport.name)
     if (userId) {
+      console.log('🔌 [Socket] Emitting join room for user:', userId)
       socket.emit('join', userId)
     }
   })
 
   socket.on('disconnect', (reason) => {
-    console.log('❌ Socket disconnected:', reason)
+    console.log('❌ [Socket] Disconnected. Reason:', reason)
+    // If disconnected by the server or due to transport issues, force attempt manual reconnect
+    if (reason === 'io server disconnect' || reason === 'transport close' || reason === 'ping timeout') {
+      console.log('🔄 [Socket] Forcing reconnection attempt...')
+      socket.connect()
+    }
   })
 
   socket.on('connect_error', (error) => {
-    console.warn('⚠️ Socket connection error:', error.message || error)
-    
-    // Switch to polling if websocket fails and isn't active
-    if (socket.io.opts.transports.includes('websocket')) {
-      console.log('🔄 Attempting fallback transports configuration...');
-    }
+    console.warn('⚠️ [Socket] Connection error:', error.message || error)
   })
+
+  socket.io.on('reconnect_attempt', (attempt) => {
+    console.log(`🔄 [Socket] Reconnection attempt #${attempt}...`)
+  })
+
+  socket.io.on('reconnect', (attempt) => {
+    console.log(`✅ [Socket] Reconnected successfully after ${attempt} attempts.`)
+  })
+
+  socket.io.on('reconnect_failed', () => {
+    console.error('💥 [Socket] Reconnection failed completely.')
+  })
+
+  // Set up React Native AppState listener to reconnect automatically when app transitions to foreground
+  if (Platform.OS !== 'web' && !appStateSubscription) {
+    appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        console.log('📱 App entered foreground. Checking socket status...')
+        if (socket) {
+          if (!socket.connected) {
+            console.log('🔄 Socket was disconnected. Triggering active reconnect...')
+            socket.connect()
+          } else {
+            console.log('✅ Socket is already active and connected.')
+          }
+        }
+      }
+    })
+  }
 
   return socket
 }

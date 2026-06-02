@@ -23,6 +23,7 @@ import * as WebBrowser from 'expo-web-browser'
 import * as Google from 'expo-auth-session/providers/google'
 import * as AuthSession from 'expo-auth-session'
 import { Ionicons } from '@expo/vector-icons'
+import { getEnv } from '../../utils/env'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -52,11 +53,11 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false)
 
   // Configure Google Auth Request (fall back to web client ID and force useProxy to make it work in Expo Go)
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '522208568376-placeholder.apps.googleusercontent.com'
+  const webClientId = getEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID', '522208568376-placeholder.apps.googleusercontent.com')
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || webClientId,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || webClientId,
+    iosClientId: getEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', webClientId),
+    androidClientId: getEnv('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', webClientId),
     projectNameForProxy: '@shahalsonu1818/client',
     useProxy: true,
     redirectUri: 'https://auth.expo.io/@shahalsonu1818/client',
