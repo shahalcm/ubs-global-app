@@ -86,22 +86,22 @@ export default function PaymentScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.secureCard}>
-          <MaterialCommunityIcons name="shield-lock" size={32} color="#4CAF50" />
-          <Text style={styles.secureText}>Secure Payment via Razorpay</Text>
-          <Text style={styles.subText}>256-bit SSL Encrypted</Text>
+          <MaterialCommunityIcons name="shield-check" size={20} color="#4CAF50" />
+          <Text style={styles.secureText}>Secure 256-bit SSL Encrypted Payment</Text>
         </View>
 
         <View style={styles.amountCard}>
           <Text style={styles.amountLabel}>Total Amount</Text>
-          <Text style={styles.amountValue}>${grandTotal}</Text>
-          <Text style={styles.currencyLabel}>USD</Text>
+          <Text style={styles.amountValue}>${grandTotal} <Text style={styles.currencyLabel}>USD</Text></Text>
           <Text style={styles.orderLabel}>Order: #{orderNumber}</Text>
         </View>
 
         <View style={styles.methodCard}>
-          <MaterialCommunityIcons name="credit-card-outline" size={32} color="#1a237e" />
-          <Text style={styles.methodTitle}>Pay with Razorpay</Text>
-          <Text style={styles.methodDesc}>Cards, UPI, Net Banking, Wallets</Text>
+          <MaterialCommunityIcons name="credit-card-outline" size={24} color="#1a237e" />
+          <View style={styles.methodTextContainer}>
+            <Text style={styles.methodTitle}>Pay with Razorpay</Text>
+            <Text style={styles.methodDesc}>Cards, UPI, Net Banking, Wallets</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -117,22 +117,22 @@ export default function PaymentScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f4f5f8' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   headerLogo: { fontSize: 18, fontWeight: '800', color: '#000040' },
-  scrollContent: { padding: 20, paddingBottom: 20 },
-  secureCard: { alignItems: 'center', backgroundColor: '#e8f5e9', padding: 20, borderRadius: 12, marginBottom: 20 },
-  secureText: { fontSize: 16, fontWeight: '700', color: '#2e7d32', marginTop: 10 },
-  subText: { fontSize: 12, color: '#4caf50' },
-  amountCard: { alignItems: 'center', backgroundColor: '#fff', padding: 30, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#eaeaea' },
-  amountLabel: { fontSize: 14, color: '#666', marginBottom: 10 },
-  amountValue: { fontSize: 36, fontWeight: '800', color: '#1a237e' },
-  currencyLabel: { fontSize: 14, fontWeight: '700', color: '#666', marginTop: 5 },
-  orderLabel: { fontSize: 12, color: '#999', marginTop: 15 },
-  methodCard: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 12, borderWidth: 1, borderColor: '#eaeaea' },
-  methodTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginTop: 10 },
-  methodDesc: { fontSize: 12, color: '#666', marginTop: 5 },
-  footer: { padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#eaeaea' },
-  payBtn: { backgroundColor: '#1a237e', paddingVertical: 18, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
-  payBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  tosText: { textAlign: 'center', fontSize: 11, color: '#888' }
+  scrollContent: { padding: 16, paddingBottom: 16 },
+  secureCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8f5e9', padding: 10, borderRadius: 8, marginBottom: 12 },
+  secureText: { fontSize: 12, fontWeight: '600', color: '#2e7d32', marginLeft: 6 },
+  amountCard: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#eaeaea' },
+  amountLabel: { fontSize: 12, color: '#666', marginBottom: 2 },
+  amountValue: { fontSize: 28, fontWeight: '800', color: '#1a237e' },
+  currencyLabel: { fontSize: 14, fontWeight: '600', color: '#666' },
+  orderLabel: { fontSize: 12, color: '#999', marginTop: 6 },
+  methodCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#eaeaea' },
+  methodTextContainer: { flex: 1, marginLeft: 10 },
+  methodTitle: { fontSize: 14, fontWeight: '700', color: '#333' },
+  methodDesc: { fontSize: 11, color: '#666', marginTop: 2 },
+  footer: { padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#eaeaea' },
+  payBtn: { backgroundColor: '#1a237e', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginBottom: 10 },
+  payBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  tosText: { textAlign: 'center', fontSize: 10, color: '#888' }
 })
