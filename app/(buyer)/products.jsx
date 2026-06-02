@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   Image,
   FlatList,
-  SafeAreaView,
   Dimensions,
 } from 'react-native'
 import { router } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -92,6 +92,7 @@ const CATEGORIES = [
 ]
 
 export default function ProductsScreen() {
+  const insets = useSafeAreaInsets()
   const handleCategoryPress = (item) => {
     if (item.name === 'Real Estate') {
       router.push('/(buyer)/real-estate')
@@ -126,7 +127,7 @@ export default function ProductsScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
 
       {/* Top Bar */}
       <View style={styles.topBar}>
@@ -186,7 +187,7 @@ export default function ProductsScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-    </SafeAreaView>
+    </View>
   )
 }
 
