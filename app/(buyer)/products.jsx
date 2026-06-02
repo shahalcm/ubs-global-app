@@ -1,5 +1,5 @@
 // app/(buyer)/products.jsx
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -9,9 +9,12 @@ import {
   Image,
   FlatList,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import api from '../../services/api'
+import { getCategoryImage } from '../../constants/categories'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -93,6 +96,43 @@ const CATEGORIES = [
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets()
+  const [categories, setCategories] = useState(CATEGORIES)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    loadCategories()
+  }, [])
+
+  const loadCategories = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/categories')
+      if (res?.data?.categories) {
+        const apiCategories = res.data.categories
+        const merged = [...CATEGORIES]
+        apiCategories.forEach(apiCat => {
+          const index = merged.findIndex(c => 
+            c.name.replace(/\s+/g, ' ').toLowerCase() === apiCat.name.replace(/\s+/g, ' ').toLowerCase()
+          );
+          if (index !== -1) {
+            merged[index] = { ...merged[index], ...apiCat, name: merged[index].name }
+          } else {
+            merged.push({
+              id: apiCat._id,
+              count: '0+ Products',
+              ...apiCat
+            })
+          }
+        })
+        setCategories(merged)
+      }
+    } catch (err) {
+      console.log('Error loading categories in products screen:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleCategoryPress = (item) => {
     if (item.name === 'Real Estate') {
       router.push('/(buyer)/real-estate')
@@ -111,7 +151,7 @@ export default function ProductsScreen() {
       activeOpacity={0.85}
     >
       <Image
-        source={{ uri: item.image }}
+        source={getCategoryImage(item.name, item.image)}
         style={styles.categoryImage}
         resizeMode="cover"
       />
@@ -120,7 +160,7 @@ export default function ProductsScreen() {
           {item.name}
         </Text>
         <Text style={styles.categoryCount}>
-          {item.count}
+          {item.count || '0+ Products'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -145,9 +185,9 @@ export default function ProductsScreen() {
       </View>
 
       <FlatList
-        data={CATEGORIES}
+        data={categories}
         renderItem={renderCategory}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id || item._id}
         numColumns={2}
         columnWrapperStyle={styles.row}
         ListHeaderComponent={
