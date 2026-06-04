@@ -63,7 +63,8 @@
 
       "expo-localization",
       "expo-web-browser",
-      "./plugins/with-cmake-staging"
+      "./plugins/with-cmake-staging",
+      "./plugins/with-android-cleartext"
     ],
 
     "experiments": {

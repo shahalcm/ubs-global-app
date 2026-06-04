@@ -3,7 +3,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 import { getEnv } from '../utils/env'
 
-const BASE_URL = getEnv('EXPO_PUBLIC_API_URL', 'https://api.ubsglobalapp.com/api')
+let BASE_URL = getEnv('EXPO_PUBLIC_API_URL', 'https://api.ubsglobalapp.com/api')
+
+// Ensure BASE_URL ends with '/api' to resolve endpoints correctly and prevent 404s
+if (BASE_URL) {
+  // Strip trailing slashes first
+  BASE_URL = BASE_URL.replace(/\/+$/, '')
+  // If it doesn't end with '/api', append it
+  if (!BASE_URL.endsWith('/api')) {
+    BASE_URL += '/api'
+  }
+} else {
+  BASE_URL = 'https://api.ubsglobalapp.com/api'
+}
+
 console.log('🔌 [API Config] Active API Base URL:', BASE_URL)
 
 const api = axios.create({
@@ -22,7 +35,13 @@ const RETRY_DELAY_BASE = 1000 // 1 second base delay
 // Auto attach token to every request
 api.interceptors.request.use(
   async (config) => {
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    // Ensure no duplicate /api segments are created in the final URL path
+    if (config.url && (config.url.startsWith('/api/') || config.url === '/api')) {
+      config.url = config.url.replace(/^\/api/, '')
+    }
+
+    console.log('API Request:', config.method?.toUpperCase(), (config.baseURL || '') + (config.url || ''));
+    
     const token = await AsyncStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -65,7 +84,10 @@ api.interceptors.response.use(
       return api(config);
     }
 
-    console.error('[API Error Response]', error.response?.status, error.message);
+    console.log('API ERROR URL:', error?.config?.url);
+    console.log('API ERROR STATUS:', error?.response?.status);
+    console.log('API ERROR DATA:', error?.response?.data);
+
     if (error.response?.status === 401) {
       await AsyncStorage.removeItem('token')
       await AsyncStorage.removeItem('user')

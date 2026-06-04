@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,71 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  Alert,
+  Linking,
+  Modal,
+  TextInput,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from "../../context/AuthContext";
+import { deleteAccount } from "../../services/userService";
 
 export default function SettingsScreen() {
-  const [notifications, setNotifications] = React.useState(true);
-  const [darkTheme, setDarkTheme] = React.useState(false);
+  const { logout, user } = useAuth();
+  const [notifications, setNotifications] = useState(true);
+  const [darkTheme, setDarkTheme] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const handleContactSupport = () => {
+    Alert.alert(
+      "Connect Support",
+      "We offer 24/7 global trade assistance. How would you like to connect?",
+      [
+        {
+          text: "Email Support",
+          onPress: () => Linking.openURL('mailto:support@ubsglobalapp.com?subject=UBS Global Support Request')
+        },
+        {
+          text: "Call Hotline",
+          onPress: () => Linking.openURL('tel:+18005550199')
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+      Alert.alert("Invalid Confirmation", "Please type the word 'DELETE' to confirm.");
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const res = await deleteAccount();
+      if (res.success) {
+        setShowDeleteModal(false);
+        Alert.alert("Account Deleted", "Your account has been deleted successfully.");
+        await logout();
+        router.replace('/(auth)/login');
+      } else {
+        Alert.alert("Error", res.message || "Failed to delete account.");
+      }
+    } catch (err) {
+      console.log("Delete account error:", err);
+      Alert.alert("Error", "An unexpected error occurred while deleting your account.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,6 +93,7 @@ export default function SettingsScreen() {
           </View>
           <Text style={styles.chevron}>→</Text>
         </TouchableOpacity>
+        
         <View style={styles.settingItem}>
           <View style={styles.settingTextContainer}>
             <Text style={styles.settingLabel}>Push Notifications</Text>
@@ -60,22 +118,111 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Account</Text>
+        <Text style={styles.sectionTitle}>Security & GDPR</Text>
 
-        <TouchableOpacity style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Change Password</Text>
+        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/privacy-settings')}>
+          <Text style={styles.settingLabel}>Privacy Settings</Text>
           <Text style={styles.chevron}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingRow}>
+        <Text style={styles.sectionTitle}>Legal & Compliance</Text>
+
+        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/privacy-policy')}>
           <Text style={styles.settingLabel}>Privacy Policy</Text>
           <Text style={styles.chevron}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingRow}>
+        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/terms-and-conditions')}>
+          <Text style={styles.settingLabel}>Terms & Conditions</Text>
+          <Text style={styles.chevron}>→</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/refund-policy')}>
+          <Text style={styles.settingLabel}>Refund Policy</Text>
+          <Text style={styles.chevron}>→</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/account-deletion-policy')}>
+          <Text style={styles.settingLabel}>Account Deletion Policy</Text>
+          <Text style={styles.chevron}>→</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Support</Text>
+
+        <TouchableOpacity style={styles.settingRow} onPress={handleContactSupport}>
+          <Text style={styles.settingLabel}>Contact Support</Text>
+          <Text style={styles.chevron}>→</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Danger Zone</Text>
+
+        <TouchableOpacity style={styles.settingRow} onPress={() => setShowDeleteModal(true)}>
           <Text style={[styles.settingLabel, { color: "#c62828" }]}>Delete Account</Text>
+          <Text style={[styles.chevron, { color: "#c62828" }]}>→</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Account Deletion Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showDeleteModal}
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>⚠️ Delete Your Account?</Text>
+            
+            <Text style={styles.modalWarningText}>
+              This action is permanent and cannot be undone. Under GDPR and App Store Guidelines:
+              {"\n\n"}
+              • Your profile details will be soft-deleted and anonymized.
+              • Active seller stores will be suspended.
+              • All your product listings will be deactivated.
+              • You will be logged out immediately.
+            </Text>
+
+            <Text style={styles.modalInputLabel}>
+              Please type the word <Text style={{fontWeight: "bold", color: "#c62828"}}>"DELETE"</Text> to confirm:
+            </Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder="DELETE"
+              placeholderTextColor="#bbb"
+              autoCapitalize="characters"
+              editable={!deleting}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelBtn]} 
+                onPress={() => {
+                  setDeleteConfirmText("");
+                  setShowDeleteModal(false);
+                }}
+                disabled={deleting}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalDeleteBtn]} 
+                onPress={handleDeleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalDeleteBtnText}>Delete Account</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -106,6 +253,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingBottom: 40,
   },
   sectionTitle: {
     fontSize: 14,
@@ -149,5 +297,79 @@ const styles = StyleSheet.create({
   chevron: {
     fontSize: 18,
     color: "#ccc",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    width: "100%",
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#000033",
+    marginBottom: 16,
+  },
+  modalWarningText: {
+    fontSize: 14,
+    color: "#444",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  modalInputLabel: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#dde3f0",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 20,
+    fontWeight: "700",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelBtn: {
+    backgroundColor: "#f5f5f5",
+  },
+  modalCancelBtnText: {
+    color: "#666",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  modalDeleteBtn: {
+    backgroundColor: "#c62828",
+  },
+  modalDeleteBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

@@ -25,3 +25,33 @@ export const updateAvatar = async (imageUri) => {
   })
   return res.data
 }
+
+// Delete Account (soft delete)
+export const deleteAccount = async () => {
+  const res = await api.delete('/users/delete-account')
+  return res.data
+}
+
+// Export My Data (GDPR export)
+export const exportData = async () => {
+  const res = await api.get('/users/export-data')
+  return res.data
+}
+
+// Delete My Data (request GDPR purge)
+export const deleteDataRequest = async () => {
+  const res = await api.delete('/users/delete-data')
+  return res.data
+}
+
+// Update Privacy Consent Settings
+export const updatePrivacySettings = async (settings) => {
+  const res = await api.patch('/users/privacy-settings', settings)
+  return res.data
+}
+
+// Get Legal Policy Document (public)
+export const getLegalDoc = async (key) => {
+  const res = await api.get(`/users/legal-docs/${key}`)
+  return res.data
+}
