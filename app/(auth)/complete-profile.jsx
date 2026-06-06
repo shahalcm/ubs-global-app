@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import * as WebBrowser from 'expo-web-browser'
 import * as Google from 'expo-auth-session/providers/google'
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -27,6 +27,7 @@ WebBrowser.maybeCompleteAuthSession()
 
 export default function CompleteProfileScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +35,7 @@ export default function CompleteProfileScreen() {
   const [pincode, setPincode] = useState("");
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
+  const [locationDetails, setLocationDetails] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -99,15 +101,52 @@ export default function CompleteProfileScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const resolveLocationFromPincode = async (code) => {
+    try {
+      const geocoded = await Location.geocodeAsync(code);
+      if (geocoded && geocoded.length > 0) {
+        const { latitude, longitude } = geocoded[0];
+        const rev = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (rev && rev.length > 0) {
+          const first = rev[0];
+          return {
+            latitude,
+            longitude,
+            city: first.city || first.subregion || first.district || "",
+            state: first.region || "",
+            country: first.country || "",
+            fullAddress: [
+              first.name,
+              first.street,
+              first.subregion,
+              first.city,
+              first.region,
+              code,
+              first.country
+            ].filter(Boolean).join(", ")
+          };
+        }
+      }
+    } catch (e) {
+      console.log("Geocoding pincode error:", e);
+    }
+    return null;
+  };
+
   const handleContinue = async () => {
     if (!validate()) return;
     setLoading(true);
     try {
+      let locationToSave = locationDetails;
+      if (!locationToSave && pincode) {
+        locationToSave = await resolveLocationFromPincode(pincode);
+      }
       const res = await signUp({
         name: fullName,
         email,
         password,
-        phone: phone || `+91${Math.floor(Math.random() * 1000000000)}` 
+        phone: phone || `+91${Math.floor(Math.random() * 1000000000)}`,
+        location: locationToSave
       });
       await login(res.user, res.token);
       router.push("/(auth)/role-select");
@@ -123,11 +162,56 @@ export default function CompleteProfileScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
-        await Location.getCurrentPositionAsync({});
-        setLocationGranted(true);
+        const loc = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = loc.coords;
+        
+        // Reverse geocode
+        const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (geocode && geocode.length > 0) {
+          const first = geocode[0];
+          const city = first.city || first.subregion || first.district || "";
+          const state = first.region || "";
+          const country = first.country || "";
+          const fullAddress = [
+            first.name,
+            first.street,
+            first.subregion,
+            first.city,
+            first.region,
+            first.postalCode,
+            first.country
+          ].filter(Boolean).join(", ");
+          
+          setLocationDetails({
+            latitude,
+            longitude,
+            city,
+            state,
+            country,
+            fullAddress
+          });
+          setLocationGranted(true);
+          if (first.postalCode) {
+            setPincode(first.postalCode);
+          }
+        } else {
+          // Fallback if reverse geocoding results empty but GPS available
+          setLocationDetails({
+            latitude,
+            longitude,
+            city: "",
+            state: "",
+            country: "",
+            fullAddress: `GPS: ${latitude}, ${longitude}`
+          });
+          setLocationGranted(true);
+        }
+      } else {
+        Alert.alert(t('Permission Denied'), t('Location permission is required to fetch your current location.'));
       }
     } catch (error) {
       console.log(error);
+      Alert.alert(t('Error'), t('Failed to fetch location. Please enter pincode manually.'));
     } finally {
       setLocationLoading(false);
     }
@@ -159,7 +243,7 @@ export default function CompleteProfileScreen() {
         {/* Top Bar */}
         <View style={styles.topBar}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}
             style={styles.menuBtn}
           >
           </TouchableOpacity>
@@ -358,11 +442,11 @@ export default function CompleteProfileScreen() {
           </TouchableOpacity>
 
           {/* Spacer for sticky button */}
-          <View style={{ height: 90 }} />
+          <View style={{ height: 110 }} />
         </ScrollView>
 
         {/* Sticky Continue Button */}
-        <View style={styles.stickyBottom}>
+        <View style={[styles.stickyBottom, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <TouchableOpacity
             style={[styles.continueBtn, loading && { opacity: 0.6 }]}
             onPress={handleContinue}

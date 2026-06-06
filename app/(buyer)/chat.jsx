@@ -11,7 +11,8 @@ import {
   Easing,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
+  Linking
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -151,8 +152,11 @@ export default function BuyerChatScreen() {
   }
 
   const handleCallPress = () => {
-    if (!room || !room.sellerId) {
-      Alert.alert('Call Failed', 'Unable to resolve seller contact details.')
+    if (!room) return
+    if (!room.sellerId) {
+      Linking.openURL('tel:9544755008').catch(() => {
+        Alert.alert('Error', 'Unable to dial phone number.')
+      })
       return
     }
     const avatar = room.meta?.sellerAvatar || ''
@@ -284,7 +288,7 @@ export default function BuyerChatScreen() {
       >
         {/* TOP BAR */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/messages')}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#1a237e" />
           </TouchableOpacity>
           <View style={styles.topInfo}>

@@ -42,7 +42,11 @@ export default function EditProfileScreen() {
         // Sync context state
         await updateUser(res.user);
         Alert.alert("Success", "Profile updated successfully.");
-        router.back();
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(buyer)/profile');
+        }
       } else {
         Alert.alert("Error", res.message || "Failed to update profile.");
       }
@@ -58,7 +62,7 @@ export default function EditProfileScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/profile')}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>

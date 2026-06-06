@@ -66,7 +66,7 @@ export default function EditProduct() {
     try {
       await updateProduct(product._id || product.id, { ...form, images });
       Alert.alert('Success', 'Product updated successfully.', [
-        { text: 'OK', onPress: () => router.back() }
+        { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard') }
       ]);
     } catch (err) {
       setError(err.message || 'Update failed.');
@@ -91,7 +91,7 @@ export default function EditProduct() {
             try {
               await deleteProduct(product._id || product.id);
               Alert.alert('Success', 'Product deleted successfully.', [
-                { text: 'OK', onPress: () => router.back() }
+                { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard') }
               ]);
             } catch (err) {
               setError(err.message || 'Delete failed.');

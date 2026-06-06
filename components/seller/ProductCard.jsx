@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 import { colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
+import { getProductImageUrl } from '../../utils/image';
 
 export default function ProductCard({ product, onEdit, onDelete }) {
   const { t } = useTranslation();
@@ -27,13 +28,18 @@ export default function ProductCard({ product, onEdit, onDelete }) {
   return (
     <Swipeable renderRightActions={rightActions}>
       <View style={styles.card}>
-        <Image source={{ uri: imageUrl }} style={styles.image} />
+        <Image source={{ uri: getProductImageUrl(imageUrl) }} style={styles.image} />
         <View style={styles.info}>
           <Text style={styles.title}>{displayTitle}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{displayCategory}</Text>
           </View>
-          <Text style={styles.price}>${product.price}</Text>
+          {!(
+            (product.category?.name || product.category || '').toLowerCase().trim() === 'job portal' ||
+            (product.category?.name || product.category || '').toLowerCase().trim() === 'service portal' ||
+            (product.category?.name || product.category || '').toLowerCase().trim() === 'job-portal' ||
+            (product.category?.name || product.category || '').toLowerCase().trim() === 'service-portal'
+          ) && <Text style={styles.price}>${product.price}</Text>}
           <Text style={[styles.stock, product.stock > 0 ? styles.inStock : styles.outStock]}>
             {product.stock > 0 ? t('In Stock') : t('Out of Stock')}
           </Text>
@@ -56,7 +62,7 @@ export default function ProductCard({ product, onEdit, onDelete }) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 12,
     marginBottom: 16,

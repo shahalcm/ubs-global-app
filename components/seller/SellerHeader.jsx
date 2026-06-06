@@ -5,8 +5,10 @@ import { useSellerDrawer } from '../../context/SellerLayoutContext';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 
 export default function SellerHeader({ title, showShadow = true }) {
+  const router = useRouter();
   const { t } = useTranslation();
   const { toggleDrawer } = useSellerDrawer();
   const { unreadNotifications, seller } = useSeller();
@@ -20,7 +22,10 @@ export default function SellerHeader({ title, showShadow = true }) {
         {title ? <Text style={styles.title}>{t(title)}</Text> : <Text style={styles.brand}>UBS Global</Text>}
       </View>
       <View style={styles.rightGroup}>
-        <TouchableOpacity style={styles.bellButton}>
+        <TouchableOpacity 
+          style={styles.bellButton}
+          onPress={() => router.push('/(seller)/seller-notifications')}
+        >
           <MaterialCommunityIcons name="bell-outline" size={24} color={colors.primary} />
           {unreadNotifications > 0 && (
             <View style={styles.badge}>
@@ -40,7 +45,7 @@ const styles = StyleSheet.create({
   header: {
     height: 64,
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

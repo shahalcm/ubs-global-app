@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Alert, TextInput, Modal } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getProductImageUrl, getSellerImageUrl } from "../../utils/image";
 import { router, useLocalSearchParams } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { getProduct } from "../../services/productService";
@@ -11,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import ContactSellerModal from "../../components/buyer/ContactSellerModal";
 import { getProductReviews, submitReview } from "../../services/reviewService";
 import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+import * as DocumentPicker from "expo-document-picker";
 
 const { width } = Dimensions.get("window");
 
@@ -28,12 +32,94 @@ export default function ProductDetailsScreen() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const { refreshCart } = useCart();
+  const { user } = useAuth();
 
   // Reviews states
   const [reviews, setReviews] = useState([]);
   const [ratingInput, setRatingInput] = useState(0);
   const [commentInput, setCommentInput] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Job application states
+  const [applyModalVisible, setApplyModalVisible] = useState(false);
+  const [applyName, setApplyName] = useState("");
+  const [applyEmail, setApplyEmail] = useState("");
+  const [applyPhone, setApplyPhone] = useState("");
+  const [applyExperience, setApplyExperience] = useState("");
+  const [applyCoverLetter, setApplyCoverLetter] = useState("");
+  const [selectedCV, setSelectedCV] = useState(null);
+  const [submittingApplication, setSubmittingApplication] = useState(false);
+
+  useEffect(() => {
+    if (user && applyModalVisible) {
+      setApplyName(user.name || "");
+      setApplyEmail(user.email || "");
+      setApplyPhone(user.phone || "");
+    }
+  }, [user, applyModalVisible]);
+
+  const handlePickCV = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true
+      });
+
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const file = res.assets[0];
+        setSelectedCV(file);
+      }
+    } catch (err) {
+      console.log("Pick CV Error:", err);
+      Alert.alert(t("Error"), t("Failed to select file."));
+    }
+  };
+
+  const handleApplySubmit = async () => {
+    if (!applyName.trim() || !applyEmail.trim() || !applyPhone.trim() || !applyExperience.trim()) {
+      Alert.alert(t("Validation Error"), t("Please fill in Name, Email, Phone, and Experience."));
+      return;
+    }
+    try {
+      setSubmittingApplication(true);
+
+      const formData = new FormData();
+      formData.append("jobId", product._id);
+      formData.append("name", applyName.trim());
+      formData.append("email", applyEmail.trim());
+      formData.append("phone", applyPhone.trim());
+      formData.append("experience", applyExperience.trim());
+      formData.append("coverLetter", applyCoverLetter.trim());
+
+      if (selectedCV) {
+        // Expo document picker returns document URI.
+        // On React Native we pass object with uri, name, and type for Multer upload.
+        formData.append("resume", {
+          uri: selectedCV.uri,
+          name: selectedCV.name || "resume.pdf",
+          type: "application/pdf"
+        });
+      }
+
+      const res = await api.post("/job-applications/apply", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
+      if (res.data?.success) {
+        Alert.alert(t("Success"), t("Your job application has been submitted successfully!"));
+        setApplyModalVisible(false);
+        setApplyExperience("");
+        setApplyCoverLetter("");
+        setSelectedCV(null);
+      }
+    } catch (error) {
+      Alert.alert(t("Error"), error.response?.data?.message || t("Failed to submit job application."));
+    } finally {
+      setSubmittingApplication(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -162,18 +248,23 @@ export default function ProductDetailsScreen() {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text>Product not found.</Text>
-        <TouchableOpacity onPress={() => router.back()}><Text style={{ color: '#1a237e' }}>Go Back</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}><Text style={{ color: '#1a237e' }}>Go Back</Text></TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   const images = product.images && product.images.length > 0 ? product.images : ['https://via.placeholder.com/400'];
 
+  const categoryName = product.category?.name?.toLowerCase().trim() || "";
+  const isJobPortal = categoryName === "job portal";
+  const isServicePortal = categoryName === "service portal";
+  const isJobOrService = isJobPortal || isServicePortal;
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>{t('Product Details')}</Text>
@@ -183,7 +274,12 @@ export default function ProductDetailsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Main Image */}
         <View style={styles.imageWrapper}>
-          <Image source={{ uri: images[selectedImage] }} style={styles.mainImage} resizeMode="cover" />
+          <Image
+            source={{ uri: getProductImageUrl(images[selectedImage]) }}
+            style={styles.mainImage}
+            contentFit="cover"
+            transition={200}
+          />
           <View style={styles.floatingActions}>
             <TouchableOpacity style={styles.iconBtn} onPress={handleWishlist}>
               <MaterialCommunityIcons name={isWishlisted ? "heart" : "heart-outline"} size={20} color="#ff4444" />
@@ -196,7 +292,11 @@ export default function ProductDetailsScreen() {
           <View style={styles.thumbnailRow}>
             {images.map((img, index) => (
               <TouchableOpacity key={index} style={[styles.thumbnailWrapper, selectedImage === index && styles.thumbnailActive]} onPress={() => setSelectedImage(index)}>
-                <Image source={{ uri: img }} style={styles.thumbnail} />
+                <Image
+                  source={{ uri: getProductImageUrl(img) }}
+                  style={styles.thumbnail}
+                  transition={100}
+                />
               </TouchableOpacity>
             ))}
           </View>
@@ -213,26 +313,34 @@ export default function ProductDetailsScreen() {
             <Text style={styles.soldCount}>{product.totalSales || 0} {t("Sold")}</Text>
           </View>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-            {product.comparePrice > product.price && (
-              <Text style={styles.originalPrice}>${product.comparePrice.toFixed(2)}</Text>
-            )}
-          </View>
+          {!isJobOrService && (
+            <View style={styles.priceRow}>
+              <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+              {product.comparePrice > product.price && (
+                <Text style={styles.originalPrice}>${product.comparePrice.toFixed(2)}</Text>
+              )}
+            </View>
+          )}
 
           <Text style={styles.description}>{product.description}</Text>
           
-          <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
-            <Text style={{fontWeight: '700', marginRight: 16}}>Quantity:</Text>
-            <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}><Text>-</Text></TouchableOpacity>
-            <Text style={{marginHorizontal: 16}}>{quantity}</Text>
-            <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}><Text>+</Text></TouchableOpacity>
-          </View>
+          {!isJobOrService && (
+            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
+              <Text style={{fontWeight: '700', marginRight: 16}}>{t("Quantity:")}</Text>
+              <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}><Text>-</Text></TouchableOpacity>
+              <Text style={{marginHorizontal: 16}}>{quantity}</Text>
+              <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}><Text>+</Text></TouchableOpacity>
+            </View>
+          )}
 
           {/* Supplier Card */}
-          {seller && (
+          {!isJobOrService && seller && (
             <View style={styles.supplierCard}>
-              <Image source={{ uri: seller.shopLogo || 'https://via.placeholder.com/100' }} style={styles.supplierAvatar} />
+              <Image
+                source={{ uri: getSellerImageUrl(seller.shopLogo) }}
+                style={styles.supplierAvatar}
+                transition={100}
+              />
               <View style={styles.supplierInfo}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Text style={styles.supplierName}>{seller.shopName}</Text>
@@ -252,23 +360,64 @@ export default function ProductDetailsScreen() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.outlineBtn} onPress={handleAddToCart}>
-            <Text style={styles.outlineBtnText}>🛒 {t("Add to Cart")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.solidBtn} onPress={handleBuyNow}>
-            <Text style={styles.solidBtnText}>{t("Buy Now")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.secondaryBtn, chatLoading && { opacity: 0.7 }]} 
-            onPress={handleStartChat}
-            disabled={chatLoading}
-          >
-            {chatLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.secondaryBtnText}>{t("Contact Seller")}</Text>
-            )}
-          </TouchableOpacity>
+          {isJobOrService && (
+            <View style={styles.supplierCard}>
+              <Image
+                source={{ uri: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=100&q=80" }}
+                style={styles.supplierAvatar}
+                transition={100}
+              />
+              <View style={styles.supplierInfo}>
+                <Text style={styles.supplierName}>{t("UBS Global Admin Panel")}</Text>
+                <Text style={styles.supplierBadge}>{t("ubsimportingexporting@gmail.com • 9544755008")}</Text>
+                <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                  {t("Careers & services managed directly by UBS Administration.")}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {!isJobOrService && (
+            <>
+              <TouchableOpacity style={styles.outlineBtn} onPress={handleAddToCart}>
+                <Text style={styles.outlineBtnText}>🛒 {t("Add to Cart")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.solidBtn} onPress={handleBuyNow}>
+                <Text style={styles.solidBtnText}>{t("Buy Now")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.secondaryBtn, chatLoading && { opacity: 0.7 }]} 
+                onPress={handleStartChat}
+                disabled={chatLoading}
+              >
+                {chatLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.secondaryBtnText}>{t("Contact Seller")}</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+
+          {isJobPortal && (
+            <TouchableOpacity style={styles.solidBtn} onPress={() => setApplyModalVisible(true)}>
+              <Text style={styles.solidBtnText}>{t("Apply Now")}</Text>
+            </TouchableOpacity>
+          )}
+
+          {isServicePortal && (
+            <TouchableOpacity 
+              style={[styles.solidBtn, chatLoading && { opacity: 0.7 }]} 
+              onPress={handleStartChat}
+              disabled={chatLoading}
+            >
+              {chatLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.solidBtnText}>{t("Contact Admin")}</Text>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Categories & Tags Display Section */}
           <View style={styles.sectionDivider} />
@@ -371,8 +520,106 @@ export default function ProductDetailsScreen() {
             if (success) router.push('/(buyer)/my-requests')
           }}
           product={product}
-          seller={seller}
+          seller={isServicePortal ? null : seller}
         />
+
+        {/* Job Application Modal */}
+        <Modal
+          visible={applyModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setApplyModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t("Job Application")}</Text>
+                <TouchableOpacity onPress={() => setApplyModalVisible(false)}>
+                  <Text style={styles.modalCloseBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.modalInputLabel}>{t("Full Name")}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={t("Your Name")}
+                  value={applyName}
+                  onChangeText={setApplyName}
+                />
+
+                <Text style={styles.modalInputLabel}>{t("Email")}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={t("Your Email")}
+                  value={applyEmail}
+                  onChangeText={setApplyEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+                <Text style={styles.modalInputLabel}>{t("Phone Number")}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={t("Your Phone Number")}
+                  value={applyPhone}
+                  onChangeText={setApplyPhone}
+                  keyboardType="phone-pad"
+                />
+
+                <Text style={styles.modalInputLabel}>{t("Years of Experience / Key Skills")}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={t("e.g. 5 Years in Logistics / Sales")}
+                  value={applyExperience}
+                  onChangeText={setApplyExperience}
+                />
+
+                <Text style={styles.modalInputLabel}>{t("Cover Letter / Additional Info")}</Text>
+                <TextInput
+                  style={[styles.modalInput, { height: 100 }]}
+                  placeholder={t("Why are you a good fit for this role?")}
+                  value={applyCoverLetter}
+                  onChangeText={setApplyCoverLetter}
+                  multiline
+                  numberOfLines={4}
+                />
+
+                <Text style={styles.modalInputLabel}>{t("Resume / CV (PDF format)")}</Text>
+                <View style={styles.fileUploadRow}>
+                  <TouchableOpacity style={styles.fileUploadBtn} onPress={handlePickCV}>
+                    <MaterialCommunityIcons name="file-pdf-box" size={20} color="#ff4444" />
+                    <Text style={styles.fileUploadBtnText}>
+                      {selectedCV ? t("Change PDF") : t("Upload PDF")}
+                    </Text>
+                  </TouchableOpacity>
+                  {selectedCV && (
+                    <View style={styles.selectedFileContainer}>
+                      <Text style={styles.selectedFileName} numberOfLines={1}>
+                        {selectedCV.name}
+                      </Text>
+                      <TouchableOpacity onPress={() => setSelectedCV(null)}>
+                        <MaterialCommunityIcons name="close-circle" size={18} color="#888" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.modalSubmitBtn, submittingApplication && { opacity: 0.7 }]} 
+                  onPress={handleApplySubmit}
+                  disabled={submittingApplication}
+                >
+                  {submittingApplication ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalSubmitText}>{t("Submit Application")}</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -437,5 +684,104 @@ const styles = StyleSheet.create({
   reviewBuyerName: { fontSize: 13, fontWeight: '600', color: '#212121' },
   reviewDate: { fontSize: 10, color: '#999' },
   reviewStarsRow: { flexDirection: 'row', marginBottom: 6 },
-  reviewComment: { fontSize: 13, color: '#444', lineHeight: 18 }
+  reviewComment: { fontSize: 13, color: '#444', lineHeight: 18 },
+
+  // Job application modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1a237e",
+  },
+  modalCloseBtn: {
+    fontSize: 20,
+    color: "#333",
+  },
+  modalInputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: "#333",
+    backgroundColor: "#fff",
+  },
+  modalSubmitBtn: {
+    backgroundColor: "#1a237e",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  modalSubmitText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  fileUploadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  fileUploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fafafa",
+    gap: 6,
+  },
+  fileUploadBtnText: {
+    fontSize: 12,
+    fontWeight: "650",
+    color: "#333",
+  },
+  selectedFileContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#a5d6a7",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#e8f5e9",
+  },
+  selectedFileName: {
+    fontSize: 12,
+    color: "#2e7d32",
+    fontWeight: "600",
+    maxWidth: "85%",
+  }
 });

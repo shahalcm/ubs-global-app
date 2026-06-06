@@ -75,7 +75,7 @@ export default function PaymentScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerLogo}>Payment</Text>
         <View style={{width: 24}}/>
       </View>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import SellerHeader from '../../components/seller/SellerHeader';
-import { useSeller } from '../../context/SellerContext';
-import { useAuth } from '../../context/AuthContext';
-import { colors } from '../../constants/colors';
+import SellerHeader from '../../../components/seller/SellerHeader';
+import { useSeller } from '../../../context/SellerContext';
+import { useAuth } from '../../../context/AuthContext';
+import { colors } from '../../../constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getDashboardStats } from '../../services/sellerService';
+import { getDashboardStats } from '../../../services/sellerService';
 import { useRouter } from 'expo-router';
 
 export default function SellerProfile() {
@@ -57,9 +57,12 @@ export default function SellerProfile() {
     : 'Recently';
 
   // Helper to get address safely
-  const address = typeof seller?.address === 'object' 
-    ? (seller.address.street || 'Not provided')
-    : (seller?.address || 'Not provided');
+  const userLoc = seller?.userId?.location;
+  const address = userLoc?.fullAddress || 
+    (userLoc?.city ? `${userLoc.city}, ${userLoc.state ? userLoc.state + ', ' : ''}${userLoc.country || ''}`.trim() : null) ||
+    (typeof seller?.address === 'object' 
+      ? (seller.address.street || 'Not provided')
+      : (seller?.address || 'Not provided'));
 
   return (
     <View style={styles.screen}>
@@ -102,7 +105,7 @@ export default function SellerProfile() {
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Location</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>{address}</Text>
+                <Text style={styles.infoValue} numberOfLines={3}>{address}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Member Since</Text>

@@ -11,6 +11,8 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Linking,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -91,7 +93,7 @@ const CATEGORIES = [
     id: '12',
     name: 'Oils',
     count: '400+ Products',
-    image: 'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=400&q=80',
+    image: 'oils',
   },
 ]
 
@@ -100,6 +102,27 @@ export default function ProductsScreen() {
   const [categories, setCategories] = useState(CATEGORIES)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+
+  const handleRequestQuote = () => {
+    Alert.alert(
+      "Request a Quote",
+      "Get custom wholesale pricing and sourcing quotes from our network. How would you like to connect?",
+      [
+        {
+          text: "Email Requirements",
+          onPress: () => Linking.openURL('mailto:ubsimportingexporting@gmail.com?subject=Wholesale Sourcing & Quote Request')
+        },
+        {
+          text: "Call Hotline",
+          onPress: () => Linking.openURL('tel:9544755008')
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    )
+  }
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true)
@@ -232,7 +255,10 @@ export default function ProductsScreen() {
                 can source specific wholesale products
                 for your business needs.
               </Text>
-              <TouchableOpacity style={styles.findBtn}>
+              <TouchableOpacity 
+                style={styles.findBtn}
+                onPress={handleRequestQuote}
+              >
                 <Text style={styles.findBtnText}>
                   Request a Quote
                 </Text>

@@ -139,7 +139,7 @@ export default function ProductFilterScreen() {
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
           style={styles.applyBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/product-listing')}
           activeOpacity={0.9}
         >
           <Text style={styles.applyBtnText}>Apply Filters</Text>

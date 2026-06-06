@@ -69,7 +69,7 @@ export default function SellerBillingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard')}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>Billing & Earnings</Text>
         <View style={{width:24}}/>
       </View>

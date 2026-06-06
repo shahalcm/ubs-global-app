@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import SellerHeader from '../../components/seller/SellerHeader';
-import { colors } from '../../constants/colors';
-import { getChatRooms, getMessages, sendMessage, markAsRead } from '../../services/messageService';
-import { onReceiveMessage, joinRoom, removeListener, getSocket } from '../../services/socketService';
-import { useCall } from '../../context/CallContext';
+import SellerHeader from '../../../components/seller/SellerHeader';
+import { colors } from '../../../constants/colors';
+import { getChatRooms, getMessages, sendMessage, markAsRead } from '../../../services/messageService';
+import { onReceiveMessage, joinRoom, removeListener, getSocket } from '../../../services/socketService';
+import { useCall } from '../../../context/CallContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SellerMessages() {

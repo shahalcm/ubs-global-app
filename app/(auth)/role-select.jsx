@@ -57,7 +57,7 @@ export default function RoleSelectScreen() {
       {/* Top Bar */}
       <View style={styles.topBar}>
         <Text style={styles.topTitle}>UBS Global</Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}>
           <Text style={styles.closeIcon}>✕</Text>
         </TouchableOpacity>
       </View>

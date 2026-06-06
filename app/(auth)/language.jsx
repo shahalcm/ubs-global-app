@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from 'react-native-paper'
 import { useTranslation } from 'react-i18next'
 import { colors } from '../../constants/colors'
@@ -33,7 +34,11 @@ export default function LanguageScreen() {
     try {
       await setAppLanguage(selectedCode)
       if (fromSettings === 'true') {
-        router.back()
+        if (router.canGoBack()) {
+          router.back()
+        } else {
+          router.replace('/(buyer)/home')
+        }
       } else {
         router.push('/(auth)/login')
       }
@@ -61,7 +66,7 @@ export default function LanguageScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>{t('Select Your Language')}</Text>
       <Text style={styles.subtitle}>{t('Choose your preferred language')}</Text>
 
@@ -92,7 +97,7 @@ export default function LanguageScreen() {
       >
         {isBusy ? t('Please wait...') : t('Continue')}
       </Button>
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -101,8 +106,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 38,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,30 +17,58 @@ import { router } from "expo-router";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from "../../context/AuthContext";
 import { deleteAccount } from "../../services/userService";
+import { useTranslation } from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function SettingsScreen() {
   const { logout, user } = useAuth();
+  const { t } = useTranslation();
+  const { darkTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
-  const [darkTheme, setDarkTheme] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Load preferences from AsyncStorage on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const savedNotifications = await AsyncStorage.getItem("notifications_enabled");
+        if (savedNotifications !== null) {
+          setNotifications(savedNotifications === "true");
+        }
+      } catch (err) {
+        console.log("Error loading settings preferences:", err);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  const handleNotificationsChange = async (val) => {
+    setNotifications(val);
+    try {
+      await AsyncStorage.setItem("notifications_enabled", String(val));
+    } catch (err) {
+      console.log("Error saving notifications preference:", err);
+    }
+  };
+
   const handleContactSupport = () => {
     Alert.alert(
-      "Connect Support",
-      "We offer 24/7 global trade assistance. How would you like to connect?",
+      t("Connect Support"),
+      t("We offer 24/7 global trade assistance. How would you like to connect?"),
       [
         {
-          text: "Email Support",
-          onPress: () => Linking.openURL('mailto:support@ubsglobalapp.com?subject=UBS Global Support Request')
+          text: t("Email Support"),
+          onPress: () => Linking.openURL('mailto:ubsimportingexporting@gmail.com?subject=UBS Global Support Request')
         },
         {
-          text: "Call Hotline",
-          onPress: () => Linking.openURL('tel:+18005550199')
+          text: t("Call Hotline"),
+          onPress: () => Linking.openURL('tel:9544755008')
         },
         {
-          text: "Cancel",
+          text: t("Cancel"),
           style: "cancel"
         }
       ]
@@ -49,7 +77,7 @@ export default function SettingsScreen() {
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
-      Alert.alert("Invalid Confirmation", "Please type the word 'DELETE' to confirm.");
+      Alert.alert(t("Invalid Confirmation"), t("Please type the word 'DELETE' to confirm."));
       return;
     }
 
@@ -58,106 +86,109 @@ export default function SettingsScreen() {
       const res = await deleteAccount();
       if (res.success) {
         setShowDeleteModal(false);
-        Alert.alert("Account Deleted", "Your account has been deleted successfully.");
+        Alert.alert(t("Account Deleted"), t("Your account has been deleted successfully."));
         await logout();
         router.replace('/(auth)/login');
       } else {
-        Alert.alert("Error", res.message || "Failed to delete account.");
+        Alert.alert(t("Error"), res.message || t("Failed to delete account."));
       }
     } catch (err) {
       console.log("Delete account error:", err);
-      Alert.alert("Error", "An unexpected error occurred while deleting your account.");
+      Alert.alert(t("Error"), t("An unexpected error occurred while deleting your account."));
     } finally {
       setDeleting(false);
     }
   };
 
+  // Dynamic theme mapping
+  const theme = {
+    background: darkTheme ? "#121212" : "#eef1f8",
+    cardBg: darkTheme ? "#1e1e1e" : "#fff",
+    text: darkTheme ? "#ffffff" : "#333333",
+    subText: darkTheme ? "#aaaaaa" : "#666666",
+    descText: darkTheme ? "#888888" : "#888888",
+    border: darkTheme ? "#2a2a2a" : "#eee",
+    headerBg: darkTheme ? "#1a1a1a" : "#fff",
+    headerText: darkTheme ? "#ffffff" : "#000033",
+    chevron: darkTheme ? "#666" : "#ccc",
+    inputBg: darkTheme ? "#2a2a2a" : "#fff",
+    inputBorder: darkTheme ? "#3a3a3a" : "#dde3f0"
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
+      <View style={[styles.header, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: theme.headerText }]}>{t("Settings")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
+        <Text style={[styles.sectionTitle, { color: theme.subText }]}>{t("Preferences")}</Text>
         
-        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/(auth)/language?fromSettings=true')}>
+        <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.cardBg }]} onPress={() => router.push('/(auth)/language?fromSettings=true')}>
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingLabel}>Language</Text>
-            <Text style={styles.settingDesc}>Change application language</Text>
+            <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Language")}</Text>
+            <Text style={[styles.settingDesc, { color: theme.descText }]}>{t("Choose your preferred language")}</Text>
           </View>
-          <Text style={styles.chevron}>→</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
         
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { backgroundColor: theme.cardBg }]}>
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingLabel}>Push Notifications</Text>
-            <Text style={styles.settingDesc}>Receive alerts for your orders</Text>
+            <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Push Notifications")}</Text>
+            <Text style={[styles.settingDesc, { color: theme.descText }]}>{t("Receive alerts for your orders")}</Text>
           </View>
           <Switch
             value={notifications}
-            onValueChange={setNotifications}
+            onValueChange={handleNotificationsChange}
             trackColor={{ false: "#ccc", true: "#1565c0" }}
           />
         </View>
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingTextContainer}>
-            <Text style={styles.settingLabel}>Dark Theme</Text>
-            <Text style={styles.settingDesc}>Use dark mode appearance</Text>
-          </View>
-          <Switch
-            value={darkTheme}
-            onValueChange={setDarkTheme}
-            trackColor={{ false: "#ccc", true: "#1565c0" }}
-          />
-        </View>
+        <Text style={[styles.sectionTitle, { color: theme.subText }]}>{t("Security & GDPR")}</Text>
 
-        <Text style={styles.sectionTitle}>Security & GDPR</Text>
-
-        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/privacy-settings')}>
-          <Text style={styles.settingLabel}>Privacy Settings</Text>
-          <Text style={styles.chevron}>→</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={() => router.push('/(buyer)/privacy-settings')}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Privacy Settings")}</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Legal & Compliance</Text>
+        <Text style={[styles.sectionTitle, { color: theme.subText }]}>{t("Legal & Compliance")}</Text>
 
-        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/privacy-policy')}>
-          <Text style={styles.settingLabel}>Privacy Policy</Text>
-          <Text style={styles.chevron}>→</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={() => router.push('/(buyer)/privacy-policy')}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Privacy Policy")}</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/terms-and-conditions')}>
-          <Text style={styles.settingLabel}>Terms & Conditions</Text>
-          <Text style={styles.chevron}>→</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={() => router.push('/(buyer)/terms-and-conditions')}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Terms of Service")}</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/refund-policy')}>
-          <Text style={styles.settingLabel}>Refund Policy</Text>
-          <Text style={styles.chevron}>→</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={() => router.push('/(buyer)/refund-policy')}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Refund Policy")}</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/(buyer)/account-deletion-policy')}>
-          <Text style={styles.settingLabel}>Account Deletion Policy</Text>
-          <Text style={styles.chevron}>→</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={() => router.push('/(buyer)/account-deletion-policy')}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Account Deletion Policy")}</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Support</Text>
+        <Text style={[styles.sectionTitle, { color: theme.subText }]}>{t("Support")}</Text>
 
-        <TouchableOpacity style={styles.settingRow} onPress={handleContactSupport}>
-          <Text style={styles.settingLabel}>Contact Support</Text>
-          <Text style={styles.chevron}>→</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={handleContactSupport}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>{t("Contact Support")}</Text>
+          <Text style={[styles.chevron, { color: theme.chevron }]}>→</Text>
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Danger Zone</Text>
+        <Text style={[styles.sectionTitle, { color: theme.subText }]}>{t("Danger Zone")}</Text>
 
-        <TouchableOpacity style={styles.settingRow} onPress={() => setShowDeleteModal(true)}>
-          <Text style={[styles.settingLabel, { color: "#c62828" }]}>Delete Account</Text>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.cardBg }]} onPress={() => setShowDeleteModal(true)}>
+          <Text style={[styles.settingLabel, { color: "#c62828" }]}>{t("Delete Account")}</Text>
           <Text style={[styles.chevron, { color: "#c62828" }]}>→</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -170,42 +201,45 @@ export default function SettingsScreen() {
         onRequestClose={() => setShowDeleteModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>⚠️ Delete Your Account?</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <Text style={[styles.modalTitle, { color: theme.headerText }]}>⚠️ {t("Delete Your Account?")}</Text>
             
-            <Text style={styles.modalWarningText}>
-              This action is permanent and cannot be undone. Under GDPR and App Store Guidelines:
+            <Text style={[styles.modalWarningText, { color: theme.text }]}>
+              {t("This action is permanent and cannot be undone. Under GDPR and App Store Guidelines:")}
               {"\n\n"}
-              • Your profile details will be soft-deleted and anonymized.
-              • Active seller stores will be suspended.
-              • All your product listings will be deactivated.
-              • You will be logged out immediately.
+              • {t("Your profile details will be soft-deleted and anonymized.")}
+              {"\n"}
+              • {t("Active seller stores will be suspended.")}
+              {"\n"}
+              • {t("All your product listings will be deactivated.")}
+              {"\n"}
+              • {t("You will be logged out immediately.")}
             </Text>
 
-            <Text style={styles.modalInputLabel}>
-              Please type the word <Text style={{fontWeight: "bold", color: "#c62828"}}>"DELETE"</Text> to confirm:
+            <Text style={[styles.modalInputLabel, { color: theme.text }]}>
+              {t("Please type the word")} <Text style={{fontWeight: "bold", color: "#c62828"}}>"DELETE"</Text> {t("to confirm:")}
             </Text>
             
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { backgroundColor: theme.inputBg, borderColor: theme.inputBorder, color: theme.text }]}
               value={deleteConfirmText}
               onChangeText={setDeleteConfirmText}
               placeholder="DELETE"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={darkTheme ? "#666" : "#bbb"}
               autoCapitalize="characters"
               editable={!deleting}
             />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.modalCancelBtn]} 
+                style={[styles.modalButton, styles.modalCancelBtn, darkTheme && { backgroundColor: "#2a2a2a" }]} 
                 onPress={() => {
                   setDeleteConfirmText("");
                   setShowDeleteModal(false);
                 }}
                 disabled={deleting}
               >
-                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                <Text style={[styles.modalCancelBtnText, darkTheme && { color: "#aaa" }]}>{t("Cancel")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -216,7 +250,7 @@ export default function SettingsScreen() {
                 {deleting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.modalDeleteBtnText}>Delete Account</Text>
+                  <Text style={styles.modalDeleteBtnText}>{t("Delete Account")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -230,7 +264,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#eef1f8",
   },
   header: {
     flexDirection: "row",
@@ -238,9 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   backBtn: {
     padding: 8,
@@ -249,7 +280,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#000033",
   },
   content: {
     padding: 20,
@@ -258,7 +288,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#666",
     textTransform: "uppercase",
     marginBottom: 12,
     marginTop: 20,
@@ -267,7 +296,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -276,7 +304,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -287,16 +314,13 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
     marginBottom: 4,
   },
   settingDesc: {
     fontSize: 13,
-    color: "#888",
   },
   chevron: {
     fontSize: 18,
-    color: "#ccc",
   },
   // Modal styles
   modalOverlay: {
@@ -307,7 +331,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: "#fff",
     width: "100%",
     borderRadius: 20,
     padding: 24,
@@ -320,28 +343,23 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#000033",
     marginBottom: 16,
   },
   modalWarningText: {
     fontSize: 14,
-    color: "#444",
     lineHeight: 20,
     marginBottom: 20,
   },
   modalInputLabel: {
     fontSize: 14,
-    color: "#333",
     marginBottom: 8,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#dde3f0",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: "#333",
     marginBottom: 20,
     fontWeight: "700",
   },

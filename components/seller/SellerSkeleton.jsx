@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, StyleSheet, Dimensions } from 'react-native';
+import { colors } from '../../constants/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -97,12 +98,12 @@ const styles = StyleSheet.create({
   },
   productCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.border,
   },
   image: {
     width: 80,
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   orderCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 16,
     marginBottom: 12,
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.border,
   },
   orderLeft: {
     flex: 1,
@@ -158,12 +159,12 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     width: 140,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 22,
     padding: 16,
     marginRight: 16,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.border,
     gap: 8,
   },
   statsIcon: {

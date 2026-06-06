@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { createContactRequest } from '../../services/contactService'
 import { useTranslation } from 'react-i18next'
+import { getProductImageUrl } from '../../utils/image'
 
 export default function ContactSellerModal({ visible, onClose, product, seller }) {
   const { t } = useTranslation()
@@ -41,7 +42,7 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
     setLoading(true)
     try {
       await createContactRequest({
-        sellerId: seller?._id,
+        sellerId: seller?._id || undefined,
         productId: product?._id,
         subject,
         message,
@@ -80,12 +81,12 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
             ]}
           >
             <View style={styles.headerRow}>
-              <Text style={styles.title}>{t('Contact Seller')}</Text>
+              <Text style={styles.title}>{seller ? t('Contact Seller') : t('Contact Admin')}</Text>
               <TouchableOpacity onPress={() => onClose(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#1a237e" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.subtitle}>{seller?.shopName || t('Seller Shop')}</Text>
+            <Text style={styles.subtitle}>{seller ? seller.shopName : t('UBS Global Admin Panel')}</Text>
 
             <Text style={styles.sectionLabel}>{t('Request Type')}</Text>
             <View style={styles.chipRow}>
@@ -163,7 +164,7 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
               <View style={styles.productRow}>
                 <View style={styles.productImagePlaceholder}>
                   {product?.images?.[0] ? (
-                    <Image source={{ uri: product.images[0] }} style={styles.productImage} />
+                    <Image source={{ uri: getProductImageUrl(product.images[0]) }} style={styles.productImage} />
                   ) : null}
                 </View>
                 <View style={styles.productInfo}>
@@ -180,7 +181,7 @@ export default function ContactSellerModal({ visible, onClose, product, seller }
                 <Text style={styles.submitText}>{t('Send Request →')}</Text>
               )}
             </TouchableOpacity>
-            <Text style={styles.noteText}>🔒 {t('Admin will review and connect you with seller within 24 hours.')}</Text>
+            <Text style={styles.noteText}>🔒 {seller ? t('Admin will review and connect you with seller within 24 hours.') : t('Admin will review and get in touch with you within 24 hours.')}</Text>
           </ScrollView>
         </View>
       </View>

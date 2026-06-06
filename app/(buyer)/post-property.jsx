@@ -418,7 +418,7 @@ export default function PostPropertyScreen() {
           [
             {
               text: 'OK',
-              onPress: () => router.back()
+              onPress: () => router.canGoBack() ? router.back() : router.replace('/(buyer)/real-estate')
             }
           ]
         )
@@ -441,7 +441,7 @@ export default function PostPropertyScreen() {
       >
         {/* TOP BAR */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/real-estate')} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1a237e" />
           </TouchableOpacity>
           <Text style={styles.topTitle}>{isEditMode ? 'Edit Property' : 'Post Property'}</Text>

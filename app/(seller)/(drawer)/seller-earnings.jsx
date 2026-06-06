@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
-import SellerHeader from '../../components/seller/SellerHeader';
+import SellerHeader from '../../../components/seller/SellerHeader';
 import { LineChart } from 'react-native-chart-kit';
-import { useSeller } from '../../context/SellerContext';
-import { colors } from '../../constants/colors';
-import { getEarnings } from '../../services/sellerService';
-import { getSellerEarnings, requestWithdrawal } from '../../services/paymentService';
+import { useSeller } from '../../../context/SellerContext';
+import { colors } from '../../../constants/colors';
+import { getEarnings } from '../../../services/sellerService';
+import { getSellerEarnings, requestWithdrawal } from '../../../services/paymentService';
 
 export default function SellerEarnings() {
   const { seller } = useSeller();

@@ -9,9 +9,19 @@ const screenWidth = Dimensions.get('window').width - 40;
 export default function EarningsChart({ mode = 'week', onModeChange, data = {} }) {
   const { t } = useTranslation();
   
+  const getFallbackLabels = () => {
+    if (mode === 'month') {
+      return Array.from({ length: 14 }, (_, i) => String(i + 1));
+    }
+    if (mode === 'year') {
+      return ['Ja', 'Fe', 'Ma', 'Ap', 'My', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De'].map(m => t(m));
+    }
+    return [t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat'), t('Sun')];
+  };
+
   const labels = (data.labels && data.labels.length > 0)
     ? data.labels
-    : [t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat'), t('Sun')];
+    : getFallbackLabels();
     
   const hasData = data.values && data.values.length > 0 && data.values.some(v => v > 0);
   const values = hasData
@@ -39,11 +49,11 @@ export default function EarningsChart({ mode = 'week', onModeChange, data = {} }
         withShadow
         bezier
         chartConfig={{
-          backgroundGradientFrom: '#ffffff',
-          backgroundGradientTo: '#ffffff',
+          backgroundGradientFrom: colors.surface,
+          backgroundGradientTo: colors.surface,
           decimalPlaces: 0,
           color: () => colors.primary,
-          labelColor: () => '#8a8a8a',
+          labelColor: () => colors.textMuted,
           propsForBackgroundLines: { strokeDasharray: '' },
           propsForDots: { r: '0' },
         }}
@@ -55,7 +65,7 @@ export default function EarningsChart({ mode = 'week', onModeChange, data = {} }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 16,
     marginVertical: 16,

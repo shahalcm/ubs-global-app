@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { getChatRooms } from '../../services/messageService'
+import { getChatRooms } from '../../../services/messageService'
+import { getSellerImageUrl } from '../../../utils/image'
 
 export default function MessagesScreen() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -48,7 +49,7 @@ export default function MessagesScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Messages</Text>
@@ -96,10 +97,18 @@ export default function MessagesScreen() {
                 onPress={() => router.push({ pathname: '/(buyer)/chat', params: { roomId: room._id } })}
               >
                 <View style={styles.avatarContainer}>
-                  <Image
-                    source={{ uri: room.sellerId?.avatar || room.sellerId?.shopLogo || room.meta?.propertyImage || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&q=80' }}
-                    style={styles.avatar}
-                  />
+                  {(room.sellerId?.avatar || room.sellerId?.shopLogo || room.meta?.propertyImage) ? (
+                    <Image
+                      source={{ uri: getSellerImageUrl(room.sellerId?.avatar || room.sellerId?.shopLogo || room.meta?.propertyImage) }}
+                      style={styles.avatar}
+                    />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <Text style={styles.avatarFallbackText}>
+                        {sellerName ? sellerName.trim().charAt(0).toUpperCase() : '?'}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.onlineDot} />
                 </View>
                 <View style={styles.messageContent}>
@@ -214,6 +223,19 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     backgroundColor: '#eaeaea',
+  },
+  avatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#00838f',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarFallbackText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   onlineDot: {
     position: 'absolute',

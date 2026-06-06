@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import { getSellerOrders, updateOrderStatus } from '../../services/orderService'
-import { onOrderStatusChanged, removeListener } from '../../services/socketService'
+import { getSellerOrders, updateOrderStatus } from '../../../services/orderService'
+import { onOrderStatusChanged, removeListener } from '../../../services/socketService'
 
 export default function SellerOrdersScreen() {
   const [orders, setOrders] = useState([])
@@ -62,7 +62,7 @@ export default function SellerOrdersScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard')}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Orders</Text>
         <TouchableOpacity onPress={loadOrders}><MaterialCommunityIcons name="refresh" size={24} color="#333" /></TouchableOpacity>
       </View>

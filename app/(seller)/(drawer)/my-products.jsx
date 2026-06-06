@@ -2,11 +2,11 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import SellerHeader from '../../components/seller/SellerHeader';
-import ProductCard from '../../components/seller/ProductCard';
-import { useSeller } from '../../context/SellerContext';
-import { colors } from '../../constants/colors';
-import { SellerProductCardSkeleton } from '../../components/seller/SellerSkeleton';
+import SellerHeader from '../../../components/seller/SellerHeader';
+import ProductCard from '../../../components/seller/ProductCard';
+import { useSeller } from '../../../context/SellerContext';
+import { colors } from '../../../constants/colors';
+import { SellerProductCardSkeleton } from '../../../components/seller/SellerSkeleton';
 
 const filters = ['All', 'Active', 'Out of Stock', 'Draft', 'Featured'];
 

@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from "react-i18next";
+import { getUserAvatarUrl } from "../../utils/image";
 
 const { width } = Dimensions.get("window");
 
@@ -75,7 +76,7 @@ export default function DrawerMenuScreen() {
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
-        onPress={() => router.back()}
+        onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}
       />
 
       {/* Drawer Content */}
@@ -89,7 +90,7 @@ export default function DrawerMenuScreen() {
             <View style={styles.closeHeader}>
               <TouchableOpacity
                 style={styles.closeBtn}
-                onPress={() => router.back()}
+                onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}
               >
                 <MaterialCommunityIcons name="close" size={24} color="#333" />
               </TouchableOpacity>
@@ -98,12 +99,20 @@ export default function DrawerMenuScreen() {
             {/* Profile Section */}
             <View style={styles.profileSection}>
               <View style={styles.avatarContainer}>
-                <Image
-                  source={{
-                    uri: user?.avatar || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80",
-                  }}
-                  style={styles.avatar}
-                />
+                {user?.avatar ? (
+                  <Image
+                    source={{
+                      uri: getUserAvatarUrl(user.avatar),
+                    }}
+                    style={styles.avatar}
+                  />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarFallbackText}>
+                      {user?.name ? user.name.trim().charAt(0).toUpperCase() : '?'}
+                    </Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.userName}>{user?.name || "UBS Global User"}</Text>
               <Text style={styles.userEmail}>{user?.email || "user.global@ubsexports.com"}</Text>
@@ -237,6 +246,19 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
+  },
+  avatarFallback: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#00838f",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarFallbackText: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
   },
   userName: {
     fontSize: 20,

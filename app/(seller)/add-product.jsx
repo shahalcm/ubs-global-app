@@ -30,8 +30,6 @@ const CATEGORIES = [
   { label: 'Electronics', value: 'electronics' },
   { label: 'Medicines', value: 'medicines' },
   { label: 'Home & Kitchen', value: 'home-kitchen' },
-  { label: 'Job Portal', value: 'job-portal' },
-  { label: 'Service Portal', value: 'service-portal' },
   { label: 'Real Estate', value: 'real-estate' },
   { label: 'Building Materials', value: 'building-materials' },
   { label: 'Machinery', value: 'machinery' },
@@ -240,7 +238,7 @@ export default function AddProductScreen() {
 
         {/* TOP BAR */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard')}>
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
           <Text style={styles.topTitle}>Add New Product</Text>

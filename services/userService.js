@@ -12,6 +12,12 @@ export const updateProfile = async (data) => {
   return res.data
 }
 
+// Change password
+export const changePassword = async (currentPassword, newPassword) => {
+  const res = await api.patch('/users/change-password', { currentPassword, newPassword })
+  return res.data
+}
+
 // Update avatar
 export const updateAvatar = async (imageUri) => {
   const formData = new FormData()
@@ -53,5 +59,17 @@ export const updatePrivacySettings = async (settings) => {
 // Get Legal Policy Document (public)
 export const getLegalDoc = async (key) => {
   const res = await api.get(`/users/legal-docs/${key}`)
+  return res.data
+}
+
+// Get location
+export const getUserLocation = async () => {
+  const res = await api.get('/users/location')
+  return res.data
+}
+
+// Update location
+export const updateUserLocation = async (locationData) => {
+  const res = await api.put('/users/location', locationData)
   return res.data
 }

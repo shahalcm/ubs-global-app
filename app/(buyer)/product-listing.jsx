@@ -5,16 +5,17 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   FlatList,
   ScrollView,
   Dimensions,
   RefreshControl,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { getProducts } from '../../services/productService'
 import { ProductGridSkeleton } from '../../components/buyer/BuyerSkeleton'
+import { getProductImageUrl } from '../../utils/image'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -109,7 +110,40 @@ export default function ProductListingScreen() {
 
   React.useEffect(() => {
     loadProducts()
+    if (categoryData.subcategories.length > 0) {
+      setActiveTab(categoryData.subcategories[0])
+    }
   }, [category, search])
+
+  // Filter products locally based on activeTab
+  const displayedProducts = React.useMemo(() => {
+    if (!activeTab) return products
+
+    const tabLower = activeTab.toLowerCase()
+
+    // If activeTab starts with 'all' or is 'all items', display all loaded products
+    if (tabLower.startsWith('all')) {
+      return products
+    }
+
+    if (tabLower === 'top rated') {
+      return products.filter((p) => (p.rating || 0) >= 4.5)
+    }
+
+    if (tabLower === 'new arrivals') {
+      // Products from backend are sorted by newest by default, so return all
+      return products
+    }
+
+    if (tabLower === 'discounted') {
+      return products.filter((p) => p.comparePrice && p.comparePrice > p.price)
+    }
+
+    // Standard subcategory matching
+    return products.filter(
+      (p) => p.subcategory && p.subcategory.toLowerCase() === tabLower
+    )
+  }, [products, activeTab])
 
   const loadProducts = async () => {
     try {
@@ -152,9 +186,10 @@ export default function ProductListingScreen() {
       {/* Image */}
       <View style={styles.imageBox}>
         <Image
-          source={{ uri: item.images?.[0] || item.image || 'https://via.placeholder.com/150' }}
+          source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
           style={styles.productImage}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={200}
         />
         <TouchableOpacity
           style={styles.wishlistBtn}
@@ -177,12 +212,17 @@ export default function ProductListingScreen() {
             {item.rating || 0} ({item.totalReviews || 0} reviews)
           </Text>
         </View>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceText}>${item.price}</Text>
-          <TouchableOpacity style={styles.cartBtn}>
-            <Text style={styles.cartBtnIcon}>🛒</Text>
-          </TouchableOpacity>
-        </View>
+        {!((category || item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
+           (category || item.category?.name || item.category || '').toLowerCase().trim() === 'service portal' ||
+           (category || item.category?.name || item.category || '').toLowerCase().trim() === 'job-portal' ||
+           (category || item.category?.name || item.category || '').toLowerCase().trim() === 'service-portal') && (
+          <View style={styles.priceRow}>
+            <Text style={styles.priceText}>${item.price}</Text>
+            <TouchableOpacity style={styles.cartBtn}>
+              <Text style={styles.cartBtnIcon}>🛒</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   )
@@ -192,7 +232,7 @@ export default function ProductListingScreen() {
 
       {/* Top Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.topTitle} numberOfLines={1}>
@@ -243,7 +283,7 @@ export default function ProductListingScreen() {
       {/* Results Count + Sort */}
       <View style={styles.resultsRow}>
         <Text style={styles.resultsText}>
-          {isRelated ? 'Showing related items' : `Showing ${products.length} items`}
+          {isRelated ? 'Showing related items' : `Showing ${displayedProducts.length} items`}
         </Text>
         <TouchableOpacity style={styles.sortBtn}>
           <Text style={styles.sortIcon}>≡</Text>
@@ -270,17 +310,29 @@ export default function ProductListingScreen() {
             No products available in this category yet. Please check back later.
           </Text>
         </View>
+      ) : displayedProducts.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyTitle}>{`No Items in "${activeTab}"`}</Text>
+          <Text style={styles.emptyDesc}>
+            There are currently no items matching this subcategory. Try selecting another tab or check back later.
+          </Text>
+        </View>
       ) : (
         <FlatList
-          data={products}
+          data={displayedProducts}
           renderItem={renderProduct}
-          keyExtractor={(item) => item.id || item._id}
+          keyExtractor={(item) => (item.id || item._id).toString()}
           numColumns={2}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

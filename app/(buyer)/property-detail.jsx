@@ -106,7 +106,7 @@ export default function PropertyDetailScreen() {
       <SafeAreaView style={styles.notFoundContainer}>
         <Text style={styles.notFoundEmoji}>❌</Text>
         <Text style={styles.notFoundText}>Property not found</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/real-estate')}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -115,13 +115,13 @@ export default function PropertyDetailScreen() {
 
   const images = property.images && property.images.length > 0
     ? property.images
-    : ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80']
+    : ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80']
 
   return (
     <View style={styles.container}>
       {/* Top Header Controls */}
       <View style={[styles.header, { top: insets.top > 0 ? insets.top + 8 : 12 }]}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/real-estate')}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerRight}>

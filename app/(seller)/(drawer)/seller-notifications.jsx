@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import SellerHeader from '../../components/seller/SellerHeader';
-import { useSeller } from '../../context/SellerContext';
-import { colors } from '../../constants/colors';
+import SellerHeader from '../../../components/seller/SellerHeader';
+import { useSeller } from '../../../context/SellerContext';
+import { colors } from '../../../constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const types = ['All', 'Orders', 'Payments', 'Messages', 'System'];

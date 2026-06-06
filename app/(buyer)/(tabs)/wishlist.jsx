@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { getProductImageUrl } from '../../../utils/image'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
-import { getWishlist, toggleWishlist } from '../../services/wishlistService'
+import { getWishlist, toggleWishlist } from '../../../services/wishlistService'
 
 export default function WishlistScreen() {
   const { t } = useTranslation()
@@ -39,7 +41,7 @@ export default function WishlistScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')} style={styles.backBtn}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>{t('My Wishlist')} ({products.length})</Text>
         <View style={{ width: 30 }} />
       </View>
@@ -61,7 +63,12 @@ export default function WishlistScreen() {
             {products.map((item) => (
               <View key={item._id} style={styles.card}>
                 <View style={styles.imageWrapper}>
-                  <Image source={{ uri: item.productId?.images?.[0] }} style={styles.image} />
+                  <Image
+                    source={{ uri: getProductImageUrl(item.productId?.images?.[0] || item.productId?.image) }}
+                    style={styles.image}
+                    contentFit="cover"
+                    transition={150}
+                  />
                   <TouchableOpacity style={styles.heartBtn} onPress={() => handleRemove(item.productId?._id)}>
                     <MaterialCommunityIcons name="heart" size={20} color="#ff4444" />
                   </TouchableOpacity>

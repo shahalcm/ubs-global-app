@@ -7,15 +7,24 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
-  Image,
   Dimensions,
   RefreshControl,
+  Modal,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { Image } from "expo-image";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getProductImageUrl } from "../../../utils/image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import api from "../../services/api";
-import { CategoryCard } from "../../components/shared/CategoryCard";
+import api from "../../../services/api";
+import { CategoryCard } from "../../../components/shared/CategoryCard";
+import * as Location from "expo-location";
+import { useAuth } from "../../../context/AuthContext";
+import { updateUserLocation } from "../../../services/userService";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -105,8 +114,7 @@ const CATEGORIES = [
   {
     id: "15",
     name: "Oils",
-    image:
-      "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=200&q=80",
+    image: "Oils",
   },
   {
     id: "16",
@@ -168,8 +176,158 @@ export default function HomeScreen() {
   const [search, setSearch] = useState("");
   const [activeBanner, setActiveBanner] = useState(0);
   const [categories, setCategories] = useState(CATEGORIES);
+  const [banners, setBanners] = useState(BANNERS);
   const [featuredProducts, setFeaturedProducts] = useState(FEATURED_PRODUCTS);
   const [refreshing, setRefreshing] = useState(false);
+
+  const { user, updateUser } = useAuth();
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
+  const [pincode, setPincode] = useState("");
+  const [manualCity, setManualCity] = useState("");
+  const [manualState, setManualState] = useState("");
+  const [manualCountry, setManualCountry] = useState("");
+  const [manualAddress, setManualAddress] = useState("");
+
+  React.useEffect(() => {
+    if (locationModalVisible && user?.location) {
+      setManualCity(user.location.city || "");
+      setManualState(user.location.state || "");
+      setManualCountry(user.location.country || "");
+      setManualAddress(user.location.fullAddress || "");
+    }
+  }, [locationModalVisible, user]);
+
+  const resolveLocationFromPincode = async (code) => {
+    try {
+      const geocoded = await Location.geocodeAsync(code);
+      if (geocoded && geocoded.length > 0) {
+        const { latitude, longitude } = geocoded[0];
+        const rev = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (rev && rev.length > 0) {
+          const first = rev[0];
+          return {
+            latitude,
+            longitude,
+            city: first.city || first.subregion || first.district || "",
+            state: first.region || "",
+            country: first.country || "",
+            fullAddress: [
+              first.name,
+              first.street,
+              first.subregion,
+              first.city,
+              first.region,
+              code,
+              first.country
+            ].filter(Boolean).join(", ")
+          };
+        }
+      }
+    } catch (e) {
+      console.log("Geocoding pincode error:", e);
+    }
+    return null;
+  };
+
+  const handleGPSUpdate = async () => {
+    setLocLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const loc = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = loc.coords;
+        const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (geocode && geocode.length > 0) {
+          const first = geocode[0];
+          const resolvedLoc = {
+            latitude,
+            longitude,
+            city: first.city || first.subregion || first.district || "",
+            state: first.region || "",
+            country: first.country || "",
+            fullAddress: [
+              first.name,
+              first.street,
+              first.subregion,
+              first.city,
+              first.region,
+              first.postalCode,
+              first.country
+            ].filter(Boolean).join(", ")
+          };
+          const res = await updateUserLocation(resolvedLoc);
+          if (res.success) {
+            updateUser(res.user);
+            Alert.alert(t('Success'), t('Location updated successfully'));
+            setLocationModalVisible(false);
+          }
+        } else {
+          Alert.alert(t('Error'), t('Failed to reverse geocode GPS location.'));
+        }
+      } else {
+        Alert.alert(t('Permission Denied'), t('Location permission is required to fetch GPS coordinates.'));
+      }
+    } catch (error) {
+      console.log("GPS update error:", error);
+      Alert.alert(t('Error'), t('Failed to get current location.'));
+    } finally {
+      setLocLoading(false);
+    }
+  };
+
+  const handleManualUpdate = async () => {
+    setLocLoading(true);
+    try {
+      let resolvedLoc = null;
+      if (pincode.trim()) {
+        resolvedLoc = await resolveLocationFromPincode(pincode.trim());
+      }
+      
+      if (!resolvedLoc) {
+        if (!manualCity.trim() || !manualCountry.trim()) {
+          Alert.alert(t('Validation Error'), t('City and Country are required for manual editing.'));
+          setLocLoading(false);
+          return;
+        }
+        
+        let latitude = 0;
+        let longitude = 0;
+        try {
+          const searchString = `${manualAddress || ''} ${manualCity} ${manualState || ''} ${manualCountry}`.trim();
+          const geocoded = await Location.geocodeAsync(searchString);
+          if (geocoded && geocoded.length > 0) {
+            latitude = geocoded[0].latitude;
+            longitude = geocoded[0].longitude;
+          }
+        } catch (e) {
+          console.log("Geocoding manual address error:", e);
+        }
+
+        resolvedLoc = {
+          latitude,
+          longitude,
+          city: manualCity.trim(),
+          state: manualState.trim(),
+          country: manualCountry.trim(),
+          fullAddress: manualAddress.trim() || `${manualCity}, ${manualState ? manualState + ', ' : ''}${manualCountry}`
+        };
+      }
+
+      const res = await updateUserLocation(resolvedLoc);
+      if (res.success) {
+        updateUser(res.user);
+        Alert.alert(t('Success'), t('Location updated successfully'));
+        setLocationModalVisible(false);
+        setPincode("");
+      }
+    } catch (error) {
+      console.log("Manual update error:", error);
+      Alert.alert(t('Error'), t('Failed to update location.'));
+    } finally {
+      setLocLoading(false);
+    }
+  };
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -185,15 +343,33 @@ export default function HomeScreen() {
     });
   };
   React.useEffect(() => {
+    const loadCachedData = async () => {
+      try {
+        const cachedCats = await AsyncStorage.getItem('ubs_categories');
+        const cachedBanners = await AsyncStorage.getItem('ubs_banners');
+        if (cachedCats) {
+          setCategories(JSON.parse(cachedCats));
+        }
+        if (cachedBanners) {
+          setBanners(JSON.parse(cachedBanners));
+        }
+      } catch (err) {
+        console.log('Error loading cached home data:', err);
+      }
+    };
+
+    loadCachedData();
     loadHomeData();
   }, []);
 
   const loadHomeData = async () => {
     try {
-      const [categoriesRes, productsRes] = await Promise.all([
+      const [categoriesRes, productsRes, bannersRes] = await Promise.all([
         api.get('/categories'),
-        api.get('/products?limit=10&sort=newest')
+        api.get('/products?limit=10&sort=newest'),
+        api.get('/banners').catch(() => null)
       ]);
+
       if (categoriesRes?.data?.categories) {
         const apiCategories = categoriesRes.data.categories;
         const merged = [...CATEGORIES];
@@ -208,8 +384,18 @@ export default function HomeScreen() {
           }
         });
         setCategories(merged);
+        await AsyncStorage.setItem('ubs_categories', JSON.stringify(merged)).catch(() => {});
       }
-      if (productsRes?.data?.products) setFeaturedProducts(productsRes.data.products);
+      
+      if (productsRes?.data?.products) {
+        setFeaturedProducts(productsRes.data.products);
+      }
+
+      if (bannersRes?.data?.banners && bannersRes.data.banners.length > 0) {
+        const apiBanners = bannersRes.data.banners;
+        setBanners(apiBanners);
+        await AsyncStorage.setItem('ubs_banners', JSON.stringify(apiBanners)).catch(() => {});
+      }
     } catch (error) {
       console.log("Home load error:", error);
     }
@@ -228,14 +414,18 @@ export default function HomeScreen() {
       }
     >
       <Image
-        source={{ uri: item.images?.[0] || item.image || "https://via.placeholder.com/150" }}
+        source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
         style={styles.productImage}
-        resizeMode="cover"
+        contentFit="cover"
+        transition={200}
       />
       <View style={styles.productInfo}>
         <Text style={styles.productCategory} numberOfLines={1}>{t(item.category?.name || item.category)}</Text>
         <Text style={styles.productName} numberOfLines={1}>{t(item.title || item.name)}</Text>
-        <Text style={styles.productPrice}>${item.price}</Text>
+        {!(
+          (item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
+          (item.category?.name || item.category || '').toLowerCase().trim() === 'service portal'
+        ) && <Text style={styles.productPrice}>${item.price}</Text>}
         {item.sellerId && (
           <Text style={{ fontSize: 10, color: '#888', marginTop: 2 }} numberOfLines={1}>
             Sold by: {item.sellerId.shopName}
@@ -258,7 +448,7 @@ export default function HomeScreen() {
             style={styles.iconBtn}
             onPress={() => router.push("/(buyer)/notifications")}
           >
-            <Text style={styles.topIcon}>🔔</Text>
+            <MaterialCommunityIcons name="bell-outline" size={24} color="#1a237e" />
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>3</Text>
             </View>
@@ -295,10 +485,115 @@ export default function HomeScreen() {
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity style={styles.filterBtn}>
-            <Text style={styles.filterIcon}>⚙</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* Location Display Row */}
+        <TouchableOpacity 
+          style={styles.locationContainer} 
+          onPress={() => setLocationModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.locationPin}>📍</Text>
+          <View style={styles.locationTextCol}>
+            <Text style={styles.locationLabel}>{t('Current Location')}</Text>
+            <Text style={styles.locationValue} numberOfLines={1}>
+              {user?.location?.fullAddress || 
+               (user?.location?.city ? `${user.location.city}, ${user.location.state || ''}, ${user.location.country || ''}`.replace(/,\s*,/, ',').trim() : t('Set Location'))}
+            </Text>
+          </View>
+          <Text style={styles.locationArrow}>›</Text>
+        </TouchableOpacity>
+
+        {/* Location Update Modal */}
+        <Modal
+          visible={locationModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setLocationModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('Update Location')}</Text>
+                <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
+                  <Text style={styles.modalCloseBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {locLoading ? (
+                <View style={styles.modalLoading}>
+                  <ActivityIndicator size="large" color="#1a237e" />
+                  <Text style={styles.loadingText}>{t('Updating Location...')}</Text>
+                </View>
+              ) : (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {/* GPS Button */}
+                  <TouchableOpacity style={styles.gpsBtn} onPress={handleGPSUpdate}>
+                    <Text style={styles.gpsBtnIcon}>📡</Text>
+                    <Text style={styles.gpsBtnText}>{t('Use GPS / Current Location')}</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.modalOrRow}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.modalOrText}>{t('OR')}</Text>
+                    <View style={styles.orLine} />
+                  </View>
+
+                  {/* Pincode Input */}
+                  <Text style={styles.modalInputLabel}>{t('Enter Pincode')}</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="e.g. 682024"
+                    value={pincode}
+                    onChangeText={setPincode}
+                    keyboardType="numeric"
+                    maxLength={6}
+                  />
+
+                  <Text style={styles.modalOrTextSmall}>{t('or enter details completely:')}</Text>
+
+                  {/* Manual Fields */}
+                  <Text style={styles.modalInputLabel}>{t('City')}</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder={t('City')}
+                    value={manualCity}
+                    onChangeText={setManualCity}
+                  />
+
+                  <Text style={styles.modalInputLabel}>{t('State')}</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder={t('State')}
+                    value={manualState}
+                    onChangeText={setManualState}
+                  />
+
+                  <Text style={styles.modalInputLabel}>{t('Country')}</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder={t('Country')}
+                    value={manualCountry}
+                    onChangeText={setManualCountry}
+                  />
+
+                  <Text style={styles.modalInputLabel}>{t('Full Address')}</Text>
+                  <TextInput
+                    style={[styles.modalInput, { height: 60 }]}
+                    placeholder={t('Full Address')}
+                    value={manualAddress}
+                    onChangeText={setManualAddress}
+                    multiline
+                  />
+
+                  <TouchableOpacity style={styles.modalSubmitBtn} onPress={handleManualUpdate}>
+                    <Text style={styles.modalSubmitText}>{t('Save Location')}</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
 
         {/* Browse by Category */}
         <Text style={styles.sectionTitle}>{t('browse_category')}</Text>
@@ -335,21 +630,26 @@ export default function HomeScreen() {
           }}
           style={styles.bannerScroll}
         >
-          {BANNERS.map((banner) => (
-            <View key={banner.id} style={styles.bannerCard}>
+          {banners.map((banner) => (
+            <View key={banner._id || banner.id} style={styles.bannerCard}>
               <Image
                 source={{ uri: banner.image }}
                 style={styles.bannerImage}
-                resizeMode="cover"
+                contentFit="cover"
+                transition={200}
               />
               <View style={styles.bannerOverlay}>
-                <Text style={styles.bannerSubtitle}>{t(banner.subtitle)}</Text>
+                {banner.subtitle ? (
+                  <Text style={styles.bannerSubtitle}>{t(banner.subtitle)}</Text>
+                ) : (
+                  <Text style={styles.bannerSubtitle}>{t('LIMITED OFFER')}</Text>
+                )}
                 <Text style={styles.bannerTitle}>{t(banner.title)}</Text>
                 <TouchableOpacity 
                   style={styles.bannerBtn}
-                  onPress={() => router.push("/(buyer)/products")}
+                  onPress={() => router.push(banner.linkUrl || "/(buyer)/products")}
                 >
-                  <Text style={styles.bannerBtnText}>{t(banner.btn)}</Text>
+                  <Text style={styles.bannerBtnText}>{t(banner.btn || 'Shop Now')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -358,7 +658,7 @@ export default function HomeScreen() {
 
         {/* Banner Dots */}
         <View style={styles.dotsRow}>
-          {BANNERS.map((_, i) => (
+          {banners.map((_, i) => (
             <View
               key={i}
               style={[styles.dot, activeBanner === i && styles.dotActive]}
@@ -404,7 +704,8 @@ export default function HomeScreen() {
               uri: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=80",
             }}
             style={styles.secureImage}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={200}
           />
         </View>
       </ScrollView>
@@ -720,5 +1021,159 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 160,
     borderRadius: 12,
+  },
+
+  // Location Styles
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  locationPin: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  locationTextCol: {
+    flex: 1,
+  },
+  locationLabel: {
+    fontSize: 10,
+    color: '#888',
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  locationValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1a237e',
+  },
+  locationArrow: {
+    fontSize: 18,
+    color: '#ccc',
+    marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1a237e',
+  },
+  modalCloseBtn: {
+    fontSize: 18,
+    color: '#666',
+    padding: 4,
+  },
+  modalLoading: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  gpsBtn: {
+    backgroundColor: '#e8eaf6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#c5cae9',
+  },
+  gpsBtnIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  gpsBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a237e',
+  },
+  modalOrRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  modalOrText: {
+    marginHorizontal: 12,
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+  },
+  modalOrTextSmall: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 8,
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  modalInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: '#f5f6fa',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+  },
+  modalSubmitBtn: {
+    backgroundColor: '#1a237e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  modalSubmitText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

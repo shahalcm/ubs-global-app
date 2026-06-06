@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { getProductImageUrl } from '../../../utils/image'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
-import { getCart, removeFromCart, updateCartItem } from '../../services/cartService'
+import { getCart, removeFromCart, updateCartItem } from '../../../services/cartService'
 
 export default function CartScreen() {
   const { t } = useTranslation()
@@ -51,7 +53,7 @@ export default function CartScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')} style={styles.backBtn}><MaterialCommunityIcons name="arrow-left" size={24} color="#333" /></TouchableOpacity>
         <Text style={styles.headerTitle}>{t('Shopping Cart')} ({cartData.items.length})</Text>
         <View style={{width:24}}/>
       </View>
@@ -74,7 +76,12 @@ export default function CartScreen() {
                   <Text style={styles.vendorName}>{item.productId?.sellerId?.shopName}</Text>
                 </View>
                 <View style={styles.cardBody}>
-                  <Image source={{ uri: item.productId?.images?.[0] }} style={styles.itemImage} />
+                  <Image
+                    source={{ uri: getProductImageUrl(item.productId?.images?.[0] || item.productId?.image) }}
+                    style={styles.itemImage}
+                    contentFit="cover"
+                    transition={150}
+                  />
                   <View style={styles.itemDetails}>
                     <Text style={styles.itemTitle} numberOfLines={2}>{item.productId?.title}</Text>
                     <View style={styles.priceRow}>

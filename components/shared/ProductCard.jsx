@@ -1,11 +1,21 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { colors } from '../../constants/colors';
+import { getProductImageUrl } from '../../utils/image';
 
 export function ProductCard({ title, price, imageUri, onPress }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      {imageUri ? <Image source={{ uri: imageUri }} style={styles.image} /> : <View style={[styles.image, styles.placeholder]} />}
+      {imageUri ? (
+        <Image
+          source={{ uri: getProductImageUrl(imageUri) }}
+          style={styles.image}
+          transition={200}
+        />
+      ) : (
+        <View style={[styles.image, styles.placeholder]} />
+      )}
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
           {title}

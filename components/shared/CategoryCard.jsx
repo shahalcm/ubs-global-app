@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { colors } from '../../constants/colors';
 import { getCategoryImage } from '../../constants/categories';
 
@@ -18,6 +19,7 @@ export function CategoryCard({ label, image, onPress, variant = 'circle' }) {
         <Image
           source={getCategoryImage(label, image)}
           style={styles.categoryImage}
+          transition={200}
         />
       </View>
       <View style={styles.categoryNameContainer}>

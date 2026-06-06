@@ -29,7 +29,9 @@ export default function OrderCard({ order, onPressAction }) {
         </View>
       </View>
       <View style={styles.customerRow}>
-        <View style={styles.avatar}>{order.customer?.charAt(0)}</View>
+        <View style={styles.avatar}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{order.customer?.charAt(0)}</Text>
+        </View>
         <View>
           <Text style={styles.customerName}>{order.customer}</Text>
           <Text style={styles.customerPhone}>{order.phone}</Text>
@@ -66,7 +68,7 @@ export default function OrderCard({ order, onPressAction }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 16,
     marginBottom: 16,

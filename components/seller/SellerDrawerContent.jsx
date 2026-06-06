@@ -84,7 +84,7 @@ export default function SellerDrawerContent(props) {
 const styles = StyleSheet.create({
   drawerScroll: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   menuText: {
     marginLeft: 14,
     fontSize: 15,
-    color: '#1f1f1f',
+    color: colors.text,
   },
   footer: {
     marginTop: 'auto',

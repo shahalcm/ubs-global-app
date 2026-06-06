@@ -10,7 +10,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { getMyRequests } from '../../services/contactService'
+import { getContactRequests } from '../../services/contactService'
+import { getProductImageUrl } from '../../utils/image'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 const filters = ['All', 'Pending', 'Connected', 'Rejected']
@@ -58,7 +59,7 @@ export default function MyRequestsScreen() {
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <Image source={{ uri: item.productImage || item.productId?.images?.[0] || 'https://via.placeholder.com/80' }} style={styles.productImage} />
+          <Image source={{ uri: getProductImageUrl(item.productImage || item.productId?.images?.[0]) }} style={styles.productImage} />
           <View style={styles.cardInfo}>
             <Text style={styles.shopName}>{item.sellerShop}</Text>
             <Text style={styles.productName} numberOfLines={1}>{item.productName || item.productId?.title}</Text>
@@ -109,7 +110,7 @@ export default function MyRequestsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#1a237e" />
         </TouchableOpacity>
         <Text style={styles.title}>My Contact Requests</Text>

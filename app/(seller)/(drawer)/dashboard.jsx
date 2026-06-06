@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import SellerHeader from '../../components/seller/SellerHeader';
-import SellerScreen from '../../components/seller/SellerScreen';
-import StatsCard from '../../components/seller/StatsCard';
-import EarningsChart from '../../components/seller/EarningsChart';
-import { useSeller } from '../../context/SellerContext';
+import SellerHeader from '../../../components/seller/SellerHeader';
+import SellerScreen from '../../../components/seller/SellerScreen';
+import StatsCard from '../../../components/seller/StatsCard';
+import EarningsChart from '../../../components/seller/EarningsChart';
+import { useSeller } from '../../../context/SellerContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { getDashboardStats, getEarnings, getRecentOrders } from '../../services/sellerService';
+import { colors } from '../../../constants/colors';
+import { getDashboardStats, getEarnings, getRecentOrders } from '../../../services/sellerService';
 
 const statusColor = { Pending: colors.warning, Confirmed: colors.primary, Shipped: '#7c4dff', Delivered: colors.success };
 
