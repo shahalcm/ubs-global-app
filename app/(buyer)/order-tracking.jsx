@@ -319,25 +319,25 @@ export default function OrderTrackingScreen() {
               <View style={styles.productInfo}>
                 <Text style={styles.productName}>{item.productName}</Text>
                 <Text style={styles.productMeta}>Qty: {item.quantity}</Text>
-                <Text style={styles.productPrice}>${(item.price || 0).toFixed(2)}</Text>
+                <Text style={styles.productPrice}>${Number(item.price || 0).toFixed(2)}</Text>
               </View>
             </View>
           ))}
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>${(order.subtotal || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>${Number(order.subtotal || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
             <Text style={order.shippingFee === 0 ? styles.summaryValueGreen : styles.summaryValue}>
-              {order.shippingFee === 0 ? 'Free' : `$${(order.shippingFee || 0).toFixed(2)}`}
+              {order.shippingFee === 0 ? 'Free' : `$${Number(order.shippingFee || 0).toFixed(2)}`}
             </Text>
           </View>
           {order.tax > 0 && (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tax (5%)</Text>
-              <Text style={styles.summaryValue}>${(order.tax || 0).toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>${Number(order.tax || 0).toFixed(2)}</Text>
             </View>
           )}
 
@@ -345,7 +345,7 @@ export default function OrderTrackingScreen() {
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>${(order.grandTotal || 0).toFixed(2)}</Text>
+            <Text style={styles.totalValue}>${Number(order.grandTotal || 0).toFixed(2)}</Text>
           </View>
         </View>
 

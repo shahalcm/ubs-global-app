@@ -29,7 +29,7 @@ export default function SellerEarnings() {
     try {
       setChartLoading(true);
       const res = await getEarnings(mode);
-      if (res.success && res.earnings) {
+      if (res && res.success && res.earnings) {
         setChartData({
           labels: res.earnings.labels || [],
           values: res.earnings.values || []
@@ -46,7 +46,7 @@ export default function SellerEarnings() {
     try {
       setEarningsLoading(true);
       const res = await getSellerEarnings();
-      if (res.success) {
+      if (res && res.success) {
         setEarningsData(res.earnings);
         setTxList(res.transactions || []);
       }
@@ -58,7 +58,7 @@ export default function SellerEarnings() {
   };
 
   const handleWithdraw = () => {
-    const maxAvailable = earningsData?.pendingWithdrawal || 0;
+    const maxAvailable = Number(earningsData?.pendingWithdrawal || 0);
     if (maxAvailable <= 0) {
       Alert.alert("Withdrawal", "You do not have any pending balance available to withdraw.");
       return;
@@ -78,11 +78,11 @@ export default function SellerEarnings() {
             try {
               setEarningsLoading(true);
               const res = await requestWithdrawal({ amount: maxAvailable });
-              if (res.success) {
+              if (res && res.success) {
                 Alert.alert("Success", `Withdrawal request for $${maxAvailable.toFixed(2)} submitted successfully!`);
                 loadEarningsBreakdown(); // Refresh state
               } else {
-                Alert.alert("Error", res.message || "Failed to request withdrawal.");
+                Alert.alert("Error", res?.message || "Failed to request withdrawal.");
               }
             } catch (err) {
               console.log("Error in withdrawal request:", err);
@@ -114,8 +114,8 @@ export default function SellerEarnings() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Total Revenue</Text>
-          <Text style={styles.balanceAmount}>${parseFloat(earningsData?.totalEarnings || 0).toFixed(2)}</Text>
-          <Text style={styles.balanceSub}>Available to Withdraw: ${parseFloat(earningsData?.pendingWithdrawal || 0).toFixed(2)}</Text>
+          <Text style={styles.balanceAmount}>${Number(earningsData?.totalEarnings || 0).toFixed(2)}</Text>
+          <Text style={styles.balanceSub}>Available to Withdraw: ${Number(earningsData?.pendingWithdrawal || 0).toFixed(2)}</Text>
           <TouchableOpacity style={styles.withdrawButton} onPress={handleWithdraw}>
             <Text style={styles.withdrawLabel}>Withdraw</Text>
           </TouchableOpacity>
@@ -161,15 +161,15 @@ export default function SellerEarnings() {
           <Text style={styles.cardTitle}>Earnings Summary</Text>
           <View style={styles.row}>
             <Text style={styles.summaryLabel}>Withdrawn Amount</Text>
-            <Text style={styles.summaryValue}>${parseFloat(earningsData?.withdrawnAmount || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>${Number(earningsData?.withdrawnAmount || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.summaryLabel}>Platform Commission Paid</Text>
-            <Text style={[styles.summaryValue, styles.negative]}>-${parseFloat(earningsData?.totalCommissionPaid || 0).toFixed(2)}</Text>
+            <Text style={[styles.summaryValue, styles.negative]}>-${Number(earningsData?.totalCommissionPaid || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.row}>
             <Text style={[styles.summaryLabel, styles.bold]}>Net Earnings</Text>
-            <Text style={[styles.summaryValue, styles.positive]}>${parseFloat(earningsData?.totalEarnings || 0).toFixed(2)}</Text>
+            <Text style={[styles.summaryValue, styles.positive]}>${Number(earningsData?.totalEarnings || 0).toFixed(2)}</Text>
           </View>
         </View>
 
@@ -181,15 +181,15 @@ export default function SellerEarnings() {
             {txList.map((item, index) => (
               <View key={item._id} style={[styles.transactionRow, index % 2 === 1 && styles.stripedRow]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.txLabel}>#{item.orderNumber || item._id.slice(-6).toUpperCase()}</Text>
+                  <Text style={styles.txLabel}>#{item.orderNumber || (item._id ? item._id.slice(-6).toUpperCase() : 'UNKNOWN')}</Text>
                   <Text style={styles.txDate}>
-                    {new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
                   </Text>
                 </View>
                 <View style={styles.txAmounts}>
-                  <Text style={styles.txGross}>Gross: ${(item.grossAmount || 0).toFixed(2)}</Text>
-                  <Text style={styles.txCommission}>Fee: -${(item.commissionAmount || 0).toFixed(2)}</Text>
-                  <Text style={styles.txNet}>Net: ${(item.sellerEarnings || 0).toFixed(2)}</Text>
+                  <Text style={styles.txGross}>Gross: ${Number(item.grossAmount || 0).toFixed(2)}</Text>
+                  <Text style={styles.txCommission}>Fee: -${Number(item.commissionAmount || 0).toFixed(2)}</Text>
+                  <Text style={styles.txNet}>Net: ${Number(item.sellerEarnings || 0).toFixed(2)}</Text>
                 </View>
               </View>
             ))}

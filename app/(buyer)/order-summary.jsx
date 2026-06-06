@@ -28,8 +28,8 @@ export default function OrderSummaryScreen() {
     }
   }
 
-  const subtotal = product ? product.price * Number(quantity) : 0
-  const shipping = product?.freeShipping ? 0 : (product?.shippingFee || 0)
+  const subtotal = product ? Number(product.price || 0) * Number(quantity) : 0
+  const shipping = product?.freeShipping ? 0 : Number(product?.shippingFee || 0)
   const tax = subtotal * 0.05
   const grandTotal = subtotal + shipping + tax
 
@@ -83,7 +83,7 @@ export default function OrderSummaryScreen() {
           <View style={styles.pInfo}>
             <Text style={styles.pTitle} numberOfLines={2}>{product.title}</Text>
             <Text style={styles.pQty}>Qty: {quantity}</Text>
-            <Text style={styles.pPrice}>${product.price.toFixed(2)} each</Text>
+            <Text style={styles.pPrice}>${Number(product.price || 0).toFixed(2)} each</Text>
           </View>
         </View>
 
@@ -105,12 +105,12 @@ export default function OrderSummaryScreen() {
 
         <Text style={styles.sectionTitle}>Price Details</Text>
         <View style={styles.card}>
-          <View style={styles.row}><Text>Subtotal</Text><Text>${subtotal.toFixed(2)}</Text></View>
-          <View style={styles.row}><Text>Shipping</Text><Text>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</Text></View>
-          <View style={styles.row}><Text>Tax (5%)</Text><Text>${tax.toFixed(2)}</Text></View>
+          <View style={styles.row}><Text>Subtotal</Text><Text>${Number(subtotal).toFixed(2)}</Text></View>
+          <View style={styles.row}><Text>Shipping</Text><Text>{shipping === 0 ? 'FREE' : `$${Number(shipping).toFixed(2)}`}</Text></View>
+          <View style={styles.row}><Text>Tax (5%)</Text><Text>${Number(tax).toFixed(2)}</Text></View>
           <View style={[styles.row, {borderTopWidth:1, borderColor:'#eee', paddingTop:10, marginTop:10}]}>
             <Text style={styles.bold}>TOTAL</Text>
-            <Text style={styles.totalBlue}>${grandTotal.toFixed(2)}</Text>
+            <Text style={styles.totalBlue}>${Number(grandTotal).toFixed(2)}</Text>
           </View>
         </View>
 

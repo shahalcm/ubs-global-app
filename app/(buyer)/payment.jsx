@@ -61,7 +61,7 @@ export default function PaymentScreen() {
         ])
       }
     } catch (error) {
-      if (error.code === 2 || error.code === 0) {
+      if (error && (error.code === 2 || error.code === 0)) {
         Alert.alert('Cancelled', 'Payment was cancelled')
       } else {
         console.log('Payment error details:', error)

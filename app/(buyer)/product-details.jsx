@@ -198,6 +198,10 @@ export default function ProductDetailsScreen() {
   };
 
   const handleBuyNow = () => {
+    if (!product || !seller) {
+      Alert.alert(t('Error'), t('Seller information is not available for this product.'));
+      return;
+    }
     router.push({
       pathname: '/(buyer)/order-summary',
       params: {
@@ -313,11 +317,11 @@ export default function ProductDetailsScreen() {
             <Text style={styles.soldCount}>{product.totalSales || 0} {t("Sold")}</Text>
           </View>
 
-          {!isJobOrService && (
+          {!isJobOrService && product.price !== undefined && product.price !== null && (
             <View style={styles.priceRow}>
-              <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-              {product.comparePrice > product.price && (
-                <Text style={styles.originalPrice}>${product.comparePrice.toFixed(2)}</Text>
+              <Text style={styles.price}>${Number(product.price).toFixed(2)}</Text>
+              {product.comparePrice !== undefined && product.comparePrice !== null && Number(product.comparePrice) > Number(product.price) && (
+                <Text style={styles.originalPrice}>${Number(product.comparePrice).toFixed(2)}</Text>
               )}
             </View>
           )}

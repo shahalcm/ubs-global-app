@@ -85,7 +85,7 @@ export default function CartScreen() {
                   <View style={styles.itemDetails}>
                     <Text style={styles.itemTitle} numberOfLines={2}>{item.productId?.title}</Text>
                     <View style={styles.priceRow}>
-                      <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+                      <Text style={styles.itemPrice}>${Number(item.price || 0).toFixed(2)}</Text>
                       <TouchableOpacity onPress={() => handleRemove(item.productId?._id)}>
                         <MaterialCommunityIcons name="trash-can" size={20} color="#ff4444" />
                       </TouchableOpacity>
@@ -101,13 +101,13 @@ export default function CartScreen() {
             ))}
             <View style={styles.summaryCard}>
               <Text style={{fontWeight: 'bold', marginBottom: 10}}>Price Breakdown</Text>
-              <View style={{flexDirection:'row', justifyContent:'space-between'}}><Text>Subtotal</Text><Text>${cartData.subtotal}</Text></View>
-              <View style={{flexDirection:'row', justifyContent:'space-between', marginTop: 5}}><Text>Shipping</Text><Text>${cartData.shippingTotal}</Text></View>
-              <View style={{flexDirection:'row', justifyContent:'space-between', marginTop: 5}}><Text>Tax</Text><Text>${cartData.tax}</Text></View>
+              <View style={{flexDirection:'row', justifyContent:'space-between'}}><Text>Subtotal</Text><Text>${Number(cartData.subtotal || 0).toFixed(2)}</Text></View>
+              <View style={{flexDirection:'row', justifyContent:'space-between', marginTop: 5}}><Text>Shipping</Text><Text>${Number(cartData.shippingTotal || 0).toFixed(2)}</Text></View>
+              <View style={{flexDirection:'row', justifyContent:'space-between', marginTop: 5}}><Text>Tax</Text><Text>${Number(cartData.tax || 0).toFixed(2)}</Text></View>
             </View>
           </ScrollView>
           <View style={styles.checkoutBar}>
-            <View style={styles.totalBox}><Text style={styles.totalLabel}>{t('Total')}</Text><Text style={styles.totalAmount}>${cartData.grandTotal}</Text></View>
+            <View style={styles.totalBox}><Text style={styles.totalLabel}>{t('Total')}</Text><Text style={styles.totalAmount}>${Number(cartData.grandTotal || 0).toFixed(2)}</Text></View>
             <TouchableOpacity style={styles.checkoutBtn} onPress={() => router.push({ pathname: '/(buyer)/order-summary', params: { productId: cartData.items[0]?.productId?._id, quantity: cartData.items[0]?.quantity, sellerId: cartData.items[0]?.productId?.sellerId?._id }})} disabled={cartData.items.length === 0}><Text style={styles.checkoutBtnText}>{t('Checkout')}</Text></TouchableOpacity>
           </View>
         </>
