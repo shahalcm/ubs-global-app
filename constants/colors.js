@@ -21,6 +21,13 @@ export const updateGlobalColors = (isDark) => {
   colors.textMuted = isDark ? '#aaaaaa' : '#757575';
   colors.border = isDark ? '#2d2d2d' : '#e0e0e0';
   colors.shadow = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.08)';
+  if (typeof colors.onChange === 'function') {
+    try {
+      colors.onChange();
+    } catch (e) {
+      console.log('Error triggering colors change on stylesheets:', e);
+    }
+  }
 };
 
 // Initial sync on module load

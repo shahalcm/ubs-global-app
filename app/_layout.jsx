@@ -6,6 +6,31 @@ import { StyleSheet } from 'react-native'
 import { colors } from '../constants/colors'
 
 const originalCreate = StyleSheet.create;
+const registeredStylesheets = [];
+
+const resolveThemeColor = (val, currentColors) => {
+  if (typeof val !== 'string') return val;
+  const lowerVal = val.toLowerCase().trim();
+  const isDark = currentColors.background !== '#ffffff';
+  
+  if (lowerVal === '#ffffff' || lowerVal === '#fff') {
+    return isDark ? '#1e1e1e' : '#ffffff';
+  } else if (lowerVal === '#eef1f8') {
+    return isDark ? '#121212' : '#eef1f8';
+  } else if (lowerVal === '#f5f5f5') {
+    return currentColors.surface;
+  } else if (lowerVal === '#1a1a1a' || lowerVal === '#333' || lowerVal === '#333333' || lowerVal === '#000033') {
+    return currentColors.text;
+  } else if (lowerVal === '#757575' || lowerVal === '#666' || lowerVal === '#666666' || lowerVal === '#888' || lowerVal === '#888888' || lowerVal === '#909090') {
+    return currentColors.textMuted;
+  } else if (lowerVal === '#e0e0e0' || lowerVal === '#eee' || lowerVal === '#eeeeee') {
+    return currentColors.border;
+  } else if (lowerVal.replace(/\s/g, '') === 'rgba(0,0,0,0.08)') {
+    return currentColors.shadow;
+  }
+  return val;
+};
+
 StyleSheet.create = (stylesObj) => {
   const newStyles = {};
   for (const styleKey in stylesObj) {
@@ -14,63 +39,44 @@ StyleSheet.create = (stylesObj) => {
       newStyles[styleKey] = {};
       for (const prop in styleObj) {
         const val = styleObj[prop];
-        if (typeof val === 'string') {
-          const lowerVal = val.toLowerCase().trim();
-          if (lowerVal === '#ffffff' || lowerVal === '#fff') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.background === '#ffffff' ? '#ffffff' : '#1e1e1e',
-              enumerable: true,
-              configurable: true
-            });
-          } else if (lowerVal === '#eef1f8') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.background === '#ffffff' ? '#eef1f8' : '#121212',
-              enumerable: true,
-              configurable: true
-            });
-          } else if (lowerVal === '#f5f5f5') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.surface,
-              enumerable: true,
-              configurable: true
-            });
-          } else if (lowerVal === '#1a1a1a' || lowerVal === '#333' || lowerVal === '#333333' || lowerVal === '#000033') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.text,
-              enumerable: true,
-              configurable: true
-            });
-          } else if (lowerVal === '#757575' || lowerVal === '#666' || lowerVal === '#666666' || lowerVal === '#888' || lowerVal === '#888888' || lowerVal === '#909090') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.textMuted,
-              enumerable: true,
-              configurable: true
-            });
-          } else if (lowerVal === '#e0e0e0' || lowerVal === '#eee' || lowerVal === '#eeeeee') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.border,
-              enumerable: true,
-              configurable: true
-            });
-          } else if (lowerVal.replace(/\s/g, '') === 'rgba(0,0,0,0.08)') {
-            Object.defineProperty(newStyles[styleKey], prop, {
-              get: () => colors.shadow,
-              enumerable: true,
-              configurable: true
-            });
-          } else {
-            newStyles[styleKey][prop] = val;
-          }
-        } else {
-          newStyles[styleKey][prop] = val;
-        }
+        newStyles[styleKey][prop] = resolveThemeColor(val, colors);
       }
     } else {
       newStyles[styleKey] = styleObj;
     }
   }
-  return originalCreate(newStyles);
+
+  const compiled = originalCreate(newStyles);
+  
+  registeredStylesheets.push({
+    original: stylesObj,
+    compiled: compiled
+  });
+
+  return compiled;
 };
+
+// Register listener to update all static stylesheets whenever colors change
+colors.onChange = () => {
+  for (const sheet of registeredStylesheets) {
+    if (!sheet.compiled || Object.isFrozen(sheet.compiled)) {
+      continue;
+    }
+    for (const styleKey in sheet.original) {
+      const styleObj = sheet.original[styleKey];
+      if (styleObj && typeof styleObj === 'object' && sheet.compiled[styleKey]) {
+        if (Object.isFrozen(sheet.compiled[styleKey])) {
+          continue;
+        }
+        for (const prop in styleObj) {
+          const val = styleObj[prop];
+          sheet.compiled[styleKey][prop] = resolveThemeColor(val, colors);
+        }
+      }
+    }
+  }
+};
+
 
 import { AuthProvider } from '../context/AuthContext'
 import { CallProvider } from '../context/CallContext'
