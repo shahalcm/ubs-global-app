@@ -21,7 +21,10 @@ export default function WishlistScreen() {
     try {
       setLoading(true)
       const res = await getWishlist()
-      if (res.success) setProducts(res.products)
+      if (res && res.success) {
+        const validProducts = (res.products || []).filter(p => p && p.productId);
+        setProducts(validProducts);
+      }
     } catch(err) {
       console.log(err)
     } finally {

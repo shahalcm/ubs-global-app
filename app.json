@@ -13,12 +13,10 @@
       "backgroundColor": "#1A237E",
       "translucent": false
     },
-
     "ios": {
       "icon": "./assets/images/icon.png",
       "supportsTablet": true
     },
-
     "android": {
       "package": "com.shahalsonu1818.client",
       "googleServicesFile": "./google-services.json",
@@ -28,15 +26,12 @@
       },
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/icon.png"
     },
-
     "plugins": [
       "expo-router",
-
       [
         "expo-splash-screen",
         {
@@ -45,7 +40,6 @@
           "backgroundColor": "#000000"
         }
       ],
-
       [
         "@stripe/stripe-react-native",
         {
@@ -53,7 +47,6 @@
           "enableGooglePay": false
         }
       ],
-
       [
         "@config-plugins/react-native-webrtc",
         {
@@ -61,18 +54,16 @@
           "microphonePermission": "Allow UBS Global to access your microphone"
         }
       ],
-
       "expo-localization",
       "expo-web-browser",
       "./plugins/with-cmake-staging",
-      "./plugins/with-android-cleartext"
+      "./plugins/with-android-cleartext",
+      "expo-image"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
-
     "extra": {
       "router": {
         "root": "app"

@@ -56,16 +56,21 @@ export default function LoginScreen() {
   const owner = Constants.expoConfig?.owner || 'ubsglobalapp923s-team'
   const slug = Constants.expoConfig?.slug || 'client'
   const projectNameForProxy = `@${owner}/${slug}`
-  const redirectUri = `https://auth.expo.io/@${owner}/${slug}`
+  
+  // Dynamically determine redirect URI and proxy requirements based on environment
+  const isGo = Constants.appOwnership === 'expo'
+  const redirectUri = isGo 
+    ? `https://auth.expo.io/@${owner}/${slug}` 
+    : AuthSession.makeRedirectUri({ scheme: 'client' })
 
-  // Configure Google Auth Request (fall back to web client ID and force useProxy to make it work in Expo Go)
+  // Configure Google Auth Request (fall back to web client ID and use proxy only in Expo Go)
   const webClientId = getEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID', '522208568376-placeholder.apps.googleusercontent.com')
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId,
     iosClientId: getEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', webClientId),
     androidClientId: getEnv('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', webClientId),
     projectNameForProxy,
-    useProxy: true,
+    useProxy: isGo,
     redirectUri,
   })
 
@@ -113,7 +118,7 @@ export default function LoginScreen() {
     setGoogleLoading(true)
     try {
       const result = await promptAsync({
-        useProxy: true,
+        useProxy: isGo,
         projectNameForProxy,
       })
       if (result?.type !== 'success') {

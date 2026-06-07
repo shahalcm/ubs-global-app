@@ -22,7 +22,12 @@ export default function CartScreen() {
     try {
       setLoading(true)
       const res = await getCart()
-      if (res.success) setCartData(res.cart)
+      if (res && res.success && res.cart) {
+        const validItems = (res.cart.items || []).filter(item => item && item.productId);
+        setCartData({ ...res.cart, items: validItems });
+      } else {
+        setCartData({ items: [], subtotal: 0, shippingTotal: 0, tax: 0, grandTotal: 0 });
+      }
     } catch(err) {
       console.log(err)
     } finally {

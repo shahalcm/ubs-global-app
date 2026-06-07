@@ -82,6 +82,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { CallProvider } from '../context/CallContext'
 import { CartProvider } from '../context/CartContext'
 import { ThemeProvider, useTheme } from '../context/ThemeContext'
+import { ErrorBoundary } from '../components/shared/ErrorBoundary'
 import { Slot } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { I18nextProvider } from 'react-i18next'
@@ -138,12 +139,14 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <RootLayoutInner />
-        </SafeAreaProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <RootLayoutInner />
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
