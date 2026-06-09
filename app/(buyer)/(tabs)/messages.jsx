@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  Alert,
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -19,11 +21,22 @@ export default function MessagesScreen() {
   const [searchQuery, setSearchQuery] = useState('')
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(false)
+  const [deletedRoomIds, setDeletedRoomIds] = useState([])
 
   const loadRooms = async () => {
     setLoading(true)
     try {
       const res = await getChatRooms()
+      const userStr = await AsyncStorage.getItem('user')
+      let deletedIds = []
+      if (userStr) {
+        const u = JSON.parse(userStr)
+        const stored = await AsyncStorage.getItem('deleted_rooms_' + u._id)
+        if (stored) {
+          deletedIds = JSON.parse(stored)
+        }
+      }
+      setDeletedRoomIds(deletedIds)
       setRooms(res.rooms || [])
     } catch (error) {
       console.log('Load chat rooms error', error)
@@ -32,11 +45,44 @@ export default function MessagesScreen() {
     }
   }
 
+  const handleDeleteChat = (room) => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation? This will only remove it from your device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const userStr = await AsyncStorage.getItem('user')
+              if (userStr) {
+                const u = JSON.parse(userStr)
+                const key = 'deleted_rooms_' + u._id
+                const stored = await AsyncStorage.getItem(key)
+                let deletedIds = stored ? JSON.parse(stored) : []
+                if (!deletedIds.includes(room._id)) {
+                  deletedIds.push(room._id)
+                  await AsyncStorage.setItem(key, JSON.stringify(deletedIds))
+                  setDeletedRoomIds(deletedIds)
+                }
+              }
+            } catch (err) {
+              console.log('Delete chat error:', err)
+            }
+          }
+        }
+      ]
+    )
+  }
+
   useEffect(() => {
     loadRooms()
   }, [])
 
   const filteredRooms = rooms.filter((room) => {
+    if (deletedRoomIds.includes(room._id)) return false
     const text = searchQuery.trim().toLowerCase()
     if (!text) return true
     const sellerName = room.sellerId?.shopName || room.sellerId?.name || room.sellerName || ''
@@ -95,6 +141,7 @@ export default function MessagesScreen() {
                 style={styles.messageRow}
                 activeOpacity={0.8}
                 onPress={() => router.push({ pathname: '/(buyer)/chat', params: { roomId: room._id } })}
+                onLongPress={() => handleDeleteChat(room)}
               >
                 <View style={styles.avatarContainer}>
                   {(room.sellerId?.avatar || room.sellerId?.shopLogo || room.meta?.propertyImage) ? (

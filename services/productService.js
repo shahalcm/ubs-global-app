@@ -86,3 +86,10 @@ export const getMyProducts = async (filters = {}) => {
   )
   return res.data
 }
+
+// Get seller public details and products
+export const getSellerPublicProfile = async (sellerId) => {
+  const res = await api.get(`/products/seller/${sellerId}`)
+  return res.data
+}
+

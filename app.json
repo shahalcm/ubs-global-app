@@ -2,7 +2,7 @@
   "expo": {
     "name": "UBS Global",
     "slug": "client",
-    "owner": "ubsglobalapp923s-team",
+    "owner": "ubsglobalapp923",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +22,7 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundImage": "./assets/images/icon.png"
+        "backgroundColor": "#ffffff"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -37,7 +37,7 @@
         {
           "image": "./assets/images/logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#ffffff"
         }
       ],
       [

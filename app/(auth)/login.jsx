@@ -53,7 +53,7 @@ export default function LoginScreen() {
   const { loginWithGoogle } = useAuth()
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923s-team'
+  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923'
   const slug = Constants.expoConfig?.slug || 'client'
   const projectNameForProxy = `@${owner}/${slug}`
   
@@ -67,8 +67,8 @@ export default function LoginScreen() {
   const webClientId = getEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID', '522208568376-placeholder.apps.googleusercontent.com')
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId,
-    iosClientId: getEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', webClientId),
-    androidClientId: getEnv('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', webClientId),
+    iosClientId: isGo ? webClientId : getEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', webClientId),
+    androidClientId: isGo ? webClientId : getEnv('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', webClientId),
     projectNameForProxy,
     useProxy: isGo,
     redirectUri,

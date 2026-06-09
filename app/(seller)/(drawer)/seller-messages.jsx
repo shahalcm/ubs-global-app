@@ -13,6 +13,68 @@ export default function SellerMessages() {
   const [search, setSearch] = useState('');
   const [rooms, setRooms] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
+  const [deletedRoomIds, setDeletedRoomIds] = useState([]);
+  const [deletedMsgIds, setDeletedMsgIds] = useState([]);
+
+  const handleDeleteChat = (room) => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation? This will only remove it from your device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (myId) {
+                const key = 'deleted_rooms_' + myId;
+                const stored = await AsyncStorage.getItem(key);
+                let deletedIds = stored ? JSON.parse(stored) : [];
+                if (!deletedIds.includes(room._id)) {
+                  deletedIds.push(room._id);
+                  await AsyncStorage.setItem(key, JSON.stringify(deletedIds));
+                  setDeletedRoomIds(deletedIds);
+                }
+              }
+            } catch (err) {
+              console.log('Delete chat error:', err);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleLongPressMessage = (message) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message? This will only remove it from your device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (myId) {
+                const key = 'deleted_messages_' + myId;
+                const stored = await AsyncStorage.getItem(key);
+                let deletedIds = stored ? JSON.parse(stored) : [];
+                if (!deletedIds.includes(message._id)) {
+                  deletedIds.push(message._id);
+                  await AsyncStorage.setItem(key, JSON.stringify(deletedIds));
+                  setDeletedMsgIds(deletedIds);
+                }
+              }
+            } catch (err) {
+              console.log('Delete message error:', err);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleCallPress = () => {
     if (!activeChat || !activeChat.buyerId) {
@@ -46,6 +108,14 @@ export default function SellerMessages() {
       if (userStr) {
         const user = JSON.parse(userStr);
         setMyId(user._id);
+        const storedRooms = await AsyncStorage.getItem('deleted_rooms_' + user._id);
+        if (storedRooms) {
+          setDeletedRoomIds(JSON.parse(storedRooms));
+        }
+        const storedMsgs = await AsyncStorage.getItem('deleted_messages_' + user._id);
+        if (storedMsgs) {
+          setDeletedMsgIds(JSON.parse(storedMsgs));
+        }
       }
       fetchRooms();
     };
@@ -117,6 +187,14 @@ export default function SellerMessages() {
     try {
       const res = await getMessages(room._id);
       if (res.success) {
+        const userStr = await AsyncStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const storedMsgs = await AsyncStorage.getItem('deleted_messages_' + user._id);
+          if (storedMsgs) {
+            setDeletedMsgIds(JSON.parse(storedMsgs));
+          }
+        }
         setThreads(res.messages);
         setBotActive(res.botActive ?? true);
         if (room.sellerUnread > 0) {
@@ -151,10 +229,11 @@ export default function SellerMessages() {
 
   const filtered = useMemo(() => {
     return rooms.filter((item) => {
+      if (deletedRoomIds.includes(item._id)) return false;
       const name = item.buyerId?.name || 'User';
       return name.toLowerCase().includes(search.toLowerCase());
     });
-  }, [search, rooms]);
+  }, [search, rooms, deletedRoomIds]);
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '';
@@ -189,7 +268,7 @@ export default function SellerMessages() {
                 const name = item.buyerId?.name || 'User';
                 const unread = item.sellerUnread || 0;
                 return (
-                  <TouchableOpacity style={styles.conversation} onPress={() => loadMessages(item)}>
+                  <TouchableOpacity style={styles.conversation} onPress={() => loadMessages(item)} onLongPress={() => handleDeleteChat(item)}>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
                     </View>
@@ -259,7 +338,7 @@ export default function SellerMessages() {
               onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             >
               {threads.length > 0 ? (
-                threads.map((message, index) => {
+                threads.filter(m => !deletedMsgIds.includes(m._id)).map((message, index) => {
                   if (message.senderType === 'system') {
                     return (
                       <View style={styles.systemMsg} key={message._id || index}>
@@ -270,7 +349,7 @@ export default function SellerMessages() {
 
                   if (message.isBot || message.senderType === 'bot') {
                     return (
-                      <View key={message._id || index} style={[styles.bubble, styles.leftBubble, { backgroundColor: '#fff8e1', borderColor: '#ffe082', borderWidth: 1 }]}>
+                      <TouchableOpacity key={message._id || index} onLongPress={() => handleLongPressMessage(message)} activeOpacity={0.9} style={[styles.bubble, styles.leftBubble, { backgroundColor: '#fff8e1', borderColor: '#ffe082', borderWidth: 1 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
                           <Text style={{ fontSize: 10, fontWeight: '750', color: colors.primary }}>UBS AI Assistant</Text>
                           <View style={{ backgroundColor: colors.primary, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
@@ -279,16 +358,16 @@ export default function SellerMessages() {
                         </View>
                         <Text style={styles.bubbleText}>{message.text}</Text>
                         <Text style={styles.timeLabel}>{formatTime(message.createdAt)}</Text>
-                      </View>
+                      </TouchableOpacity>
                     );
                   }
 
                   const isMine = message.senderId === myId;
                   return (
-                    <View key={message._id || index} style={[styles.bubble, isMine ? styles.rightBubble : styles.leftBubble]}>
+                    <TouchableOpacity key={message._id || index} onLongPress={() => handleLongPressMessage(message)} activeOpacity={0.9} style={[styles.bubble, isMine ? styles.rightBubble : styles.leftBubble]}>
                       <Text style={[styles.bubbleText, isMine && styles.rightText]}>{message.text}</Text>
                       <Text style={[styles.timeLabel, isMine && styles.rightTimeLabel]}>{formatTime(message.createdAt)}</Text>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               ) : (

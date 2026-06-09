@@ -96,7 +96,9 @@ export default function SplashScreen() {
             />
             <View style={[styles.loaderDot, { backgroundColor: SKY }]} />
           </View>
-          <Text style={styles.loadingText}>{t("INITIALIZING GLOBAL NETWORK")}</Text>
+          <Text style={styles.loadingText}>
+            {t("INITIALIZING GLOBAL NETWORK")}
+          </Text>
         </View>
       </Animated.View>
     </View>

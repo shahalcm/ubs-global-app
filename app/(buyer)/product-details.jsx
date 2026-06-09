@@ -358,7 +358,7 @@ export default function ProductDetailsScreen() {
                   <Text style={{ fontSize: 10, color: '#666', marginLeft: 2 }}>{seller.rating || 0} ({seller.totalReviews || 0})</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => router.push(`/seller/${seller._id}`)}>
+              <TouchableOpacity onPress={() => router.push(`/(buyer)/seller/${seller._id}`)}>
                 <Text style={styles.chatBtn}>{t("Visit Store")}</Text>
               </TouchableOpacity>
             </View>

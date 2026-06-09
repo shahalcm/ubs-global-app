@@ -14,6 +14,7 @@ import {
   Alert,
   Linking
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   joinRoom,
@@ -40,6 +41,7 @@ export default function BuyerChatScreen() {
   const [sellerOnline, setSellerOnline] = useState(false)
   const [botActive, setBotActive] = useState(true)
   const [sellerTookOver, setSellerTookOver] = useState(false)
+  const [deletedMsgIds, setDeletedMsgIds] = useState([])
   const flatListRef = useRef(null)
   const typingAnim = useRef(new Animated.Value(0)).current
 
@@ -59,6 +61,16 @@ export default function BuyerChatScreen() {
       const res = await api.get(`/chat/${roomId}/messages`)
       if (res.data && res.data.success) {
         setRoom(res.data.room)
+        
+        let deletedIds = []
+        if (user?._id) {
+          const stored = await AsyncStorage.getItem('deleted_messages_' + user._id)
+          if (stored) {
+            deletedIds = JSON.parse(stored)
+          }
+        }
+        setDeletedMsgIds(deletedIds)
+
         setMessages(res.data.messages || [])
         setBotActive(res.data.botActive ?? true)
         
@@ -71,6 +83,36 @@ export default function BuyerChatScreen() {
     } catch (error) {
       console.log('Load messages error:', error)
     }
+  }
+
+  const handleLongPressMessage = (message) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message? This will only remove it from your device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (user?._id) {
+                const key = 'deleted_messages_' + user._id
+                const stored = await AsyncStorage.getItem(key)
+                let deletedIds = stored ? JSON.parse(stored) : []
+                if (!deletedIds.includes(message._id)) {
+                  deletedIds.push(message._id)
+                  await AsyncStorage.setItem(key, JSON.stringify(deletedIds))
+                  setDeletedMsgIds(deletedIds)
+                }
+              }
+            } catch (err) {
+              console.log('Delete message error:', err)
+            }
+          }
+        }
+      ]
+    )
   }
 
   const setupSocket = () => {
@@ -195,7 +237,7 @@ export default function BuyerChatScreen() {
     // Bot message
     if (item.isBot || item.senderType === 'bot') {
       return (
-        <View style={styles.botMsgRow} key={item._id}>
+        <TouchableOpacity onLongPress={() => handleLongPressMessage(item)} activeOpacity={0.9} style={styles.botMsgRow} key={item._id}>
           {/* Bot avatar */}
           <View style={styles.botAvatar}>
             <Text style={styles.botAvatarIcon}>🤖</Text>
@@ -224,7 +266,7 @@ export default function BuyerChatScreen() {
               {formatTime(item.createdAt)}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
       )
     }
 
@@ -233,7 +275,7 @@ export default function BuyerChatScreen() {
       const isMe = item.senderId === user?._id
       if (isMe) {
         return (
-          <View style={styles.myMsgRow} key={item._id}>
+          <TouchableOpacity onLongPress={() => handleLongPressMessage(item)} activeOpacity={0.9} style={styles.myMsgRow} key={item._id}>
             <View style={[
               styles.msgBubble,
               styles.myBubble
@@ -248,14 +290,14 @@ export default function BuyerChatScreen() {
             ]}>
               {formatTime(item.createdAt)}
             </Text>
-          </View>
+          </TouchableOpacity>
         )
       }
     }
 
     // Seller message (left side)
     return (
-      <View style={styles.sellerMsgRow} key={item._id}>
+      <TouchableOpacity onLongPress={() => handleLongPressMessage(item)} activeOpacity={0.9} style={styles.sellerMsgRow} key={item._id}>
         <Image
           source={{
             uri: item.senderAvatar || 'https://via.placeholder.com/32'
@@ -275,7 +317,7 @@ export default function BuyerChatScreen() {
             {formatTime(item.createdAt)}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     )
   }
 
@@ -352,7 +394,7 @@ export default function BuyerChatScreen() {
         {/* MESSAGES LIST */}
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={messages.filter(m => !deletedMsgIds.includes(m._id))}
           renderItem={renderMessage}
           keyExtractor={item => item._id?.toString() || Math.random().toString()}
           contentContainerStyle={styles.messagesList}
