@@ -1,8 +1,9 @@
 {
+  "$schema": "https://api.expo.dev/v2/project/configuration/schema/56.0.0",
   "expo": {
     "name": "UBS Global",
     "slug": "client",
-    "owner": "ubsglobalapp923",
+    "owner": "ubsglobalapp923s-team",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

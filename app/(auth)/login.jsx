@@ -53,7 +53,7 @@ export default function LoginScreen() {
   const { loginWithGoogle } = useAuth()
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923'
+  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923s-team'
   const slug = Constants.expoConfig?.slug || 'client'
   const projectNameForProxy = `@${owner}/${slug}`
   

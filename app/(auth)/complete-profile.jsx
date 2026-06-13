@@ -46,7 +46,7 @@ export default function CompleteProfileScreen() {
   const phone = rawPhone ? rawPhone.replace(/ /g, '+') : '';
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923'
+  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923s-team'
   const slug = Constants.expoConfig?.slug || 'client'
   const projectNameForProxy = `@${owner}/${slug}`
   const redirectUri = `https://auth.expo.io/@${owner}/${slug}`
