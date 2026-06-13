@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   pTitle: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 4 },
   pQty: { fontSize: 12, color: '#666' },
   pPrice: { fontSize: 14, fontWeight: '700', color: '#008b8b', marginTop: 4 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 10, backgroundColor: '#fafafa' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 10, backgroundColor: '#fafafa', color: '#333' },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   bold: { fontWeight: '800', fontSize: 16 },
   totalBlue: { fontWeight: '800', fontSize: 18, color: '#1a237e' },

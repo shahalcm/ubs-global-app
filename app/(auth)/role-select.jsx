@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -46,6 +47,7 @@ export default function RoleSelectScreen() {
       }
     } catch (error) {
       console.log(error)
+      Alert.alert(t('Error'), error.response?.data?.message || t('Failed to update role. Please try again.'))
     } finally {
       setLoading(false)
     }

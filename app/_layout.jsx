@@ -84,14 +84,73 @@ import { CartProvider } from '../context/CartContext'
 import { ThemeProvider, useTheme } from '../context/ThemeContext'
 import { ErrorBoundary } from '../components/shared/ErrorBoundary'
 import { Slot } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { I18nextProvider } from 'react-i18next'
+import React, { useEffect, useState, forwardRef } from 'react'
+import { I18nextProvider, useTranslation } from 'react-i18next'
 import i18n, { initI18n } from '../i18n'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import CustomAlertContainer from '../components/shared/CustomAlert'
 import * as WebBrowser from 'expo-web-browser'
 import { StatusBar } from 'expo-status-bar'
-import { View, Platform } from 'react-native'
+import ReactNative, { View, Platform } from 'react-native'
+
+// Hijack Text & TextInput for global automatic translation
+const OriginalText = ReactNative.Text;
+const OriginalTextInput = ReactNative.TextInput;
+
+const translateString = (str, t) => {
+  if (typeof str !== 'string') return str;
+  const trimmed = str.trim();
+  if (!trimmed) return str;
+  
+  if (/^\d+$/.test(trimmed) || /^\d{1,2}:\d{2}$/.test(trimmed) || trimmed.startsWith('Order #')) {
+    return str;
+  }
+
+  const translated = t(trimmed);
+  const startSpace = str.match(/^\s*/)[0];
+  const endSpace = str.match(/\s*$/)[0];
+  return startSpace + translated + endSpace;
+};
+
+const CustomText = forwardRef(({ children, ...props }, ref) => {
+  const { t } = useTranslation();
+
+  const translateChildren = (node) => {
+    if (typeof node === 'string') {
+      return translateString(node, t);
+    }
+    if (Array.isArray(node)) {
+      return React.Children.map(node, translateChildren);
+    }
+    return node;
+  };
+
+  const translatedChildren = translateChildren(children);
+  return <OriginalText {...props} ref={ref}>{translatedChildren}</OriginalText>;
+});
+
+const CustomTextInput = forwardRef(({ placeholder, ...props }, ref) => {
+  const { t } = useTranslation();
+  const translatedPlaceholder = placeholder ? translateString(placeholder, t) : placeholder;
+  return <OriginalTextInput {...props} ref={ref} placeholder={translatedPlaceholder} />;
+});
+
+Object.defineProperty(ReactNative, 'Text', {
+  configurable: true,
+  enumerable: true,
+  get() {
+    return CustomText;
+  }
+});
+
+Object.defineProperty(ReactNative, 'TextInput', {
+  configurable: true,
+  enumerable: true,
+  get() {
+    return CustomTextInput;
+  }
+});
+
 
 // Startup logs & Global Native Crash Handler
 console.log("📱 [App Status] App Started and Bundle Evaluating...");

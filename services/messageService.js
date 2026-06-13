@@ -26,3 +26,9 @@ export const markAsRead = async (roomId) => {
   const res = await api.patch(`/chat/${roomId}/read`)
   return res.data
 }
+
+// Delete chat room
+export const deleteChatRoom = async (roomId) => {
+  const res = await api.delete(`/chat/${roomId}`)
+  return res.data
+}

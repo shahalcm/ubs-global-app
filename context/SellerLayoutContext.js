@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { DrawerActions } from '@react-navigation/native';
+import { DrawerActions } from 'expo-router/react-navigation';
 import { useNavigation } from 'expo-router';
 
 let drawerNavigation = null;

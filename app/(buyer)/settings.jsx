@@ -10,7 +10,9 @@ import {
   Linking,
   Modal,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -200,62 +202,67 @@ export default function SettingsScreen() {
         visible={showDeleteModal}
         onRequestClose={() => setShowDeleteModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
-            <Text style={[styles.modalTitle, { color: theme.headerText }]}>⚠️ {t("Delete Your Account?")}</Text>
-            
-            <Text style={[styles.modalWarningText, { color: theme.text }]}>
-              {t("This action is permanent and cannot be undone. Under GDPR and App Store Guidelines:")}
-              {"\n\n"}
-              • {t("Your profile details will be soft-deleted and anonymized.")}
-              {"\n"}
-              • {t("Active seller stores will be suspended.")}
-              {"\n"}
-              • {t("All your product listings will be deactivated.")}
-              {"\n"}
-              • {t("You will be logged out immediately.")}
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+              <Text style={[styles.modalTitle, { color: theme.headerText }]}>⚠️ {t("Delete Your Account?")}</Text>
+              
+              <Text style={[styles.modalWarningText, { color: theme.text }]}>
+                {t("This action is permanent and cannot be undone. Under GDPR and App Store Guidelines:")}
+                {"\n\n"}
+                • {t("Your profile details will be soft-deleted and anonymized.")}
+                {"\n"}
+                • {t("Active seller stores will be suspended.")}
+                {"\n"}
+                • {t("All your product listings will be deactivated.")}
+                {"\n"}
+                • {t("You will be logged out immediately.")}
+              </Text>
 
-            <Text style={[styles.modalInputLabel, { color: theme.text }]}>
-              {t("Please type the word")} <Text style={{fontWeight: "bold", color: "#c62828"}}>"DELETE"</Text> {t("to confirm:")}
-            </Text>
-            
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: theme.inputBg, borderColor: theme.inputBorder, color: theme.text }]}
-              value={deleteConfirmText}
-              onChangeText={setDeleteConfirmText}
-              placeholder="DELETE"
-              placeholderTextColor={darkTheme ? "#666" : "#bbb"}
-              autoCapitalize="characters"
-              editable={!deleting}
-            />
+              <Text style={[styles.modalInputLabel, { color: theme.text }]}>
+                {t("Please type the word")} <Text style={{fontWeight: "bold", color: "#c62828"}}>"DELETE"</Text> {t("to confirm:")}
+              </Text>
+              
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.inputBg, borderColor: theme.inputBorder, color: theme.text }]}
+                value={deleteConfirmText}
+                onChangeText={setDeleteConfirmText}
+                placeholder="DELETE"
+                placeholderTextColor={darkTheme ? "#666" : "#bbb"}
+                autoCapitalize="characters"
+                editable={!deleting}
+              />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalCancelBtn, darkTheme && { backgroundColor: "#2a2a2a" }]} 
-                onPress={() => {
-                  setDeleteConfirmText("");
-                  setShowDeleteModal(false);
-                }}
-                disabled={deleting}
-              >
-                <Text style={[styles.modalCancelBtnText, darkTheme && { color: "#aaa" }]}>{t("Cancel")}</Text>
-              </TouchableOpacity>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalCancelBtn, darkTheme && { backgroundColor: "#2a2a2a" }]} 
+                  onPress={() => {
+                    setDeleteConfirmText("");
+                    setShowDeleteModal(false);
+                  }}
+                  disabled={deleting}
+                >
+                  <Text style={[styles.modalCancelBtnText, darkTheme && { color: "#aaa" }]}>{t("Cancel")}</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalDeleteBtn]} 
-                onPress={handleDeleteAccount}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.modalDeleteBtnText}>{t("Delete Account")}</Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalDeleteBtn]} 
+                  onPress={handleDeleteAccount}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalDeleteBtnText}>{t("Delete Account")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

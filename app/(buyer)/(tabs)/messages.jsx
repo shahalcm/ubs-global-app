@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { getChatRooms } from '../../../services/messageService'
+import { getChatRooms, deleteChatRoom } from '../../../services/messageService'
 import { getSellerImageUrl } from '../../../utils/image'
 
 export default function MessagesScreen() {
@@ -48,7 +48,7 @@ export default function MessagesScreen() {
   const handleDeleteChat = (room) => {
     Alert.alert(
       'Delete Conversation',
-      'Are you sure you want to delete this conversation? This will only remove it from your device.',
+      'Are you sure you want to permanently delete this conversation? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -56,6 +56,7 @@ export default function MessagesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // 1. Save locally to AsyncStorage for instant/offline fallback
               const userStr = await AsyncStorage.getItem('user')
               if (userStr) {
                 const u = JSON.parse(userStr)
@@ -68,8 +69,17 @@ export default function MessagesScreen() {
                   setDeletedRoomIds(deletedIds)
                 }
               }
+
+              // 2. Hide immediately in local state
+              setRooms(prev => prev.filter(r => r._id !== room._id))
+
+              // 3. Make API call to delete permanently on the server
+              await deleteChatRoom(room._id)
             } catch (err) {
               console.log('Delete chat error:', err)
+              if (err.response?.status !== 404) {
+                Alert.alert('Error', 'Failed to delete conversation from server. Please try again.')
+              }
             }
           }
         }

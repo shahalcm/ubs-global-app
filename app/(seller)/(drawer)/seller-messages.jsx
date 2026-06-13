@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Keyboard
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SellerHeader from '../../../components/seller/SellerHeader';
 import { colors } from '../../../constants/colors';
-import { getChatRooms, getMessages, sendMessage, markAsRead } from '../../../services/messageService';
+import { getChatRooms, getMessages, sendMessage, markAsRead, deleteChatRoom } from '../../../services/messageService';
 import { onReceiveMessage, joinRoom, removeListener, getSocket } from '../../../services/socketService';
 import { useCall } from '../../../context/CallContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +19,7 @@ export default function SellerMessages() {
   const handleDeleteChat = (room) => {
     Alert.alert(
       'Delete Conversation',
-      'Are you sure you want to delete this conversation? This will only remove it from your device.',
+      'Are you sure you want to permanently delete this conversation? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -27,6 +27,7 @@ export default function SellerMessages() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // 1. Save locally to AsyncStorage for instant/offline fallback
               if (myId) {
                 const key = 'deleted_rooms_' + myId;
                 const stored = await AsyncStorage.getItem(key);
@@ -37,8 +38,17 @@ export default function SellerMessages() {
                   setDeletedRoomIds(deletedIds);
                 }
               }
+
+              // 2. Hide immediately in local state
+              setRooms((prev) => prev.filter((r) => r._id !== room._id));
+
+              // 3. Make API call to delete permanently on the server
+              await deleteChatRoom(room._id);
             } catch (err) {
               console.log('Delete chat error:', err);
+              if (err.response?.status !== 404) {
+                Alert.alert('Error', 'Failed to delete conversation from server. Please try again.');
+              }
             }
           }
         }
