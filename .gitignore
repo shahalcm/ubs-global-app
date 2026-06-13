@@ -46,3 +46,7 @@ app-example
 
 # portable node
 node_portable/
+
+# Built binaries
+*.apk
+
