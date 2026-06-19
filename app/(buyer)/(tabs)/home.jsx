@@ -25,6 +25,7 @@ import * as Location from "expo-location";
 import { useAuth } from "../../../context/AuthContext";
 import { updateUserLocation } from "../../../services/userService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
@@ -189,14 +190,23 @@ export default function HomeScreen() {
   const [manualCountry, setManualCountry] = useState("");
   const [manualAddress, setManualAddress] = useState("");
 
-  React.useEffect(() => {
-    if (locationModalVisible && user?.location) {
+  const bannerRef = React.useRef(null);
+
+  const openLocationModal = () => {
+    if (user?.location) {
       setManualCity(user.location.city || "");
       setManualState(user.location.state || "");
       setManualCountry(user.location.country || "");
       setManualAddress(user.location.fullAddress || "");
+    } else {
+      setManualCity("");
+      setManualState("");
+      setManualCountry("");
+      setManualAddress("");
     }
-  }, [locationModalVisible, user]);
+    setPincode("");
+    setLocationModalVisible(true);
+  };
 
   const resolveLocationFromPincode = async (code) => {
     try {
@@ -329,40 +339,7 @@ export default function HomeScreen() {
     }
   };
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await loadHomeData();
-    setRefreshing(false);
-  }, []);
-
-  const handleSearch = () => {
-    if (!search.trim()) return;
-    router.push({
-      pathname: "/(buyer)/product-listing",
-      params: { search: search.trim() },
-    });
-  };
-  React.useEffect(() => {
-    const loadCachedData = async () => {
-      try {
-        const cachedCats = await AsyncStorage.getItem('ubs_categories');
-        const cachedBanners = await AsyncStorage.getItem('ubs_banners');
-        if (cachedCats) {
-          setCategories(JSON.parse(cachedCats));
-        }
-        if (cachedBanners) {
-          setBanners(JSON.parse(cachedBanners));
-        }
-      } catch (err) {
-        console.log('Error loading cached home data:', err);
-      }
-    };
-
-    loadCachedData();
-    loadHomeData();
-  }, []);
-
-  const loadHomeData = async () => {
+  const loadHomeData = React.useCallback(async () => {
     try {
       const [categoriesRes, productsRes, bannersRes] = await Promise.all([
         api.get('/categories'),
@@ -399,7 +376,64 @@ export default function HomeScreen() {
     } catch (error) {
       console.log("Home load error:", error);
     }
+  }, []);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadHomeData();
+    setRefreshing(false);
+  }, [loadHomeData]);
+
+  const handleSearch = () => {
+    if (!search.trim()) return;
+    router.push({
+      pathname: "/(buyer)/product-listing",
+      params: { search: search.trim() },
+    });
   };
+
+  React.useEffect(() => {
+    let active = true;
+    const initData = async () => {
+      try {
+        const cachedCats = await AsyncStorage.getItem('ubs_categories');
+        const cachedBanners = await AsyncStorage.getItem('ubs_banners');
+        if (active) {
+          if (cachedCats) {
+            setCategories(JSON.parse(cachedCats));
+          }
+          if (cachedBanners) {
+            setBanners(JSON.parse(cachedBanners));
+          }
+        }
+      } catch (err) {
+        console.log('Error loading cached home data:', err);
+      }
+      
+      if (active) {
+        await loadHomeData();
+      }
+    };
+
+    initData();
+    return () => {
+      active = false;
+    };
+  }, [loadHomeData]);
+
+  // Autoplay banner logic
+  React.useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      const nextIndex = (activeBanner + 1) % banners.length;
+      setActiveBanner(nextIndex);
+      bannerRef.current?.scrollTo({
+        x: nextIndex * (width - 32),
+        animated: true,
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeBanner, banners.length]);
 
 
 
@@ -412,6 +446,7 @@ export default function HomeScreen() {
           params: { id: item._id || item.id },
         })
       }
+      activeOpacity={0.9}
     >
       <Image
         source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
@@ -425,11 +460,18 @@ export default function HomeScreen() {
         {!(
           (item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
           (item.category?.name || item.category || '').toLowerCase().trim() === 'service portal'
-        ) && <Text style={styles.productPrice}>${item.price}</Text>}
+        ) && (
+          <View style={styles.priceRow}>
+            <Text style={styles.productPrice}>${item.price}</Text>
+          </View>
+        )}
         {item.sellerId && (
-          <Text style={{ fontSize: 10, color: '#888', marginTop: 2 }} numberOfLines={1}>
-            Sold by: {item.sellerId.shopName}
-          </Text>
+          <View style={styles.sellerRow}>
+            <MaterialCommunityIcons name="storefront" size={10} color="#888" style={{ marginRight: 2 }} />
+            <Text style={styles.sellerText} numberOfLines={1}>
+              {item.sellerId.shopName}
+            </Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -439,8 +481,8 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Top Navigation Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push("/(buyer)/drawer")}>
-          <Text style={styles.menuIcon}>☰</Text>
+        <TouchableOpacity onPress={() => router.push("/(buyer)/drawer")} style={styles.menuButton}>
+          <MaterialCommunityIcons name="menu" size={26} color="#1a237e" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>UBS Global</Text>
         <View style={styles.topRight}>
@@ -469,31 +511,55 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Search Bar */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchBar}>
-            <TouchableOpacity onPress={handleSearch}>
-              <Text style={styles.searchIcon}>🔍</Text>
+        {/* Welcome Header & Integrated Search Bar */}
+        <LinearGradient
+          colors={['#1a237e', '#283593']}
+          style={styles.headerBlock}
+        >
+          <View style={styles.welcomeRow}>
+            <View>
+              <Text style={styles.greetingText}>{t('Welcome back,')}</Text>
+              <Text style={styles.userNameText}>{user?.name || t('Guest')}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.avatarContainer}
+              onPress={() => router.push("/(buyer)/drawer")}
+            >
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {(user?.name || 'G').charAt(0).toUpperCase()}
+                </Text>
+              </View>
             </TouchableOpacity>
+          </View>
+
+          {/* Integrated Search Bar */}
+          <View style={styles.searchBar}>
+            <MaterialCommunityIcons name="magnify" size={20} color="#888" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder={t('search_placeholder')}
-              placeholderTextColor="#aaa"
+              placeholderTextColor="#999"
               value={search}
               onChangeText={setSearch}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
+            {search.trim().length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")} style={styles.searchClearBtn}>
+                <MaterialCommunityIcons name="close-circle" size={18} color="#aaa" />
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Location Display Row */}
         <TouchableOpacity 
           style={styles.locationContainer} 
-          onPress={() => setLocationModalVisible(true)}
+          onPress={openLocationModal}
           activeOpacity={0.7}
         >
-          <Text style={styles.locationPin}>📍</Text>
+          <MaterialCommunityIcons name="map-marker" size={18} color="#1a237e" style={styles.locationPin} />
           <View style={styles.locationTextCol}>
             <Text style={styles.locationLabel}>{t('Current Location')}</Text>
             <Text style={styles.locationValue} numberOfLines={1}>
@@ -501,7 +567,7 @@ export default function HomeScreen() {
                (user?.location?.city ? `${user.location.city}, ${user.location.state || ''}, ${user.location.country || ''}`.replace(/,\s*,/, ',').trim() : t('Set Location'))}
             </Text>
           </View>
-          <Text style={styles.locationArrow}>›</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color="#999" style={styles.locationArrow} />
         </TouchableOpacity>
 
         {/* Location Update Modal */}
@@ -512,11 +578,16 @@ export default function HomeScreen() {
           onRequestClose={() => setLocationModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
+            <TouchableOpacity 
+              style={StyleSheet.absoluteFillObject} 
+              activeOpacity={1} 
+              onPress={() => setLocationModalVisible(false)} 
+            />
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{t('Update Location')}</Text>
-                <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
-                  <Text style={styles.modalCloseBtn}>✕</Text>
+                <TouchableOpacity onPress={() => setLocationModalVisible(false)} style={styles.modalCloseBtn}>
+                  <MaterialCommunityIcons name="close" size={24} color="#666" />
                 </TouchableOpacity>
               </View>
 
@@ -526,10 +597,10 @@ export default function HomeScreen() {
                   <Text style={styles.loadingText}>{t('Updating Location...')}</Text>
                 </View>
               ) : (
-                <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                   {/* GPS Button */}
                   <TouchableOpacity style={styles.gpsBtn} onPress={handleGPSUpdate}>
-                    <Text style={styles.gpsBtnIcon}>📡</Text>
+                    <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#1a237e" style={styles.gpsBtnIcon} />
                     <Text style={styles.gpsBtnText}>{t('Use GPS / Current Location')}</Text>
                   </TouchableOpacity>
 
@@ -596,7 +667,9 @@ export default function HomeScreen() {
         </Modal>
 
         {/* Browse by Category */}
-        <Text style={styles.sectionTitle}>{t('browse_category')}</Text>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>{t('browse_category')}</Text>
+        </View>
         <View style={styles.categoryGridContainer}>
           {categories.map((item) => (
             <CategoryCard
@@ -619,6 +692,7 @@ export default function HomeScreen() {
 
         {/* Banner Slider */}
         <ScrollView
+          ref={bannerRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
@@ -638,7 +712,10 @@ export default function HomeScreen() {
                 contentFit="cover"
                 transition={200}
               />
-              <View style={styles.bannerOverlay}>
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.85)']}
+                style={styles.bannerOverlay}
+              >
                 {banner.subtitle ? (
                   <Text style={styles.bannerSubtitle}>{t(banner.subtitle)}</Text>
                 ) : (
@@ -651,7 +728,7 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.bannerBtnText}>{t(banner.btn || 'Shop Now')}</Text>
                 </TouchableOpacity>
-              </View>
+              </LinearGradient>
             </View>
           ))}
         </ScrollView>
@@ -691,11 +768,11 @@ export default function HomeScreen() {
           </Text>
           <View style={styles.secureBadgeRow}>
             <View style={styles.secureBadge}>
-              <Text style={styles.secureBadgeIcon}>✅</Text>
+              <MaterialCommunityIcons name="shield-check" size={16} color="#4caf50" />
               <Text style={styles.secureBadgeText}>{t('verified_vendors')}</Text>
             </View>
             <View style={styles.secureBadge}>
-              <Text style={styles.secureBadgeIcon}>🔒</Text>
+              <MaterialCommunityIcons name="lock" size={16} color="#1a237e" />
               <Text style={styles.secureBadgeText}>{t('escrow_support')}</Text>
             </View>
           </View>
@@ -731,14 +808,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  menuIcon: {
-    fontSize: 22,
-    color: "#1a237e",
+  menuButton: {
+    padding: 4,
   },
   topTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#1a237e",
+    letterSpacing: 0.5,
   },
   topRight: {
     flexDirection: "row",
@@ -747,15 +824,12 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     position: "relative",
-  },
-  topIcon: {
-    fontSize: 22,
-    color: "#1a237e",
+    padding: 4,
   },
   cartBadge: {
     position: "absolute",
-    top: -6,
-    right: -6,
+    top: 0,
+    right: 0,
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -774,275 +848,97 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
 
-  // Search
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  // Welcome Header & Search Block
+  headerBlock: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-    backgroundColor: "#fff",
+    paddingTop: 16,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  welcomeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  greetingText: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.75)",
+    fontWeight: "500",
+  },
+  userNameText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+    marginTop: 2,
+  },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  avatarPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
   },
   searchBar: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f5f7fc",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     gap: 8,
-    borderWidth: 1,
-    borderColor: "#e8ecf4",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   searchIcon: {
-    fontSize: 16,
+    marginRight: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: "#333",
+    padding: 0,
   },
-  filterBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "#f5f7fc",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e8ecf4",
-  },
-  filterIcon: {
-    fontSize: 18,
-    color: "#1a237e",
+  searchClearBtn: {
+    padding: 2,
   },
 
-  // Section
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1a237e",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  sectionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  viewAll: {
-    fontSize: 13,
-    color: "#29b6f6",
-    fontWeight: "600",
-  },
-
-  // Categories
-  categoryGridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 12,
-    justifyContent: "flex-start",
-  },
-  categoryItem: {
-    width: "25%",
-    alignItems: "center",
-    marginBottom: 16,
-    paddingHorizontal: 2,
-  },
-  categoryCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    overflow: "hidden",
-    backgroundColor: "#e8ecf4",
-    marginBottom: 6,
-  },
-  categoryImage: {
-    width: "100%",
-    height: "100%",
-  },
-  categoryName: {
-    fontSize: 11,
-    color: "#444",
-    textAlign: "center",
-    lineHeight: 15,
-  },
-
-  // Banner
-  bannerScroll: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  bannerCard: {
-    width: width - 32,
-    height: 160,
-    borderRadius: 16,
-    overflow: "hidden",
-    position: "relative",
-  },
-  bannerImage: {
-    width: "100%",
-    height: "100%",
-  },
-  bannerOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  bannerSubtitle: {
-    fontSize: 10,
-    color: "#29b6f6",
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  bannerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 8,
-  },
-  bannerBtn: {
-    alignSelf: "flex-start",
-    backgroundColor: "#29b6f6",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  bannerBtnText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  dotsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 10,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#ccc",
-  },
-  dotActive: {
-    backgroundColor: "#1a237e",
-    width: 16,
-  },
-
-  // Featured Products
-  featuredList: {
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-  productCard: {
-    width: 180,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  productImage: {
-    width: "100%",
-    height: 160,
-    backgroundColor: "#f5f5f5",
-  },
-  productInfo: {
-    padding: 10,
-  },
-  productCategory: {
-    fontSize: 11,
-    color: "#888",
-    marginBottom: 2,
-  },
-  productName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#222",
-    marginBottom: 4,
-  },
-  productPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#29b6f6",
-  },
-
-  // Secure Card
-  secureCard: {
-    margin: 16,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  secureTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1a237e",
-    marginBottom: 10,
-  },
-  secureDesc: {
-    fontSize: 13,
-    color: "#666",
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  secureBadgeRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 16,
-  },
-  secureBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  secureBadgeIcon: {
-    fontSize: 14,
-  },
-  secureBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1a237e",
-  },
-  secureImage: {
-    width: "100%",
-    height: 160,
-    borderRadius: 12,
-  },
-
-  // Location Styles
+  // Location Selector
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     marginHorizontal: 16,
+    marginTop: -12,
     marginBottom: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
   locationPin: {
-    fontSize: 18,
     marginRight: 10,
   },
   locationTextCol: {
@@ -1062,10 +958,238 @@ const styles = StyleSheet.create({
     color: '#1a237e',
   },
   locationArrow: {
-    fontSize: 18,
-    color: '#ccc',
     marginLeft: 6,
   },
+
+  // Section
+  sectionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#1a237e",
+  },
+  viewAll: {
+    fontSize: 13,
+    color: "#29b6f6",
+    fontWeight: "700",
+  },
+
+  // Categories
+  categoryGridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
+    justifyContent: "flex-start",
+    marginTop: 8,
+  },
+
+  // Banners Carousel
+  bannerScroll: {
+    marginHorizontal: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginTop: 10,
+  },
+  bannerCard: {
+    width: width - 32,
+    height: 170,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bannerOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    justifyContent: "flex-end",
+    height: "100%",
+  },
+  bannerSubtitle: {
+    fontSize: 10,
+    color: "#29b6f6",
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  bannerTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 10,
+    lineHeight: 22,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  bannerBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "#29b6f6",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#29b6f6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  bannerBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ccc",
+  },
+  dotActive: {
+    backgroundColor: "#1a237e",
+    width: 18,
+  },
+
+  // Featured Products
+  featuredList: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 14,
+  },
+  productCard: {
+    width: 170,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#eef1f8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  productImage: {
+    width: "100%",
+    height: 150,
+    backgroundColor: "#f5f5f5",
+  },
+  productInfo: {
+    padding: 12,
+  },
+  productCategory: {
+    fontSize: 10,
+    color: "#888",
+    marginBottom: 2,
+    textTransform: "uppercase",
+    fontWeight: "600",
+  },
+  productName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#222",
+    marginBottom: 6,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#1a237e",
+  },
+  sellerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#f5f5f5",
+    paddingTop: 6,
+  },
+  sellerText: {
+    fontSize: 10,
+    color: '#888',
+    flex: 1,
+  },
+
+  // Secure Payments Card
+  secureCard: {
+    margin: 16,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#eef1f8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  secureTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a237e",
+    marginBottom: 8,
+  },
+  secureDesc: {
+    fontSize: 13,
+    color: "#666",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  secureBadgeRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  secureBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#f5f7fc",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#eef1f8",
+  },
+  secureBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1a237e",
+  },
+  secureImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+
+  // Location Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1077,8 +1201,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 30,
     maxHeight: '85%',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1095,8 +1224,6 @@ const styles = StyleSheet.create({
     color: '#1a237e',
   },
   modalCloseBtn: {
-    fontSize: 18,
-    color: '#666',
     padding: 4,
   },
   modalLoading: {
@@ -1120,7 +1247,6 @@ const styles = StyleSheet.create({
     borderColor: '#c5cae9',
   },
   gpsBtnIcon: {
-    fontSize: 18,
     marginRight: 8,
   },
   gpsBtnText: {
@@ -1133,18 +1259,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 10,
   },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#eee',
+  },
   modalOrText: {
     marginHorizontal: 12,
     fontSize: 12,
     color: '#999',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   modalOrTextSmall: {
     fontSize: 11,
     color: '#999',
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 12,
-    fontStyle: 'italic',
+    fontWeight: "600",
   },
   modalInputLabel: {
     fontSize: 12,
@@ -1170,6 +1301,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
+    shadowColor: '#1a237e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   modalSubmitText: {
     color: '#fff',

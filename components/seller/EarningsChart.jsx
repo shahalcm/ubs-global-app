@@ -4,10 +4,11 @@ import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
 
-const screenWidth = Dimensions.get('window').width - 40;
+const defaultChartWidth = Dimensions.get('window').width - 72;
 
-export default function EarningsChart({ mode = 'week', onModeChange, data = {} }) {
+export default function EarningsChart({ mode = 'week', onModeChange, data = {}, width }) {
   const { t } = useTranslation();
+  const chartWidth = width || defaultChartWidth;
   
   const getFallbackLabels = () => {
     if (mode === 'month') {
@@ -42,7 +43,7 @@ export default function EarningsChart({ mode = 'week', onModeChange, data = {} }
       </View>
       <LineChart
         data={{ labels, datasets: [{ data: values, color: () => colors.accent }] }}
-        width={screenWidth}
+        width={chartWidth}
         height={240}
         verticalLabelRotation={0}
         withDots={false}

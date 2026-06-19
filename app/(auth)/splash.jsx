@@ -53,7 +53,7 @@ export default function SplashScreen() {
   useEffect(() => {
     const id = setTimeout(() => {
       router.replace("/language");
-    }, 4500); // Wait 4.5s so the user can enjoy the splash screen
+    }, 2000); // Wait 2s so the user can enjoy the splash screen
     return () => clearTimeout(id);
   }, [router]);
 
