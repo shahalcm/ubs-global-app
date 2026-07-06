@@ -19,11 +19,13 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../../context/AuthContext';
 import { getSellerProfile, updateSellerProfile } from '../../../services/sellerService';
 import { changePassword, deleteAccount } from '../../../services/userService';
+import { useSeller } from '../../../context/SellerContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SellerSettings() {
   const router = useRouter();
   const { logout, user } = useAuth();
+  const { loadProfile } = useSeller();
   
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [sellerProfile, setSellerProfile] = useState(null);
@@ -104,7 +106,7 @@ export default function SellerSettings() {
   };
 
   const handleSaveField = async () => {
-    if (!editValue.trim()) {
+    if (!editValue.trim() && editField !== 'bankDetails.upiId') {
       Alert.alert('Error', `${editLabel} cannot be empty.`);
       return;
     }
@@ -117,10 +119,22 @@ export default function SellerSettings() {
         Alert.alert('Success', 'Business hours updated.');
         setEditModalVisible(false);
       } else {
-        const updateData = { [editField]: editValue.trim() };
+        let updateData = {};
+        if (editField.startsWith('bankDetails.')) {
+          const nestedKey = editField.split('.')[1];
+          updateData = {
+            bankDetails: {
+              ...sellerProfile?.bankDetails,
+              [nestedKey]: editValue.trim()
+            }
+          };
+        } else {
+          updateData = { [editField]: editValue.trim() };
+        }
         const res = await updateSellerProfile(updateData);
         if (res.success) {
           setSellerProfile(res.seller);
+          await loadProfile();
           Alert.alert('Success', `${editLabel} updated successfully.`);
           setEditModalVisible(false);
         } else {
@@ -254,6 +268,55 @@ export default function SellerSettings() {
       ],
     },
     {
+      title: 'Payment Details',
+      items: [
+        {
+          label: 'Bank Name',
+          icon: 'bank-outline',
+          value: sellerProfile?.bankDetails?.bankName || (loadingProfile ? 'Loading...' : 'Not Set'),
+          onPress: () => {
+            setEditField('bankDetails.bankName');
+            setEditLabel('Bank Name');
+            setEditValue(sellerProfile?.bankDetails?.bankName || '');
+            setEditModalVisible(true);
+          }
+        },
+        {
+          label: 'Account Number',
+          icon: 'numeric',
+          value: sellerProfile?.bankDetails?.accountNumber || (loadingProfile ? 'Loading...' : 'Not Set'),
+          onPress: () => {
+            setEditField('bankDetails.accountNumber');
+            setEditLabel('Account Number');
+            setEditValue(sellerProfile?.bankDetails?.accountNumber || '');
+            setEditModalVisible(true);
+          }
+        },
+        {
+          label: 'IFSC Code',
+          icon: 'barcode',
+          value: sellerProfile?.bankDetails?.ifscCode || (loadingProfile ? 'Loading...' : 'Not Set'),
+          onPress: () => {
+            setEditField('bankDetails.ifscCode');
+            setEditLabel('IFSC Code');
+            setEditValue(sellerProfile?.bankDetails?.ifscCode || '');
+            setEditModalVisible(true);
+          }
+        },
+        {
+          label: 'UPI ID',
+          icon: 'qrcode',
+          value: sellerProfile?.bankDetails?.upiId || (loadingProfile ? 'Loading...' : 'Not Set'),
+          onPress: () => {
+            setEditField('bankDetails.upiId');
+            setEditLabel('UPI ID');
+            setEditValue(sellerProfile?.bankDetails?.upiId || '');
+            setEditModalVisible(true);
+          }
+        },
+      ],
+    },
+    {
       title: 'Notifications',
       items: [
         { label: 'Order Alerts', icon: 'bell-ring-outline', toggle: true, stateKey: 'orderAlerts' },
@@ -378,6 +441,8 @@ export default function SellerSettings() {
               placeholderTextColor={colors.textMuted}
               multiline={editField === 'description'}
               numberOfLines={editField === 'description' ? 4 : 1}
+              keyboardType={editField === 'bankDetails.accountNumber' ? 'numeric' : 'default'}
+              autoCapitalize={editField === 'bankDetails.ifscCode' ? 'characters' : 'none'}
               autoFocus
             />
 

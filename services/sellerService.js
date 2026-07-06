@@ -12,6 +12,8 @@ export const applyAsSeller = async (sellerData) => {
           name: `${key}.jpg`
         })
       }
+    } else if (key === 'bankDetails' && typeof sellerData[key] === 'object' && sellerData[key] !== null) {
+      formData.append(key, JSON.stringify(sellerData[key]))
     } else {
       formData.append(key, sellerData[key])
     }

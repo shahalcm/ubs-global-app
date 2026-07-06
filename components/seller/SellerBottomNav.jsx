@@ -1,15 +1,17 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSellerDrawer } from '../../context/SellerLayoutContext';
 import { colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
+import { useSeller } from '../../context/SellerContext';
 
 export default function SellerBottomNav() {
   const { t } = useTranslation();
   const router = useRouter();
   const { closeDrawer } = useSellerDrawer();
+  const { seller } = useSeller();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const activeSegment = segments[segments.length - 1] || 'dashboard';
@@ -40,7 +42,22 @@ export default function SellerBottomNav() {
 
       <TouchableOpacity
         style={styles.centerBtn}
-        onPress={() => { closeDrawer(); router.push('/(seller)/add-product'); }}
+        onPress={() => {
+          closeDrawer();
+          if (seller?.status === 'pending') {
+            Alert.alert(
+              t('Pending Approval'),
+              t('You are on the pending list. After admin approval only, you can sell products.')
+            );
+          } else if (seller?.status !== 'approved') {
+            Alert.alert(
+              t('Access Denied'),
+              t('Only approved sellers can add products.')
+            );
+          } else {
+            router.push('/(seller)/add-product');
+          }
+        }}
       >
         <Text style={styles.centerIcon}>+</Text>
       </TouchableOpacity>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import SellerHeader from '../../../components/seller/SellerHeader';
@@ -7,11 +7,13 @@ import ProductCard from '../../../components/seller/ProductCard';
 import { useSeller } from '../../../context/SellerContext';
 import { colors } from '../../../constants/colors';
 import { SellerProductCardSkeleton } from '../../../components/seller/SellerSkeleton';
+import { useTranslation } from 'react-i18next';
 
 const filters = ['All', 'Active', 'Out of Stock', 'Draft', 'Featured'];
 
 export default function MyProducts() {
-  const { products, loading, deleteProduct, loadDashboard } = useSeller();
+  const { products, loading, deleteProduct, loadDashboard, seller } = useSeller();
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -90,7 +92,24 @@ export default function MyProducts() {
             ListEmptyComponent={<Text style={styles.empty}>No products found. Add a new product to get started.</Text>}
           />
         )}
-        <TouchableOpacity style={styles.fab} onPress={() => router.push('/(seller)/add-product')}>
+        <TouchableOpacity 
+          style={styles.fab} 
+          onPress={() => {
+            if (seller?.status === 'pending') {
+              Alert.alert(
+                t('Pending Approval'),
+                t('You are on the pending list. After admin approval only, you can sell products.')
+              );
+            } else if (seller?.status !== 'approved') {
+              Alert.alert(
+                t('Access Denied'),
+                t('Only approved sellers can add products.')
+              );
+            } else {
+              router.push('/(seller)/add-product');
+            }
+          }}
+        >
           <MaterialCommunityIcons name="plus" size={26} color="#fff" />
         </TouchableOpacity>
       </View>

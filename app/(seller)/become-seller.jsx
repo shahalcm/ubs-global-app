@@ -10,6 +10,8 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,9 +20,32 @@ import { router } from "expo-router";
 import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
 import { Alert } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const COUNTRIES = [
+  { code: '+1', flag: '🇺🇸', name: 'US' },
+  { code: '+44', flag: '🇬🇧', name: 'UK' },
+  { code: '+91', flag: '🇮🇳', name: 'IN' },
+  { code: '+971', flag: '🇦🇪', name: 'AE' },
+  { code: '+966', flag: '🇸🇦', name: 'SA' },
+  { code: '+92', flag: '🇵🇰', name: 'PK' },
+  { code: '+880', flag: '🇧🇩', name: 'BD' },
+  { code: '+60', flag: '🇲🇾', name: 'MY' },
+  { code: '+65', flag: '🇸🇬', name: 'SG' },
+  { code: '+86', flag: '🇨🇳', name: 'CN' },
+  { code: '+81', flag: '🇯🇵', name: 'JP' },
+  { code: '+49', flag: '🇩🇪', name: 'DE' },
+  { code: '+33', flag: '🇫🇷', name: 'FR' },
+  { code: '+34', flag: '🇪🇸', name: 'ES' },
+  { code: '+55', flag: '🇧🇷', name: 'BR' },
+];
 
 export default function BecomeSellerScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const [step, setStep] = useState(1);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [form, setForm] = useState({
     shopName: "",
     ownerName: "",
@@ -29,6 +54,12 @@ export default function BecomeSellerScreen() {
     businessType: "",
     idProof: null,
     shopLogo: null,
+    bankDetails: {
+      bankName: "",
+      accountNumber: "",
+      ifscCode: "",
+      upiId: ""
+    }
   });
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
@@ -87,7 +118,7 @@ export default function BecomeSellerScreen() {
     setForm({ ...form, businessType: businessTypes[nextIndex] });
   };
 
-  const handleSubmit = async () => {
+  const handleNextStep = () => {
     if (
       !form.shopName ||
       !form.ownerName ||
@@ -97,9 +128,24 @@ export default function BecomeSellerScreen() {
       Alert.alert(t("Error"), t("Please fill all required fields"));
       return;
     }
+    setStep(2);
+  };
+
+  const handleSubmit = async () => {
+    if (
+      !form.bankDetails.bankName ||
+      !form.bankDetails.accountNumber ||
+      !form.bankDetails.ifscCode
+    ) {
+      Alert.alert(t("Error"), t("Please fill all required payment fields"));
+      return;
+    }
     try {
       setLoading(true);
-      const res = await applyAsSeller(form);
+      const res = await applyAsSeller({
+        ...form,
+        phone: `${selectedCountry.code}${form.phone}`
+      });
       if (res.success) {
         Alert.alert(
           t("Success"),
@@ -124,7 +170,8 @@ export default function BecomeSellerScreen() {
     <View style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -137,7 +184,7 @@ export default function BecomeSellerScreen() {
             colors={["#021B79", "#0575E6"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.headerArea}
+            style={[styles.headerArea, { paddingTop: Math.max(insets.top + 24, 70), paddingBottom: 70 }]}
           >
             <View style={styles.headerSafeArea}>
               <Text style={styles.headerTitle}>UBS Global</Text>
@@ -145,11 +192,15 @@ export default function BecomeSellerScreen() {
 
               <View style={styles.progressContainer}>
                 <View style={styles.progressTextRow}>
-                  <Text style={styles.stepTextBold}>{t("Step 1 of 2")}</Text>
-                  <Text style={styles.stepText}>{t("Business Details")}</Text>
+                  <Text style={styles.stepTextBold}>
+                    {step === 1 ? t("Step 1 of 2") : t("Step 2 of 2")}
+                  </Text>
+                  <Text style={styles.stepText}>
+                    {step === 1 ? t("Business Details") : t("Payment Details")}
+                  </Text>
                 </View>
                 <View style={styles.progressBarBg}>
-                  <View style={styles.progressBarFill} />
+                  <View style={[styles.progressBarFill, { width: step === 1 ? "50%" : "100%" }]} />
                 </View>
               </View>
             </View>
@@ -157,182 +208,280 @@ export default function BecomeSellerScreen() {
 
           {/* White Form Card */}
           <View style={styles.formCard}>
-            {/* Logo Upload (Overlapping) */}
-            <View style={styles.logoSection}>
-              <View style={styles.logoWrapper}>
-                <TouchableOpacity
-                  style={styles.logoCircle}
-                  onPress={() => pickImage("shopLogo")}
-                >
-                  {form.shopLogo ? (
-                    <Image
-                      source={{ uri: form.shopLogo }}
-                      style={styles.logoImage}
-                    />
-                  ) : (
-                    <>
+            {step === 1 ? (
+              <>
+                {/* Logo Upload (Overlapping) */}
+                <View style={styles.logoSection}>
+                  <View style={styles.logoWrapper}>
+                    <TouchableOpacity
+                      style={styles.logoCircle}
+                      onPress={() => pickImage("shopLogo")}
+                    >
+                      {form.shopLogo ? (
+                        <Image
+                          source={{ uri: form.shopLogo }}
+                          style={styles.logoImage}
+                        />
+                      ) : (
+                        <>
+                          <MaterialCommunityIcons
+                            name="camera-plus-outline"
+                            size={24}
+                            color="#888"
+                          />
+                          <Text style={styles.logoPlaceholder}>{t("LOGO")}</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <View style={styles.editIconBadge}>
                       <MaterialCommunityIcons
-                        name="camera-plus-outline"
-                        size={24}
-                        color="#888"
+                        name="pencil"
+                        size={12}
+                        color="#fff"
                       />
-                      <Text style={styles.logoPlaceholder}>{t("LOGO")}</Text>
-                    </>
+                    </View>
+                  </View>
+                  <Text style={styles.logoLabel}>{t("UPLOAD SHOP LOGO")}</Text>
+                </View>
+
+                {/* Form Fields Step 1 */}
+                <View style={styles.fieldsContainer}>
+                  <Text style={styles.label}>{t("SHOP NAME")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="storefront-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("Global Trade Hub")}
+                      placeholderTextColor="#bbb"
+                      value={form.shopName}
+                      onChangeText={(text) => setForm({ ...form, shopName: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("OWNER FULL NAME")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="account-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("John Doe")}
+                      placeholderTextColor="#bbb"
+                      value={form.ownerName}
+                      onChangeText={(text) => setForm({ ...form, ownerName: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("PHONE NUMBER")}</Text>
+                  <View style={styles.phoneContainer}>
+                    <TouchableOpacity 
+                      style={styles.countryPicker}
+                      onPress={() => setShowCountryPicker(true)}
+                    >
+                      <Text style={styles.countryText}>{selectedCountry.flag} {selectedCountry.code}</Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={18}
+                        color="#555"
+                      />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.phoneInput}
+                      placeholder={t("123-456-7890")}
+                      placeholderTextColor="#bbb"
+                      keyboardType="phone-pad"
+                      value={form.phone}
+                      onChangeText={(text) => setForm({ ...form, phone: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>
+                    {t("BUSINESS TYPE (Tap to change)")}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.inputContainer}
+                    onPress={handleBusinessTypeSelect}
+                  >
+                    <MaterialCommunityIcons
+                      name="briefcase-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <Text
+                      style={[
+                        styles.input,
+                        { color: form.businessType ? "#333" : "#bbb" },
+                      ]}
+                    >
+                      {form.businessType || t("Select Business Type")}
+                    </Text>
+                    <MaterialCommunityIcons
+                      name="chevron-down"
+                      size={20}
+                      color="#888"
+                    />
+                  </TouchableOpacity>
+
+                  <Text style={styles.label}>{t("FULL ADDRESS")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="map-marker-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("123 Logistic Way, Suite 400, Port City")}
+                      placeholderTextColor="#bbb"
+                      value={form.address}
+                      onChangeText={(text) => setForm({ ...form, address: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("UPLOAD ID PROOF")}</Text>
+                  <TouchableOpacity
+                    style={styles.uploadDashed}
+                    onPress={() => pickImage("idProof")}
+                  >
+                    <View style={styles.uploadIconCircle}>
+                      <MaterialCommunityIcons
+                        name="file-upload-outline"
+                        size={20}
+                        color="#0575E6"
+                      />
+                    </View>
+                    <Text style={styles.uploadTextBold}>
+                      {t("Tap to upload your ID or Business License")}
+                    </Text>
+                    <Text style={styles.uploadTextSmall}>
+                      {t("PDF, JPG, or PNG (Max 5MB)")}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Continue to Step 2 Button */}
+                  <TouchableOpacity
+                    style={styles.submitBtn}
+                    onPress={handleNextStep}
+                  >
+                    <Text style={styles.submitBtnText}>
+                      {t("Continue to Payment Details")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              /* Step 2 payment details form */
+              <View style={styles.fieldsContainer}>
+                <Text style={styles.label}>{t("BANK NAME")}</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons
+                    name="bank-outline"
+                    size={20}
+                    color="#888"
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t("Chase Bank")}
+                    placeholderTextColor="#bbb"
+                    value={form.bankDetails.bankName}
+                    onChangeText={(text) => setForm({ ...form, bankDetails: { ...form.bankDetails, bankName: text } })}
+                  />
+                </View>
+
+                <Text style={styles.label}>{t("ACCOUNT NUMBER")}</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons
+                    name="numeric"
+                    size={20}
+                    color="#888"
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t("1234567890")}
+                    placeholderTextColor="#bbb"
+                    keyboardType="numeric"
+                    value={form.bankDetails.accountNumber}
+                    onChangeText={(text) => setForm({ ...form, bankDetails: { ...form.bankDetails, accountNumber: text } })}
+                  />
+                </View>
+
+                <Text style={styles.label}>{t("IFSC / ROUTING CODE")}</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons
+                    name="barcode"
+                    size={20}
+                    color="#888"
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t("CHAS0001234")}
+                    placeholderTextColor="#bbb"
+                    autoCapitalize="characters"
+                    value={form.bankDetails.ifscCode}
+                    onChangeText={(text) => setForm({ ...form, bankDetails: { ...form.bankDetails, ifscCode: text } })}
+                  />
+                </View>
+
+                <Text style={styles.label}>{t("UPI ID / PAYMENT ALIAS (OPTIONAL)")}</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons
+                    name="qrcode"
+                    size={20}
+                    color="#888"
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t("john@upi")}
+                    placeholderTextColor="#bbb"
+                    autoCapitalize="none"
+                    value={form.bankDetails.upiId}
+                    onChangeText={(text) => setForm({ ...form, bankDetails: { ...form.bankDetails, upiId: text } })}
+                  />
+                </View>
+
+                {/* Submit Application Button */}
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  onPress={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>
+                      {t("Submit Seller Request")}
+                    </Text>
                   )}
                 </TouchableOpacity>
-                <View style={styles.editIconBadge}>
-                  <MaterialCommunityIcons
-                    name="pencil"
-                    size={12}
-                    color="#fff"
-                  />
-                </View>
-              </View>
-              <Text style={styles.logoLabel}>{t("UPLOAD SHOP LOGO")}</Text>
-            </View>
 
-            {/* Form Fields */}
-            <View style={styles.fieldsContainer}>
-              <Text style={styles.label}>{t("SHOP NAME")}</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="storefront-outline"
-                  size={20}
-                  color="#888"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder={t("Global Trade Hub")}
-                  placeholderTextColor="#bbb"
-                  value={form.shopName}
-                  onChangeText={(text) => setForm({ ...form, shopName: text })}
-                />
-              </View>
-
-              <Text style={styles.label}>{t("OWNER FULL NAME")}</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="account-outline"
-                  size={20}
-                  color="#888"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder={t("John Doe")}
-                  placeholderTextColor="#bbb"
-                  value={form.ownerName}
-                  onChangeText={(text) => setForm({ ...form, ownerName: text })}
-                />
-              </View>
-
-              <Text style={styles.label}>{t("PHONE NUMBER")}</Text>
-              <View style={styles.phoneContainer}>
-                <TouchableOpacity style={styles.countryPicker}>
-                  <Text style={styles.countryText}>+1 (US)</Text>
-                  <MaterialCommunityIcons
-                    name="chevron-down"
-                    size={18}
-                    color="#555"
-                  />
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.phoneInput}
-                  placeholder={t("123-456-7890")}
-                  placeholderTextColor="#bbb"
-                  keyboardType="phone-pad"
-                  value={form.phone}
-                  onChangeText={(text) => setForm({ ...form, phone: text })}
-                />
-              </View>
-
-              <Text style={styles.label}>
-                {t("BUSINESS TYPE (Tap to change)")}
-              </Text>
-              <TouchableOpacity
-                style={styles.inputContainer}
-                onPress={handleBusinessTypeSelect}
-              >
-                <MaterialCommunityIcons
-                  name="briefcase-outline"
-                  size={20}
-                  color="#888"
-                />
-                <Text
-                  style={[
-                    styles.input,
-                    { color: form.businessType ? "#333" : "#bbb" },
-                  ]}
+                {/* Back to Step 1 Button */}
+                <TouchableOpacity
+                  style={styles.backBtn}
+                  onPress={() => setStep(1)}
+                  disabled={loading}
                 >
-                  {form.businessType || t("Select Business Type")}
-                </Text>
-                <MaterialCommunityIcons
-                  name="chevron-down"
-                  size={20}
-                  color="#888"
-                />
-              </TouchableOpacity>
-
-              <Text style={styles.label}>{t("FULL ADDRESS")}</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="map-marker-outline"
-                  size={20}
-                  color="#888"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder={t("123 Logistic Way, Suite 400, Port City")}
-                  placeholderTextColor="#bbb"
-                  value={form.address}
-                  onChangeText={(text) => setForm({ ...form, address: text })}
-                />
-              </View>
-
-              <Text style={styles.label}>{t("UPLOAD ID PROOF")}</Text>
-              <TouchableOpacity
-                style={styles.uploadDashed}
-                onPress={() => pickImage("idProof")}
-              >
-                <View style={styles.uploadIconCircle}>
-                  <MaterialCommunityIcons
-                    name="file-upload-outline"
-                    size={20}
-                    color="#0575E6"
-                  />
-                </View>
-                <Text style={styles.uploadTextBold}>
-                  {t("Tap to upload your ID or Business License")}
-                </Text>
-                <Text style={styles.uploadTextSmall}>
-                  {t("PDF, JPG, or PNG (Max 5MB)")}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Submit Button */}
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitBtnText}>
-                    {t("Submit Seller Request")}
+                  <Text style={styles.backBtnText}>
+                    {t("Back to Step 1")}
                   </Text>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.noticeRow}>
-                <MaterialCommunityIcons
-                  name="clock-outline"
-                  size={14}
-                  color="#888"
-                />
-                <Text style={styles.noticeText}>
-                  {t("Your application will be reviewed within 24 hours")}
-                </Text>
+                </TouchableOpacity>
               </View>
+            )}
+
+            <View style={styles.noticeRow}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={14}
+                color="#888"
+              />
+              <Text style={styles.noticeText}>
+                {t("Your application will be reviewed within 24 hours")}
+              </Text>
             </View>
           </View>
 
@@ -367,7 +516,43 @@ export default function BecomeSellerScreen() {
               </View>
             </View>
           </View>
+          <View style={{ height: 60 }} />
         </ScrollView>
+
+        {/* Country Picker Modal */}
+        <Modal
+          visible={showCountryPicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowCountryPicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            onPress={() => setShowCountryPicker(false)}
+            activeOpacity={1}
+          >
+            <View style={styles.modalSheet}>
+              <Text style={styles.modalTitle}>{t('Select Country')}</Text>
+              <FlatList
+                data={COUNTRIES}
+                keyExtractor={(item) => item.code + item.name}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.countryRow}
+                    onPress={() => {
+                      setSelectedCountry(item)
+                      setShowCountryPicker(false)
+                    }}
+                  >
+                    <Text style={styles.countryFlag}>{item.flag}</Text>
+                    <Text style={styles.countryName}>{item.name}</Text>
+                    <Text style={styles.countryCode}>{item.code}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </KeyboardAvoidingView>
     </View>
   );
@@ -384,7 +569,7 @@ const styles = StyleSheet.create({
   },
   headerArea: {
     paddingTop: 80,
-    paddingBottom: 80, // significantly increased padding to prevent overlapping issues
+    paddingBottom: 80,
     paddingHorizontal: 20,
   },
   headerSafeArea: {
@@ -429,7 +614,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    width: "50%",
     backgroundColor: "#33D1FF",
     borderRadius: 2,
   },
@@ -437,9 +621,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginHorizontal: 20,
     borderRadius: 16,
-    marginTop: -30, // overlap with the blue header safely
+    marginTop: -30,
     paddingHorizontal: 20,
-    paddingTop: 20, // Add top padding so inputs don't crowd the top
+    paddingTop: 20,
     paddingBottom: 24,
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -449,7 +633,7 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: "center",
-    marginTop: -60, // push the circle further out of the white box so it doesn't squash inputs
+    marginTop: -60,
     marginBottom: 20,
   },
   logoWrapper: {
@@ -580,7 +764,7 @@ const styles = StyleSheet.create({
     color: "#777",
   },
   submitBtn: {
-    backgroundColor: "#1a237e", // deep navy
+    backgroundColor: "#1a237e",
     borderRadius: 10,
     paddingVertical: 16,
     alignItems: "center",
@@ -588,6 +772,20 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  backBtn: {
+    borderWidth: 1.5,
+    borderColor: "#1a237e",
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginBottom: 16,
+    backgroundColor: "transparent",
+  },
+  backBtnText: {
+    color: "#1a237e",
     fontSize: 15,
     fontWeight: "700",
   },
@@ -621,5 +819,46 @@ const styles = StyleSheet.create({
     color: "#666",
     marginLeft: 6,
     letterSpacing: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '50%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a237e',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  countryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  countryFlag: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  countryName: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+  },
+  countryCode: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '600',
   },
 });

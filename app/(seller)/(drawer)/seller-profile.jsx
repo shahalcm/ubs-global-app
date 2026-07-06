@@ -252,6 +252,52 @@ export default function SellerProfile() {
           </View>
         </View>
 
+        {/* Payment Details Section */}
+        <View style={[styles.infoCard, isDark && styles.cardBgDark]}>
+          <View style={styles.infoCardHeader}>
+            <MaterialCommunityIcons name="credit-card-outline" size={20} color={colors.primary} />
+            <Text style={[styles.infoCardTitle, isDark && styles.textDark]}>Payment Details</Text>
+            <TouchableOpacity 
+              style={{ marginLeft: 'auto' }} 
+              onPress={() => router.push('/(seller)/seller-settings')}
+            >
+              <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabelContainer}>
+              <MaterialCommunityIcons name="bank-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
+              <Text style={styles.infoLabel}>Bank Name</Text>
+            </View>
+            <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.bankName || 'N/A'}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabelContainer}>
+              <MaterialCommunityIcons name="numeric" size={16} color={colors.textMuted} style={styles.infoIcon} />
+              <Text style={styles.infoLabel}>Account Number</Text>
+            </View>
+            <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.accountNumber || 'N/A'}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabelContainer}>
+              <MaterialCommunityIcons name="barcode" size={16} color={colors.textMuted} style={styles.infoIcon} />
+              <Text style={styles.infoLabel}>IFSC Code</Text>
+            </View>
+            <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.ifscCode || 'N/A'}</Text>
+          </View>
+
+          <View style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+            <View style={styles.infoLabelContainer}>
+              <MaterialCommunityIcons name="qrcode" size={16} color={colors.textMuted} style={styles.infoIcon} />
+              <Text style={styles.infoLabel}>UPI ID</Text>
+            </View>
+            <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.upiId || 'N/A'}</Text>
+          </View>
+        </View>
+
         {/* Action Options Panel */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity 
