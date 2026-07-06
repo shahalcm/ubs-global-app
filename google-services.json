@@ -41,6 +41,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522208568376:android:c90658325a9a207fa872cd",
+        "android_client_info": {
+          "package_name": "com.ubsglobal.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "522208568376-t1evgae97vvrrsh9h2r6a1qhfhij7ipq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3JtQ3opV8AEbgtxzmolQR9smqb15jEx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "522208568376-t1evgae97vvrrsh9h2r6a1qhfhij7ipq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
