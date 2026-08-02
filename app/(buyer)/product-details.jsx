@@ -188,6 +188,10 @@ export default function ProductDetailsScreen() {
   };
 
   const handleAddToCart = async () => {
+    if (!product || product.stock <= 0) {
+      Alert.alert(t('Out of Stock'), t('This product is currently out of stock.'));
+      return;
+    }
     try {
       await addToCart(product._id, quantity);
       if (refreshCart) await refreshCart();
@@ -198,7 +202,11 @@ export default function ProductDetailsScreen() {
   };
 
   const handleBuyNow = () => {
-    if (!product || !seller) {
+    if (!product || product.stock <= 0) {
+      Alert.alert(t('Out of Stock'), t('This product is currently out of stock.'));
+      return;
+    }
+    if (!seller) {
       Alert.alert(t('Error'), t('Seller information is not available for this product.'));
       return;
     }
@@ -383,11 +391,29 @@ export default function ProductDetailsScreen() {
 
           {!isJobOrService && (
             <>
-              <TouchableOpacity style={styles.outlineBtn} onPress={handleAddToCart}>
-                <Text style={styles.outlineBtnText}>🛒 {t("Add to Cart")}</Text>
+              {product.stock <= 0 && (
+                <View style={styles.outOfStockBanner}>
+                  <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#d32f2f" />
+                  <Text style={styles.outOfStockBannerText}>{t("Out of Stock")}</Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={[styles.outlineBtn, product.stock <= 0 && styles.disabledBtn]}
+                onPress={handleAddToCart}
+                disabled={product.stock <= 0}
+              >
+                <Text style={[styles.outlineBtnText, product.stock <= 0 && styles.disabledBtnText]}>
+                  🛒 {product.stock <= 0 ? t("Out of Stock") : t("Add to Cart")}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.solidBtn} onPress={handleBuyNow}>
-                <Text style={styles.solidBtnText}>{t("Buy Now")}</Text>
+              <TouchableOpacity
+                style={[styles.solidBtn, product.stock <= 0 && styles.disabledBtn]}
+                onPress={handleBuyNow}
+                disabled={product.stock <= 0}
+              >
+                <Text style={[styles.solidBtnText, product.stock <= 0 && styles.disabledBtnText]}>
+                  {product.stock <= 0 ? t("Out of Stock") : t("Buy Now")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.secondaryBtn, chatLoading && { opacity: 0.7 }]} 
@@ -787,5 +813,31 @@ const styles = StyleSheet.create({
     color: "#2e7d32",
     fontWeight: "600",
     maxWidth: "85%",
+  },
+  outOfStockBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffebee",
+    borderWidth: 1,
+    borderColor: "#ffcdd2",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    gap: 8,
+  },
+  outOfStockBannerText: {
+    color: "#d32f2f",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  disabledBtn: {
+    backgroundColor: "#e0e0e0",
+    borderColor: "#cccccc",
+    opacity: 0.7,
+  },
+  disabledBtnText: {
+    color: "#757575",
   }
 });

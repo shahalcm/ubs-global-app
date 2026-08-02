@@ -283,24 +283,68 @@ export default function SellerOrdersScreen() {
                   <View style={styles.buyerHeaderRow}>
                     <View style={styles.buyerHeaderLeft}>
                       <MaterialCommunityIcons name="account-circle-outline" size={16} color="#757575" style={{ marginRight: 6 }} />
-                      <Text style={styles.buyerLabel}>Buyer Details</Text>
+                      <Text style={styles.buyerLabel}>Buyer & Delivery Details</Text>
                     </View>
-                    {order.deliveryAddress?.phone && (
-                      <TouchableOpacity
-                        style={styles.callBtn}
-                        onPress={() => Linking.openURL(`tel:${order.deliveryAddress.phone}`)}
-                      >
-                        <MaterialCommunityIcons name="phone" size={12} color={colors.primary} />
-                        <Text style={styles.callBtnText}>Call</Text>
-                      </TouchableOpacity>
-                    )}
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {order.deliveryAddress?.email && (
+                        <TouchableOpacity
+                          style={[styles.callBtn, { backgroundColor: '#e3f2fd' }]}
+                          onPress={() => Linking.openURL(`mailto:${order.deliveryAddress.email}`)}
+                        >
+                          <MaterialCommunityIcons name="email-outline" size={12} color="#0288d1" />
+                          <Text style={[styles.callBtnText, { color: '#0288d1' }]}>Email</Text>
+                        </TouchableOpacity>
+                      )}
+                      {order.deliveryAddress?.phone && (
+                        <TouchableOpacity
+                          style={styles.callBtn}
+                          onPress={() => Linking.openURL(`tel:${order.deliveryAddress.phone}`)}
+                        >
+                          <MaterialCommunityIcons name="phone" size={12} color={colors.primary} />
+                          <Text style={styles.callBtnText}>Call</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   <View style={styles.buyerDetailsCard}>
-                    <Text style={styles.buyerName}>{order.buyerId?.name || 'Customer'}</Text>
+                    <Text style={styles.buyerName}>{order.deliveryAddress?.fullName || order.buyerId?.name || 'Customer'}</Text>
+                    
                     <View style={styles.buyerAddressRow}>
-                      <MaterialCommunityIcons name="map-marker-outline" size={13} color="#757575" style={{ marginRight: 4, marginTop: 2 }} />
-                      <Text style={styles.buyerAddress} numberOfLines={2}>
-                        {order.deliveryAddress?.street}, {order.deliveryAddress?.city}, {order.deliveryAddress?.country}
+                      <MaterialCommunityIcons name="map-marker-outline" size={14} color={colors.primary} style={{ marginRight: 4, marginTop: 2 }} />
+                      <Text style={styles.buyerAddress}>
+                        {order.deliveryAddress?.street}{order.deliveryAddress?.city ? `, ${order.deliveryAddress.city}` : ''}{order.deliveryAddress?.state ? `, ${order.deliveryAddress.state}` : ''}{order.deliveryAddress?.zipCode ? ` - ${order.deliveryAddress.zipCode}` : ''}{order.deliveryAddress?.country ? `, ${order.deliveryAddress.country}` : ''}
+                      </Text>
+                    </View>
+
+                    {/* Landmark / Delivery Instructions */}
+                    {(order.deliveryAddress?.landmark || order.deliveryAddress?.deliveryInstructions) && (
+                      <View style={styles.infoChipRow}>
+                        <MaterialCommunityIcons name="compass-outline" size={13} color="#f57c00" />
+                        <Text style={styles.infoChipText}>
+                          Landmark/Gate: {order.deliveryAddress.landmark || order.deliveryAddress.deliveryInstructions}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Customer Seller Note */}
+                    {order.sellerNote && (
+                      <View style={[styles.infoChipRow, { backgroundColor: '#fff8e1', borderColor: '#ffe082' }]}>
+                        <MaterialCommunityIcons name="note-text-outline" size={13} color="#b78103" />
+                        <Text style={[styles.infoChipText, { color: '#795548' }]}>
+                          Note: {order.sellerNote}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Shipping Method Badge */}
+                    <View style={styles.shippingSpeedRow}>
+                      <MaterialCommunityIcons
+                        name={order.shippingSpeed === 'express' ? 'truck-fast-outline' : 'truck-delivery-outline'}
+                        size={13}
+                        color={order.shippingSpeed === 'express' ? '#d32f2f' : '#2e7d32'}
+                      />
+                      <Text style={[styles.shippingSpeedText, order.shippingSpeed === 'express' && { color: '#d32f2f', fontWeight: '700' }]}>
+                        {order.shippingSpeed === 'express' ? 'Express Delivery (1-2 Days)' : 'Standard Delivery'}
                       </Text>
                     </View>
                   </View>
@@ -575,5 +619,34 @@ const styles = StyleSheet.create({
     color: '#ffffff', 
     fontSize: 11.5, 
     fontWeight: '800' 
+  },
+  infoChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ffe0b2',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginTop: 6,
+    gap: 6,
+  },
+  infoChipText: {
+    fontSize: 11,
+    color: '#e65100',
+    fontWeight: '600',
+    flex: 1,
+  },
+  shippingSpeedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 4,
+  },
+  shippingSpeedText: {
+    fontSize: 11,
+    color: '#2e7d32',
+    fontWeight: '600',
   }
 })

@@ -191,6 +191,11 @@ export default function ProductListingScreen() {
           contentFit="cover"
           transition={200}
         />
+        {item.stock <= 0 && (
+          <View style={styles.outOfStockOverlay}>
+            <Text style={styles.outOfStockTag}>Out of Stock</Text>
+          </View>
+        )}
         <TouchableOpacity
           style={styles.wishlistBtn}
           onPress={() => toggleWishlist(item._id || item.id)}
@@ -218,9 +223,11 @@ export default function ProductListingScreen() {
            (category || item.category?.name || item.category || '').toLowerCase().trim() === 'service-portal') && (
           <View style={styles.priceRow}>
             <Text style={styles.priceText}>${item.price}</Text>
-            <TouchableOpacity style={styles.cartBtn}>
-              <Text style={styles.cartBtnIcon}>🛒</Text>
-            </TouchableOpacity>
+            {item.stock > 0 && (
+              <TouchableOpacity style={styles.cartBtn}>
+                <Text style={styles.cartBtnIcon}>🛒</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -621,5 +628,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#856404',
     fontWeight: '600',
+  },
+  outOfStockOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(211, 47, 47, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  outOfStockTag: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
   },
 })

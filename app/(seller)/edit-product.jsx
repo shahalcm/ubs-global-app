@@ -30,6 +30,7 @@ export default function EditProduct() {
 
   useEffect(() => {
     if (product) {
+      const initialStockNum = Number(product.stock ?? 0);
       setForm({
         title: product.title || product.name || '',
         description: product.description || '',
@@ -39,9 +40,9 @@ export default function EditProduct() {
         cost: String(product.cost || ''),
         category: product.category?.name || product.category || '',
         subcategory: product.subcategory || '',
-        stock: String(product.stock ?? 0),
+        stock: String(initialStockNum),
         alertThreshold: String(product.alertThreshold ?? 3),
-        inStock: product.stock > 0,
+        inStock: initialStockNum > 0,
         weight: String(product.weight || ''),
         length: String(product.length || ''),
         width: String(product.width || ''),
@@ -65,7 +66,14 @@ export default function EditProduct() {
     setLoading(true);
     setError(null);
     try {
-      await updateProduct(product._id || product.id, { ...form, images });
+      const finalStock = form.inStock ? (Number(form.stock) > 0 ? form.stock : '10') : '0';
+      const payload = {
+        ...form,
+        stock: finalStock,
+        inStock: form.inStock,
+        images
+      };
+      await updateProduct(product._id || product.id, payload);
       Alert.alert('Success', 'Product updated successfully.', [
         { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard') }
       ]);
@@ -139,8 +147,47 @@ export default function EditProduct() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Inventory</Text>
-          <View style={styles.row}><TextInput style={[styles.input, styles.halfInput]} placeholder="Stock Quantity" keyboardType="number-pad" value={form.stock} onChangeText={(stock) => setForm({ ...form, stock })} /><TextInput style={[styles.input, styles.halfInput]} placeholder="Low stock alert" keyboardType="number-pad" value={form.alertThreshold} onChangeText={(alertThreshold) => setForm({ ...form, alertThreshold })} /></View>
-          <View style={styles.toggleRow}><Text style={styles.toggleLabel}>In Stock</Text><TouchableOpacity style={[styles.switch, form.inStock && styles.switchActive]} onPress={() => setForm((prev) => ({ ...prev, inStock: !prev.inStock }))}><View style={[styles.switchThumb, form.inStock && styles.switchThumbActive]} /></TouchableOpacity></View>
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, styles.halfInput]}
+              placeholder="Stock Quantity"
+              keyboardType="number-pad"
+              value={form.stock}
+              onChangeText={(stockText) => {
+                const num = Number(stockText || 0);
+                setForm((prev) => ({
+                  ...prev,
+                  stock: stockText,
+                  inStock: num > 0
+                }));
+              }}
+            />
+            <TextInput
+              style={[styles.input, styles.halfInput]}
+              placeholder="Low stock alert"
+              keyboardType="number-pad"
+              value={form.alertThreshold}
+              onChangeText={(alertThreshold) => setForm({ ...form, alertThreshold })}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>In Stock</Text>
+            <TouchableOpacity
+              style={[styles.switch, form.inStock && styles.switchActive]}
+              onPress={() =>
+                setForm((prev) => {
+                  const nextInStock = !prev.inStock;
+                  return {
+                    ...prev,
+                    inStock: nextInStock,
+                    stock: nextInStock ? (Number(prev.stock) > 0 ? prev.stock : '10') : '0'
+                  };
+                })
+              }
+            >
+              <View style={[styles.switchThumb, form.inStock && styles.switchThumbActive]} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.card}>

@@ -160,7 +160,9 @@ export default function AddProductScreen() {
       formData.append('price', price)
       formData.append('comparePrice', comparePrice || '0')
       formData.append('costPerItem', costPerItem || '0')
-      formData.append('stock', stock)
+      const finalStock = inStock ? (Number(stock) > 0 ? stock : '10') : '0'
+      formData.append('stock', finalStock)
+      formData.append('inStock', inStock.toString())
       formData.append('lowStockAlert', lowStockAlert)
       formData.append('weight', weight || '0')
       formData.append('length', length || '0')
@@ -427,7 +429,14 @@ export default function AddProductScreen() {
                 <Text style={styles.toggleLabel}>In Stock</Text>
                 <Switch
                   value={inStock}
-                  onValueChange={setInStock}
+                  onValueChange={(val) => {
+                    setInStock(val)
+                    if (!val) {
+                      setStock('0')
+                    } else if (Number(stock) <= 0) {
+                      setStock('10')
+                    }
+                  }}
                   trackColor={{ false: '#ddd', true: '#29b6f6' }}
                   thumbColor={inStock ? '#1a237e' : '#fff'}
                 />
@@ -440,7 +449,10 @@ export default function AddProductScreen() {
               placeholder="0"
               placeholderTextColor="#bbb"
               value={stock}
-              onChangeText={setStock}
+              onChangeText={(val) => {
+                setStock(val)
+                setInStock(Number(val || 0) > 0)
+              }}
               keyboardType="number-pad"
             />
 
