@@ -216,11 +216,12 @@ export default function LoginScreen() {
           router.replace('/(auth)/role-select')
         }
       } else {
-        Alert.alert(t('Error'), res?.message || t('Failed to reset password.'))
+        Alert.alert(t('Reset Failed'), res?.message || t('Failed to reset password. Please try again.'))
       }
     } catch (error) {
       console.log('Reset password error:', error)
-      Alert.alert(t('Error'), error?.response?.data?.message || t('Failed to reset password.'))
+      const message = error?.response?.data?.message || error?.message || t('Failed to reset password.')
+      Alert.alert(t('Error'), message)
     } finally {
       setForgotLoading(false)
     }

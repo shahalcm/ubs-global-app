@@ -76,10 +76,14 @@ export const completeProfile = async (profileData) => {
 
 // Save user data to storage
 const saveUserData = async (data) => {
-  await AsyncStorage.setItem('token', data.token)
-  await AsyncStorage.setItem('user', JSON.stringify(data.user))
-  await AsyncStorage.setItem('userId', data.user._id)
-  await connectSocket()
+  if (data?.token && data?.user) {
+    await AsyncStorage.setItem('token', data.token)
+    await AsyncStorage.setItem('user', JSON.stringify(data.user))
+    if (data.user._id) {
+      await AsyncStorage.setItem('userId', data.user._id)
+    }
+    await connectSocket().catch(() => {})
+  }
 }
 
 // Logout
