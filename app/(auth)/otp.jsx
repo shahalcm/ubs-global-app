@@ -72,7 +72,15 @@ export default function OTPScreen() {
         const loginRes = await loginWithPhone(phone)
         if (loginRes.success) {
           await login(loginRes.user, loginRes.token)
-          router.replace('/(buyer)/home')
+          if (loginRes.user?.role === 'seller') {
+            router.replace('/(seller)/home')
+          } else if (loginRes.user?.role === 'buyer') {
+            router.replace('/(buyer)/(tabs)/home')
+          } else if (loginRes.user?.role) {
+            router.replace('/(buyer)/(tabs)/home')
+          } else {
+            router.replace('/(auth)/role-select')
+          }
           return
         }
       } catch (loginError) {

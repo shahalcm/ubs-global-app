@@ -99,10 +99,8 @@ export default function LoginScreen() {
     try {
       const fullPhone = selectedCountry.code + phone.trim()
       const res = await loginWithPassword({ phone: fullPhone, password })
-      if (res?.success) {
-        if (res.user) {
-          await updateUser(res.user)
-        }
+      if (res?.success && res?.user && res?.token) {
+        await login(res.user, res.token)
         if (res.user?.role === 'seller') {
           router.replace('/(seller)/home')
         } else if (res.user?.role === 'buyer') {
@@ -204,10 +202,8 @@ export default function LoginScreen() {
         newPassword: newPassword.trim()
       })
 
-      if (res?.success) {
-        if (res.user) {
-          await updateUser(res.user)
-        }
+      if (res?.success && res?.user && res?.token) {
+        await login(res.user, res.token)
         setShowForgotModal(false)
         Alert.alert(t('Success'), t('Password reset successfully! Logged in.'))
         if (res.user?.role === 'seller') {
