@@ -17,10 +17,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
-import { Alert } from "react-native";
-import { useTranslation } from "react-i18next";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import api from "../../services/api";
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -46,6 +43,8 @@ export default function BecomeSellerScreen() {
   const [step, setStep] = useState(1);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [registrationFee, setRegistrationFee] = useState(15);
+  const [selectedPayMethod, setSelectedPayMethod] = useState("card");
   const [form, setForm] = useState({
     shopName: "",
     ownerName: "",
@@ -71,7 +70,19 @@ export default function BecomeSellerScreen() {
 
   useEffect(() => {
     checkSellerStatus();
+    fetchRegistrationFee();
   }, []);
+
+  const fetchRegistrationFee = async () => {
+    try {
+      const res = await api.get('/sellers/registration-fee');
+      if (res.data?.success && res.data?.registrationFee) {
+        setRegistrationFee(res.data.registrationFee);
+      }
+    } catch (err) {
+      console.log('Error fetching registration fee:', err);
+    }
+  };
 
   const checkSellerStatus = async () => {
     try {
@@ -136,7 +147,7 @@ export default function BecomeSellerScreen() {
     setStep(2);
   };
 
-  const handleSubmit = async () => {
+  const handleStep2Next = () => {
     if (
       !form.bankDetails.bankName ||
       !form.bankDetails.accountNumber ||
@@ -145,16 +156,22 @@ export default function BecomeSellerScreen() {
       Alert.alert(t("Error"), t("Please fill all required payment fields"));
       return;
     }
+    setStep(3);
+  };
+
+  const handleSubmit = async () => {
     try {
       setLoading(true);
       const res = await applyAsSeller({
         ...form,
-        phone: `${selectedCountry.code}${form.phone}`
+        phone: `${selectedCountry.code}${form.phone}`,
+        registrationFeeAmount: registrationFee,
+        paymentMethod: selectedPayMethod === 'card' ? 'Credit/Debit Card' : selectedPayMethod === 'upi' ? 'UPI Wallet' : 'Bank Transfer'
       });
       if (res.success) {
         Alert.alert(
           t("Success"),
-          t("Application submitted! Awaiting approval."),
+          t(`Application & $${registrationFee.toFixed(2)} Store Registration Fee received! Awaiting approval.`),
         );
         router.replace("/(seller)/dashboard");
       } else {
@@ -198,14 +215,14 @@ export default function BecomeSellerScreen() {
               <View style={styles.progressContainer}>
                 <View style={styles.progressTextRow}>
                   <Text style={styles.stepTextBold}>
-                    {step === 1 ? t("Step 1 of 2") : t("Step 2 of 2")}
+                    {step === 1 ? t("Step 1 of 3") : step === 2 ? t("Step 2 of 3") : t("Step 3 of 3")}
                   </Text>
                   <Text style={styles.stepText}>
-                    {step === 1 ? t("Business Details") : t("Payment Details")}
+                    {step === 1 ? t("Business Details") : step === 2 ? t("Bank Details") : t("Store Fee Payment")}
                   </Text>
                 </View>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: step === 1 ? "50%" : "100%" }]} />
+                  <View style={[styles.progressBarFill, { width: step === 1 ? "33%" : step === 2 ? "66%" : "100%" }]} />
                 </View>
               </View>
             </View>
@@ -575,7 +592,98 @@ export default function BecomeSellerScreen() {
                   />
                 </View>
 
-                {/* Submit Application Button */}
+                {/* Continue to Step 3 Button */}
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  onPress={handleStep2Next}
+                >
+                  <Text style={styles.submitBtnText}>
+                    {t("Continue to Registration Fee")}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Back to Step 1 Button */}
+                <TouchableOpacity
+                  style={styles.backBtn}
+                  onPress={() => setStep(1)}
+                >
+                  <Text style={styles.backBtnText}>
+                    {t("Back to Step 1")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Step 3 Store Registration Fee Payment */
+              <View style={styles.fieldsContainer}>
+                {/* Fee Header Card */}
+                <View style={styles.feeBannerCard}>
+                  <View style={styles.feeBadgeContainer}>
+                    <Text style={styles.feeBadgeText}>{t("OFFICIAL ONBOARDING")}</Text>
+                  </View>
+                  <Text style={styles.feeAmountText}>${registrationFee.toFixed(2)}</Text>
+                  <Text style={styles.feeTitleText}>{t("Store Registration & Verification Fee")}</Text>
+                  <Text style={styles.feeDescText}>
+                    {t("One-time registration fee to setup your verified global export store, seller dashboard, and AI assistant.")}
+                  </Text>
+                </View>
+
+                {/* Payment Method Selector */}
+                <Text style={styles.label}>{t("SELECT PAYMENT METHOD")}</Text>
+                
+                <TouchableOpacity
+                  style={[styles.payMethodOption, selectedPayMethod === 'card' && styles.payMethodActive]}
+                  onPress={() => setSelectedPayMethod('card')}
+                >
+                  <MaterialCommunityIcons name="credit-card-outline" size={22} color={selectedPayMethod === 'card' ? '#0575E6' : '#666'} />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.payMethodTitle}>{t("Credit / Debit Card")}</Text>
+                    <Text style={styles.payMethodSub}>{t("Visa, MasterCard, Amex (Instant)")}</Text>
+                  </View>
+                  <MaterialCommunityIcons name={selectedPayMethod === 'card' ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={selectedPayMethod === 'card' ? '#0575E6' : '#bbb'} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.payMethodOption, selectedPayMethod === 'upi' && styles.payMethodActive]}
+                  onPress={() => setSelectedPayMethod('upi')}
+                >
+                  <MaterialCommunityIcons name="wallet-outline" size={22} color={selectedPayMethod === 'upi' ? '#0575E6' : '#666'} />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.payMethodTitle}>{t("UPI & Digital Wallets")}</Text>
+                    <Text style={styles.payMethodSub}>{t("Google Pay, Apple Pay, PhonePe")}</Text>
+                  </View>
+                  <MaterialCommunityIcons name={selectedPayMethod === 'upi' ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={selectedPayMethod === 'upi' ? '#0575E6' : '#bbb'} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.payMethodOption, selectedPayMethod === 'wire' && styles.payMethodActive]}
+                  onPress={() => setSelectedPayMethod('wire')}
+                >
+                  <MaterialCommunityIcons name="bank-transfer" size={22} color={selectedPayMethod === 'wire' ? '#0575E6' : '#666'} />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.payMethodTitle}>{t("Bank Wire Transfer")}</Text>
+                    <Text style={styles.payMethodSub}>{t("Direct transfer to UBS Escrow")}</Text>
+                  </View>
+                  <MaterialCommunityIcons name={selectedPayMethod === 'wire' ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={selectedPayMethod === 'wire' ? '#0575E6' : '#bbb'} />
+                </TouchableOpacity>
+
+                {/* Price Summary Breakdown */}
+                <View style={styles.summaryCard}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>{t("Store Registration Fee")}</Text>
+                    <Text style={styles.summaryVal}>${registrationFee.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>{t("Marketplace Onboarding")}</Text>
+                    <Text style={[styles.summaryVal, { color: '#4caf50' }]}>{t("FREE")}</Text>
+                  </View>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryTotalLabel}>{t("Total Due Now")}</Text>
+                    <Text style={styles.summaryTotalVal}>${registrationFee.toFixed(2)}</Text>
+                  </View>
+                </View>
+
+                {/* Pay & Submit Button */}
                 <TouchableOpacity
                   style={styles.submitBtn}
                   onPress={handleSubmit}
@@ -585,19 +693,19 @@ export default function BecomeSellerScreen() {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={styles.submitBtnText}>
-                      {t("Submit Seller Request")}
+                      {t(`Pay $${registrationFee.toFixed(2)} & Submit Application`)}
                     </Text>
                   )}
                 </TouchableOpacity>
 
-                {/* Back to Step 1 Button */}
+                {/* Back to Step 2 Button */}
                 <TouchableOpacity
                   style={styles.backBtn}
-                  onPress={() => setStep(1)}
+                  onPress={() => setStep(2)}
                   disabled={loading}
                 >
                   <Text style={styles.backBtnText}>
-                    {t("Back to Step 1")}
+                    {t("Back to Step 2")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -982,6 +1090,109 @@ const styles = StyleSheet.create({
     color: "#1a237e",
     fontSize: 15,
     fontWeight: "700",
+  },
+  // Step 3 Fee Payment Styles
+  feeBannerCard: {
+    backgroundColor: "#021B79",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  feeBadgeContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  feeBadgeText: {
+    color: "#90caf9",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  feeAmountText: {
+    color: "#ffffff",
+    fontSize: 32,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  feeTitleText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  feeDescText: {
+    color: "#b0bec5",
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  payMethodOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  payMethodActive: {
+    borderColor: "#0575E6",
+    backgroundColor: "#e3f2fd",
+  },
+  payMethodTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#333",
+  },
+  payMethodSub: {
+    fontSize: 11,
+    color: "#666",
+    marginTop: 2,
+  },
+  summaryCard: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    marginVertical: 16,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
+  },
+  summaryVal: {
+    fontSize: 12,
+    color: "#333",
+    fontWeight: "700",
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "#e0e0e0",
+    marginVertical: 8,
+  },
+  summaryTotalLabel: {
+    fontSize: 14,
+    color: "#1a237e",
+    fontWeight: "800",
+  },
+  summaryTotalVal: {
+    fontSize: 16,
+    color: "#1a237e",
+    fontWeight: "900",
   },
   noticeRow: {
     flexDirection: "row",
