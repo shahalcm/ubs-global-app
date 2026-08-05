@@ -38,7 +38,7 @@ const COUNTRIES = [
 
 export default function LoginScreen() {
   const { t } = useTranslation()
-  const { updateUser } = useAuth()
+  const { login, updateUser } = useAuth()
 
   // Mode: 'otp' | 'password'
   const [loginMode, setLoginMode] = useState('otp')
