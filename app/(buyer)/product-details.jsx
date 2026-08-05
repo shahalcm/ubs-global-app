@@ -14,7 +14,7 @@ import ContactSellerModal from "../../components/buyer/ContactSellerModal";
 import { getProductReviews, submitReview } from "../../services/reviewService";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import * as DocumentPicker from "expo-document-picker";
+import { addRecentlyViewed } from "../../services/recentlyViewed";
 
 const { width } = Dimensions.get("window");
 
@@ -31,6 +31,7 @@ export default function ProductDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [categoryProducts, setCategoryProducts] = useState([]);
   const { refreshCart } = useCart();
   const { user } = useAuth();
 
@@ -49,6 +50,8 @@ export default function ProductDetailsScreen() {
   const [applyCoverLetter, setApplyCoverLetter] = useState("");
   const [selectedCV, setSelectedCV] = useState(null);
   const [submittingApplication, setSubmittingApplication] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
 
   useEffect(() => {
     if (user && applyModalVisible) {
@@ -128,6 +131,38 @@ export default function ProductDetailsScreen() {
     }
   }, [id]);
 
+  const loadCategoryProducts = async (catIdentifier, currentProdId, categoryObj) => {
+    try {
+      let items = [];
+      const targetId = typeof catIdentifier === 'object' ? catIdentifier?._id : catIdentifier;
+
+      if (targetId) {
+        let res = await getProductsByCategory(targetId, { exclude: currentProdId, limit: 20 });
+        if (res?.success && res.products) {
+          items = res.products.filter(p => p._id !== currentProdId);
+        }
+      }
+
+      if (items.length === 0 && categoryObj?.name) {
+        let res = await getProductsByCategory(categoryObj.name, { exclude: currentProdId, limit: 20 });
+        if (res?.success && res.products) {
+          items = res.products.filter(p => p._id !== currentProdId);
+        }
+      }
+
+      if (items.length === 0) {
+        const allProdsRes = await getProducts({ limit: 10 });
+        if (allProdsRes?.products) {
+          items = allProdsRes.products.filter(p => p._id !== currentProdId);
+        }
+      }
+
+      setCategoryProducts(items);
+    } catch (err) {
+      console.log("Error loading category products:", err);
+    }
+  };
+
   const loadProduct = async () => {
     try {
       setLoading(true);
@@ -135,6 +170,21 @@ export default function ProductDetailsScreen() {
       if (res?.product) {
         setProduct(res.product);
         setSeller(res.product.sellerId);
+
+        if (res.product.colors && res.product.colors.length > 0) {
+          setSelectedColor(res.product.colors[0]);
+        } else if (res.product.color) {
+          setSelectedColor(res.product.color);
+        }
+
+        if (res.product.sizes && res.product.sizes.length > 0) {
+          setSelectedSize(res.product.sizes[0]);
+        }
+
+        const cat = res.product.category;
+        const catId = cat?._id || cat;
+        loadCategoryProducts(catId, res.product._id, cat);
+        addRecentlyViewed(res.product);
       }
     } catch (err) {
       console.log(err);
@@ -318,6 +368,24 @@ export default function ProductDetailsScreen() {
           <Text style={styles.category}>{product.category?.name?.toUpperCase()}</Text>
           <Text style={styles.title}>{product.title}</Text>
 
+          {/* Brand & Warranty Badges */}
+          {(product.brand || product.warranty) && (
+            <View style={styles.badgesRow}>
+              {product.brand && (
+                <View style={styles.brandBadge}>
+                  <MaterialCommunityIcons name="shield-check" size={13} color="#1a237e" />
+                  <Text style={styles.brandBadgeText}>{product.brand}</Text>
+                </View>
+              )}
+              {product.warranty && (
+                <View style={styles.warrantyBadge}>
+                  <MaterialCommunityIcons name="certificate" size={13} color="#008b8b" />
+                  <Text style={styles.warrantyBadgeText}>{product.warranty}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
           <View style={styles.ratingRow}>
             <MaterialCommunityIcons name="star" size={16} color="#fbc02d" />
             <Text style={styles.stars}> {product.rating || 0}</Text>
@@ -335,7 +403,43 @@ export default function ProductDetailsScreen() {
           )}
 
           <Text style={styles.description}>{product.description}</Text>
-          
+
+          {/* Color Selection Chips */}
+          {!isJobOrService && ((product.colors && product.colors.length > 0) || product.color) && (
+            <View style={styles.optionSection}>
+              <Text style={styles.optionLabel}>{t("Color:")} <Text style={styles.optionSelectedText}>{selectedColor || product.color || (product.colors && product.colors[0])}</Text></Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+                {(product.colors && product.colors.length > 0 ? product.colors : [product.color]).map((c, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.colorChipItem, selectedColor === c && styles.colorChipItemSelected]}
+                    onPress={() => setSelectedColor(c)}
+                  >
+                    <Text style={[styles.colorChipItemText, selectedColor === c && styles.colorChipItemTextSelected]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Size Selection Chips */}
+          {!isJobOrService && product.sizes && product.sizes.length > 0 && (
+            <View style={styles.optionSection}>
+              <Text style={styles.optionLabel}>{t("Size:")} <Text style={styles.optionSelectedText}>{selectedSize || product.sizes[0]}</Text></Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+                {product.sizes.map((s, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.sizeChipItem, selectedSize === s && styles.sizeChipItemSelected]}
+                    onPress={() => setSelectedSize(s)}
+                  >
+                    <Text style={[styles.sizeChipItemText, selectedSize === s && styles.sizeChipItemTextSelected]}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {!isJobOrService && (
             <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
               <Text style={{fontWeight: '700', marginRight: 16}}>{t("Quantity:")}</Text>
@@ -466,6 +570,66 @@ export default function ProductDetailsScreen() {
             </View>
           </View>
 
+          {/* Product Specifications & Details Section */}
+          {(product.brand || product.countryOfOrigin || product.warranty || product.material || product.fit || product.sleeve || product.neck || product.refundPolicy) && (
+            <>
+              <View style={styles.sectionDivider} />
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>{t("Product Specifications & Details")}</Text>
+                <View style={styles.specsTable}>
+                  {product.brand && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Brand")}</Text>
+                      <Text style={styles.specVal}>{product.brand}</Text>
+                    </View>
+                  )}
+                  {product.countryOfOrigin && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Country of Origin")}</Text>
+                      <Text style={styles.specVal}>{product.countryOfOrigin}</Text>
+                    </View>
+                  )}
+                  {product.warranty && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Warranty")}</Text>
+                      <Text style={styles.specVal}>{product.warranty}</Text>
+                    </View>
+                  )}
+                  {product.material && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Material / Fabric")}</Text>
+                      <Text style={styles.specVal}>{product.material}</Text>
+                    </View>
+                  )}
+                  {product.fit && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Fit Type")}</Text>
+                      <Text style={styles.specVal}>{product.fit}</Text>
+                    </View>
+                  )}
+                  {product.sleeve && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Sleeve Type")}</Text>
+                      <Text style={styles.specVal}>{product.sleeve}</Text>
+                    </View>
+                  )}
+                  {product.neck && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Neck / Collar")}</Text>
+                      <Text style={styles.specVal}>{product.neck}</Text>
+                    </View>
+                  )}
+                  {product.refundPolicy && (
+                    <View style={styles.specRow}>
+                      <Text style={styles.specKey}>{t("Return & Refund Policy")}</Text>
+                      <Text style={[styles.specVal, { color: '#008b8b', fontWeight: '700' }]}>{product.refundPolicy}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </>
+          )}
+
           {/* Write a Review Form Section */}
           <View style={styles.sectionDivider} />
           <View style={styles.sectionContainer}>
@@ -541,6 +705,71 @@ export default function ProductDetailsScreen() {
               ))
             )}
           </View>
+
+          {/* Related Category Products Section */}
+          {categoryProducts.length > 0 && (
+            <>
+              <View style={styles.sectionDivider} />
+              <View style={styles.sectionContainer}>
+                <View style={styles.categoryRowHeader}>
+                  <Text style={styles.sectionTitle}>
+                    {product.category?.name
+                      ? `${t("More in")} ${product.category.name}`
+                      : typeof product.category === 'string'
+                        ? `${t("More in")} ${product.category}`
+                        : t("Recommended For You")}
+                  </Text>
+                  {(product.category?._id || typeof product.category === 'string') && (
+                    <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: '/(buyer)/category-products',
+                        params: {
+                          categoryId: product.category?._id || product.category,
+                          categoryName: product.category?.name || product.category
+                        }
+                      })}
+                    >
+                      <Text style={styles.viewAllText}>{t("View All")} ›</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoryProductsRow}
+                >
+                  {categoryProducts.map((item) => (
+                    <TouchableOpacity
+                      key={item._id}
+                      style={styles.categoryProductCard}
+                      activeOpacity={0.85}
+                      onPress={() => router.push({ pathname: '/(buyer)/product-details', params: { id: item._id } })}
+                    >
+                      <Image
+                        source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
+                        style={styles.categoryProductImg}
+                        transition={150}
+                      />
+                      <View style={styles.categoryProductBody}>
+                        <Text style={styles.categoryProductTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        <View style={styles.categoryProductRatingRow}>
+                          <MaterialCommunityIcons name="star" size={12} color="#fbc02d" />
+                          <Text style={styles.categoryProductRating}> {item.rating || 0}</Text>
+                          <Text style={styles.categoryProductSold}> • {item.totalSales || 0} {t("sold")}</Text>
+                        </View>
+                        <Text style={styles.categoryProductPrice}>
+                          ${Number(item.price || 0).toFixed(2)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </>
+          )}
         </View>
 
         <ContactSellerModal
@@ -716,6 +945,19 @@ const styles = StyleSheet.create({
   reviewStarsRow: { flexDirection: 'row', marginBottom: 6 },
   reviewComment: { fontSize: 13, color: '#444', lineHeight: 18 },
 
+  // Category products row styles
+  categoryRowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  viewAllText: { fontSize: 12, fontWeight: '700', color: '#008b8b' },
+  categoryProductsRow: { gap: 12, paddingRight: 16, paddingBottom: 6 },
+  categoryProductCard: { width: 140, backgroundColor: '#ffffff', borderRadius: 12, borderWidth: 1, borderColor: '#eef0f2', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  categoryProductImg: { width: '100%', height: 110, backgroundColor: '#f5f5f5' },
+  categoryProductBody: { padding: 8 },
+  categoryProductTitle: { fontSize: 12, fontWeight: '700', color: '#212121', lineHeight: 16, height: 32, marginBottom: 4 },
+  categoryProductRatingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  categoryProductRating: { fontSize: 10, fontWeight: '700', color: '#333' },
+  categoryProductSold: { fontSize: 10, color: '#888' },
+  categoryProductPrice: { fontSize: 14, fontWeight: '800', color: '#008b8b' },
+
   // Job application modal styles
   modalOverlay: {
     flex: 1,
@@ -839,5 +1081,127 @@ const styles = StyleSheet.create({
   },
   disabledBtnText: {
     color: "#757575",
-  }
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginVertical: 6,
+  },
+  brandBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#e8eaf6',
+    borderColor: '#c5cae9',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  brandBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1a237e',
+  },
+  warrantyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#e0f2f1',
+    borderColor: '#b2dfdb',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  warrantyBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#008b8b',
+  },
+  optionSection: {
+    marginVertical: 8,
+  },
+  optionLabel: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 6,
+  },
+  optionSelectedText: {
+    fontWeight: '800',
+    color: '#1a237e',
+  },
+  optionRow: {
+    gap: 8,
+  },
+  colorChipItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f5f7fa',
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+  },
+  colorChipItemSelected: {
+    backgroundColor: '#1a237e',
+    borderColor: '#1a237e',
+  },
+  colorChipItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  colorChipItemTextSelected: {
+    color: '#fff',
+  },
+  sizeChipItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f5f7fa',
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+  },
+  sizeChipItemSelected: {
+    backgroundColor: '#1a237e',
+    borderColor: '#1a237e',
+  },
+  sizeChipItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  sizeChipItemTextSelected: {
+    color: '#fff',
+  },
+  specsTable: {
+    backgroundColor: '#fafbfc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#eef2f6',
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  specRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#edf2f7',
+  },
+  specKey: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+    width: '45%',
+  },
+  specVal: {
+    fontSize: 12,
+    color: '#222',
+    fontWeight: '700',
+    width: '55%',
+    textAlign: 'right',
+  },
 });

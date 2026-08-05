@@ -123,7 +123,8 @@ export function SellerProvider({ children }) {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const response = await api.put(`/products/${id}`, updates);
-      dispatch({ type: 'UPDATE_PRODUCT', payload: response.data });
+      const updatedItem = response.data.product || response.data;
+      dispatch({ type: 'UPDATE_PRODUCT', payload: updatedItem });
       return response.data;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });

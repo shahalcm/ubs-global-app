@@ -1,5 +1,4 @@
-// app/(auth)/login.jsx
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
@@ -13,20 +12,14 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { sendOTP } from '../../services/authService'
+import { sendOTP, verifyOTP, loginWithPassword, forgotPasswordSendOTP, resetPasswordWithOTP } from '../../services/authService'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
-import * as WebBrowser from 'expo-web-browser'
-import * as Google from 'expo-auth-session/providers/google'
-import * as AuthSession from 'expo-auth-session'
-import { Ionicons } from '@expo/vector-icons'
-import { getEnv } from '../../utils/env'
-import Constants from 'expo-constants'
-
-WebBrowser.maybeCompleteAuthSession()
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -45,97 +38,39 @@ const COUNTRIES = [
 
 export default function LoginScreen() {
   const { t } = useTranslation()
+  const { updateUser } = useAuth()
+
+  // Mode: 'otp' | 'password'
+  const [loginMode, setLoginMode] = useState('otp')
+
   const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
   const [showPicker, setShowPicker] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const { loginWithGoogle } = useAuth()
-  const [googleLoading, setGoogleLoading] = useState(false)
+  // Forgot Password Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false)
+  const [forgotStep, setForgotStep] = useState(1) // 1: phone, 2: otp + new password
+  const [forgotPhone, setForgotPhone] = useState('')
+  const [forgotCountry, setForgotCountry] = useState(COUNTRIES[0])
+  const [showForgotCountryPicker, setShowForgotCountryPicker] = useState(false)
+  const [forgotOtp, setForgotOtp] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
 
-  const owner = Constants.expoConfig?.owner || 'ubsglobalapp923s-team'
-  const slug = Constants.expoConfig?.slug || 'client'
-  const projectNameForProxy = `@${owner}/${slug}`
-  
-  // Dynamically determine redirect URI and proxy requirements based on environment
-  const isGo = Constants.appOwnership === 'expo'
-  const redirectUri = isGo 
-    ? `https://auth.expo.io/@${owner}/${slug}` 
-    : AuthSession.makeRedirectUri({ scheme: 'client' })
-
-  // Configure Google Auth Request (fall back to web client ID and use proxy only in Expo Go)
-  const webClientId = getEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID', '522208568376-placeholder.apps.googleusercontent.com')
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId,
-    iosClientId: isGo ? webClientId : getEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', webClientId),
-    androidClientId: isGo ? webClientId : getEnv('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', webClientId),
-    projectNameForProxy,
-    useProxy: isGo,
-    redirectUri,
-  })
-
-  // Log the redirect URI so the developer can copy-paste it into Google Cloud Console
-  useEffect(() => {
-    if (request?.redirectUri) {
-      console.log('====== GOOGLE OAUTH REDIRECT URI ======')
-      console.log(request.redirectUri)
-      console.log('=======================================')
+  // Handle OTP Continue
+  const handleOTPContinue = async () => {
+    if (!phone || phone.length < 7) {
+      Alert.alert(t('Error'), t('Please enter a valid phone number'))
+      return
     }
-  }, [request])
-
-  // Handle Google Auth Response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const idToken = response.authentication?.idToken || response.params?.id_token
-      if (idToken) {
-        handleGoogleAuthSuccess(idToken)
-      } else {
-        setGoogleLoading(false)
-        Alert.alert(t('Error'), t('Failed to retrieve authentication token from Google.'))
-      }
-    } else if (response?.type === 'error') {
-      setGoogleLoading(false)
-      Alert.alert(t('Error'), response.error?.message || t('Google sign in error.'))
-    }
-  }, [response])
-
-  const handleGoogleAuthSuccess = async (idToken) => {
-    setGoogleLoading(true)
-    try {
-      const result = await loginWithGoogle(idToken)
-      if (result?.success) {
-        router.replace('/(auth)/role-select')
-      }
-    } catch (error) {
-      console.error('Firebase/Backend Google Login Error:', error)
-      Alert.alert(t('Error'), t('Failed to authenticate with Google. Please try again.'))
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true)
-    try {
-      const result = await promptAsync({
-        useProxy: isGo,
-        projectNameForProxy,
-      })
-      if (result?.type !== 'success') {
-        setGoogleLoading(false)
-      }
-    } catch (error) {
-      console.error('Google login trigger error:', error)
-      setGoogleLoading(false)
-      Alert.alert(t('Error'), t('Failed to launch Google authentication.'))
-    }
-  }
-
-  const handleContinue = async () => {
-    if (!phone || phone.length < 7) return
     setLoading(true)
     try {
-      const fullPhone = selectedCountry.code + phone
+      const fullPhone = selectedCountry.code + phone.trim()
       await sendOTP(fullPhone)
       router.push({
         pathname: '/(auth)/otp',
@@ -143,9 +78,146 @@ export default function LoginScreen() {
       })
     } catch (error) {
       console.log(error)
-      Alert.alert(t('Error'), t('Failed to send OTP. Please try again.'))
+      Alert.alert(t('Error'), error?.response?.data?.message || t('Failed to send OTP. Please try again.'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Handle Password Login
+  const handlePasswordLogin = async () => {
+    if (!phone || phone.length < 7) {
+      Alert.alert(t('Error'), t('Please enter a valid phone number'))
+      return
+    }
+    if (!password) {
+      Alert.alert(t('Error'), t('Please enter your password'))
+      return
+    }
+
+    setLoading(true)
+    try {
+      const fullPhone = selectedCountry.code + phone.trim()
+      const res = await loginWithPassword({ phone: fullPhone, password })
+      if (res?.success) {
+        if (res.user) {
+          await updateUser(res.user)
+        }
+        if (res.user?.role) {
+          router.replace('/(buyer)/(tabs)/home')
+        } else {
+          router.replace('/(auth)/role-select')
+        }
+      } else {
+        Alert.alert(t('Login Failed'), res?.message || t('Invalid phone number or password.'))
+      }
+    } catch (error) {
+      console.log('Password login error:', error)
+      Alert.alert(t('Login Failed'), error?.response?.data?.message || t('Incorrect phone number or password.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Open Forgot Password Modal
+  const openForgotPassword = () => {
+    setForgotPhone(phone)
+    setForgotCountry(selectedCountry)
+    setForgotStep(1)
+    setForgotOtp('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setShowForgotModal(true)
+  }
+
+  // Forgot Password Step 1: Send OTP to registered number
+  const handleForgotSendOTP = async () => {
+    if (!forgotPhone || forgotPhone.length < 7) {
+      Alert.alert(t('Error'), t('Please enter a valid phone number'))
+      return
+    }
+
+    setForgotLoading(true)
+    try {
+      const fullPhone = forgotCountry.code + forgotPhone.trim()
+      const res = await forgotPasswordSendOTP(fullPhone)
+      if (res?.success) {
+        Alert.alert(t('OTP Sent'), t('A 6-digit verification code has been sent to your registered phone number.'))
+        setForgotStep(2)
+      } else {
+        Alert.alert(t('Error'), res?.message || t('No registered account found with this phone number.'))
+      }
+    } catch (error) {
+      console.log('Forgot password OTP error:', error)
+      Alert.alert(t('Error'), error?.response?.data?.message || t('No account found with this phone number. Please sign up.'))
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  // Forgot Password Step 2: Verify OTP code
+  const handleVerifyForgotOTP = async () => {
+    if (!forgotOtp || forgotOtp.length < 4) {
+      Alert.alert(t('Error'), t('Please enter the 6-digit verification code.'))
+      return
+    }
+
+    setForgotLoading(true)
+    try {
+      const fullPhone = forgotCountry.code + forgotPhone.trim()
+      const res = await verifyOTP(fullPhone, forgotOtp.trim())
+      if (res?.success) {
+        setForgotStep(3)
+      } else {
+        Alert.alert(t('Error'), res?.message || t('Invalid or expired OTP.'))
+      }
+    } catch (error) {
+      console.log('Verify OTP error:', error)
+      Alert.alert(t('Error'), error?.response?.data?.message || t('Invalid or expired OTP.'))
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  // Forgot Password Step 3: Reset Password
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      Alert.alert(t('Error'), t('New password must be at least 6 characters.'))
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert(t('Error'), t('Passwords do not match.'))
+      return
+    }
+
+    setForgotLoading(true)
+    try {
+      const fullPhone = forgotCountry.code + forgotPhone.trim()
+      const res = await resetPasswordWithOTP({
+        phone: fullPhone,
+        otp: forgotOtp.trim(),
+        newPassword: newPassword.trim()
+      })
+
+      if (res?.success) {
+        if (res.user) {
+          await updateUser(res.user)
+        }
+        setShowForgotModal(false)
+        Alert.alert(t('Success'), t('Password reset successfully! Logged in.'))
+        if (res.user?.role) {
+          router.replace('/(buyer)/(tabs)/home')
+        } else {
+          router.replace('/(auth)/role-select')
+        }
+      } else {
+        Alert.alert(t('Error'), res?.message || t('Failed to reset password.'))
+      }
+    } catch (error) {
+      console.log('Reset password error:', error)
+      Alert.alert(t('Error'), error?.response?.data?.message || t('Failed to reset password.'))
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -160,15 +232,44 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-
-          {/* White Card */}
+          {/* Main Login Card */}
           <View style={styles.card}>
-
             {/* Title */}
             <Text style={styles.title}>{t('Welcome Back')}</Text>
             <Text style={styles.subtitle}>
               {t('Sign in to manage your global trade')}
             </Text>
+
+            {/* Mode Switcher Tabs */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tabBtn, loginMode === 'otp' && styles.tabBtnActive]}
+                onPress={() => setLoginMode('otp')}
+              >
+                <Ionicons
+                  name="keypad-outline"
+                  size={16}
+                  color={loginMode === 'otp' ? '#fff' : '#1a237e'}
+                />
+                <Text style={[styles.tabText, loginMode === 'otp' && styles.tabTextActive]}>
+                  {t('OTP Login')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.tabBtn, loginMode === 'password' && styles.tabBtnActive]}
+                onPress={() => setLoginMode('password')}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={16}
+                  color={loginMode === 'password' ? '#fff' : '#1a237e'}
+                />
+                <Text style={[styles.tabText, loginMode === 'password' && styles.tabTextActive]}>
+                  {t('Password Login')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             {/* Phone Label */}
             <Text style={styles.label}>{t('Phone number')}</Text>
@@ -194,37 +295,54 @@ export default function LoginScreen() {
               />
             </View>
 
-            {/* Continue Button */}
+            {/* Password Field (Only when in Password Login Mode) */}
+            {loginMode === 'password' && (
+              <View style={styles.passwordGroup}>
+                <Text style={styles.label}>{t('Password')}</Text>
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder={t('Enter your password')}
+                    placeholderTextColor="#aab"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Forgot Password Link */}
+                <TouchableOpacity
+                  style={styles.forgotBtn}
+                  onPress={openForgotPassword}
+                >
+                  <Text style={styles.forgotText}>{t('Forgot Password?')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Action Submit Button */}
             <TouchableOpacity
               style={[styles.continueBtn, loading && { opacity: 0.6 }]}
-              onPress={handleContinue}
+              onPress={loginMode === 'otp' ? handleOTPContinue : handlePasswordLogin}
               disabled={loading}
+              activeOpacity={0.88}
             >
-              <Text style={styles.continueBtnText}>
-                {loading ? t('Please wait...') : t('Continue')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* OR Divider */}
-            <View style={styles.orRow}>
-              <View style={styles.orLine} />
-              <Text style={styles.orText}>{t('OR')}</Text>
-              <View style={styles.orLine} />
-            </View>
-
-            {/* Google Button */}
-            <TouchableOpacity
-              style={[styles.googleBtn, (googleLoading || loading) && { opacity: 0.6 }]}
-              onPress={handleGoogleLogin}
-              disabled={googleLoading || loading}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color="#1a237e" size="small" />
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <>
-                  <Ionicons name="logo-google" size={18} color="#4285F4" />
-                  <Text style={styles.googleBtnText}>{t('Continue with Google')}</Text>
-                </>
+                <Text style={styles.continueBtnText}>
+                  {loginMode === 'otp' ? t('Continue with OTP') : t('Sign In')}
+                </Text>
               )}
             </TouchableOpacity>
 
@@ -238,26 +356,24 @@ export default function LoginScreen() {
                 {t('Sign Up')}
               </Text>
             </Text>
-
           </View>
 
           {/* Footer Links */}
           <View style={styles.footer}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.ubsglobalapp.com/privacy-policy').catch(() => Alert.alert(t('Error'), t('Unable to open Privacy Policy.')))}>
               <Text style={styles.footerLink}>{t('Privacy Policy')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.ubsglobalapp.com/terms-and-conditions').catch(() => Alert.alert(t('Error'), t('Unable to open Terms of Service.')))}>
               <Text style={styles.footerLink}>{t('Terms of Service')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('mailto:ubsimportingexporting@gmail.com').catch(() => Alert.alert(t('Contact Support'), 'ubsimportingexporting@gmail.com'))}>
               <Text style={styles.footerLink}>{t('Contact Support')}</Text>
             </TouchableOpacity>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Country Picker Modal */}
+      {/* Main Country Picker Modal */}
       <Modal
         visible={showPicker}
         transparent
@@ -291,6 +407,195 @@ export default function LoginScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={showForgotModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowForgotModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowForgotModal(false)}
+        >
+          <View style={[styles.modalSheet, { maxHeight: '80%' }]} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {forgotStep === 1 ? t('Forgot Password') : (forgotStep === 2 ? t('Enter Verification Code') : t('Create New Password'))}
+              </Text>
+              <TouchableOpacity onPress={() => setShowForgotModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            {forgotStep === 1 && (
+              // Step 1: Phone input & OTP dispatch
+              <View>
+                <Text style={styles.modalSubtitle}>
+                  {t('Enter your registered phone number to receive a verification code.')}
+                </Text>
+
+                <Text style={styles.label}>{t('Phone number')}</Text>
+                <View style={styles.phoneRow}>
+                  <TouchableOpacity
+                    style={styles.countryBtn}
+                    onPress={() => setShowForgotCountryPicker(true)}
+                  >
+                    <Text style={styles.countryCode}>{forgotCountry.code}</Text>
+                    <Text style={styles.dropdownArrow}>⌄</Text>
+                  </TouchableOpacity>
+
+                  <TextInput
+                    style={styles.phoneInput}
+                    placeholder={t('Enter mobile number')}
+                    placeholderTextColor="#aab"
+                    keyboardType="phone-pad"
+                    value={forgotPhone}
+                    onChangeText={setForgotPhone}
+                    maxLength={15}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.continueBtn, forgotLoading && { opacity: 0.6 }]}
+                  onPress={handleForgotSendOTP}
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.continueBtnText}>{t('Send Verification Code')}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {forgotStep === 2 && (
+              // Step 2: Enter & Verify OTP
+              <View>
+                <Text style={styles.modalSubtitle}>
+                  {t('Enter the 6-digit OTP code sent to')} {forgotCountry.code} {forgotPhone}.
+                </Text>
+
+                <Text style={styles.label}>{t('Verification Code (OTP)')}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={t('Enter 6-digit OTP')}
+                  placeholderTextColor="#aab"
+                  keyboardType="number-pad"
+                  value={forgotOtp}
+                  onChangeText={setForgotOtp}
+                  maxLength={6}
+                />
+
+                <TouchableOpacity
+                  style={[styles.continueBtn, { marginTop: 12 }, forgotLoading && { opacity: 0.6 }]}
+                  onPress={handleVerifyForgotOTP}
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.continueBtnText}>{t('Verify Code')}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {forgotStep === 3 && (
+              // Step 3: Create New Password
+              <View>
+                <Text style={styles.modalSubtitle}>
+                  {t('Enter your new account password below.')}
+                </Text>
+
+                <Text style={styles.label}>{t('New Password')}</Text>
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder={t('Enter new password')}
+                    placeholderTextColor="#aab"
+                    secureTextEntry={!showNewPassword}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    <Ionicons
+                      name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.label}>{t('Confirm New Password')}</Text>
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder={t('Confirm new password')}
+                    placeholderTextColor="#aab"
+                    secureTextEntry={!showNewPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.continueBtn, { marginTop: 18 }, forgotLoading && { opacity: 0.6 }]}
+                  onPress={handleResetPassword}
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.continueBtnText}>{t('Set New Password & Sign In')}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Forgot Phone Country Picker Modal */}
+      <Modal
+        visible={showForgotCountryPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowForgotCountryPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowForgotCountryPicker(false)}
+        >
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>{t('Select Country Code')}</Text>
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={(item) => item.code + item.name}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryRow}
+                  onPress={() => {
+                    setForgotCountry(item)
+                    setShowForgotCountryPicker(false)
+                  }}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <Text style={styles.countryName}>{item.name}</Text>
+                  <Text style={styles.countryCodeRight}>{item.code}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -306,8 +611,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
-
-  // Card
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 24,
@@ -319,7 +622,6 @@ const styles = StyleSheet.create({
     elevation: 6,
     marginBottom: 24,
   },
-
   title: {
     fontSize: 28,
     fontWeight: '700',
@@ -331,21 +633,47 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
   },
-
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f7fc',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#dde3f0',
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  tabBtnActive: {
+    backgroundColor: '#1a237e',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1a237e',
+  },
+  tabTextActive: {
+    color: '#ffffff',
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1a237e',
     marginBottom: 10,
   },
-
-  // Phone Row
   phoneRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   countryBtn: {
     flexDirection: 'row',
@@ -380,14 +708,44 @@ const styles = StyleSheet.create({
     color: '#1a237e',
     backgroundColor: '#f5f7fc',
   },
-
-  // Continue Button
+  passwordGroup: {
+    marginBottom: 18,
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#dde3f0',
+    borderRadius: 12,
+    backgroundColor: '#f5f7fc',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 16,
+    fontSize: 15,
+    color: '#1a237e',
+  },
+  eyeBtn: {
+    padding: 8,
+  },
+  forgotBtn: {
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+  },
+  forgotText: {
+    color: '#1565c0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   continueBtn: {
     backgroundColor: '#1a237e',
     borderRadius: 14,
     paddingVertical: 18,
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 20,
   },
   continueBtnText: {
     color: '#fff',
@@ -395,59 +753,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-
-  // OR Divider
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  orText: {
-    fontSize: 13,
-    color: '#999',
-    fontWeight: '500',
-    letterSpacing: 1,
-  },
-
-  // Google Button
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#dde3f0',
-    borderRadius: 14,
-    paddingVertical: 16,
-    marginBottom: 24,
-    gap: 12,
-    backgroundColor: '#fff',
-  },
-  googleIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  googleIconText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4285F4',
-  },
-  googleBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1a237e',
-  },
-
-  // Sign Up
   signupText: {
     textAlign: 'center',
     fontSize: 14,
@@ -457,8 +762,6 @@ const styles = StyleSheet.create({
     color: '#29b6f6',
     fontWeight: '700',
   },
-
-  // Footer
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -469,8 +772,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -481,13 +782,35 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    maxHeight: '65%',
+    maxHeight: '75%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1a237e',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#666',
     marginBottom: 16,
+    lineHeight: 18,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: '#dde3f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#1a237e',
+    backgroundColor: '#f5f7fc',
+    marginBottom: 14,
   },
   countryRow: {
     flexDirection: 'row',

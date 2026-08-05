@@ -8,11 +8,45 @@ import SellerHeader from '../../components/seller/SellerHeader';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
 
+const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Navy', 'Gray', 'Beige', 'Gold', 'Silver'];
+const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', '38', '40', 'Free Size'];
+
 export default function EditProduct() {
   const { products, updateProduct, deleteProduct } = useSeller();
   const { id } = useLocalSearchParams();
   const [product, setProduct] = useState(null);
-  const [form, setForm] = useState({ title: '', description: '', sku: '', price: '', comparePrice: '', cost: '', category: '', subcategory: '', stock: '10', alertThreshold: '3', inStock: true, weight: '', length: '', width: '', height: '', freeShipping: false, shippingFee: '' });
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    sku: '',
+    price: '',
+    comparePrice: '',
+    cost: '',
+    category: '',
+    subcategory: '',
+    stock: '10',
+    alertThreshold: '3',
+    inStock: true,
+    weight: '',
+    length: '',
+    width: '',
+    height: '',
+    freeShipping: false,
+    shippingFee: '',
+    brand: '',
+    color: '',
+    colors: [],
+    sizes: [],
+    countryOfOrigin: '',
+    warranty: '',
+    material: '',
+    fit: '',
+    sleeve: '',
+    neck: '',
+    refundPolicy: ''
+  });
+  const [customColor, setCustomColor] = useState('');
+  const [customSize, setCustomSize] = useState('');
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -49,10 +83,56 @@ export default function EditProduct() {
         height: String(product.height || ''),
         freeShipping: product.freeShipping || false,
         shippingFee: String(product.shippingFee || ''),
+        brand: product.brand || '',
+        color: product.color || '',
+        colors: Array.isArray(product.colors) ? product.colors : (product.color ? [product.color] : []),
+        sizes: Array.isArray(product.sizes) ? product.sizes : [],
+        countryOfOrigin: product.countryOfOrigin || '',
+        warranty: product.warranty || '',
+        material: product.material || '',
+        fit: product.fit || '',
+        sleeve: product.sleeve || '',
+        neck: product.neck || '',
+        refundPolicy: product.refundPolicy || ''
       });
       setImages(product.images || []);
     }
   }, [product]);
+
+  const toggleColor = (c) => {
+    setForm(prev => {
+      const current = prev.colors || [];
+      const updated = current.includes(c) ? current.filter(item => item !== c) : [...current, c];
+      return { ...prev, colors: updated, color: updated[0] || '' };
+    });
+  };
+
+  const addCustomColor = () => {
+    const trimmed = customColor.trim();
+    if (trimmed && !(form.colors || []).includes(trimmed)) {
+      setForm(prev => {
+        const updated = [...(prev.colors || []), trimmed];
+        return { ...prev, colors: updated, color: updated[0] || '' };
+      });
+      setCustomColor('');
+    }
+  };
+
+  const toggleSize = (s) => {
+    setForm(prev => {
+      const current = prev.sizes || [];
+      const updated = current.includes(s) ? current.filter(item => item !== s) : [...current, s];
+      return { ...prev, sizes: updated };
+    });
+  };
+
+  const addCustomSize = () => {
+    const trimmed = customSize.trim();
+    if (trimmed && !(form.sizes || []).includes(trimmed)) {
+      setForm(prev => ({ ...prev, sizes: [...(prev.sizes || []), trimmed] }));
+      setCustomSize('');
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
@@ -130,6 +210,64 @@ export default function EditProduct() {
           <TextInput style={styles.input} placeholder="Product Title" value={form.title} onChangeText={(text) => setForm({ ...form, title: text })} />
           <TextInput style={[styles.input, styles.textArea]} placeholder="Description" multiline value={form.description} onChangeText={(text) => setForm({ ...form, description: text })} />
           <TextInput style={styles.input} placeholder="SKU / Product Code" value={form.sku} onChangeText={(text) => setForm({ ...form, sku: text })} />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Specifications & Attributes</Text>
+          <Text style={styles.fieldLabel}>Brand Name</Text>
+          <TextInput style={styles.input} placeholder="Brand Name (e.g. Nike, Samsung)" value={form.brand} onChangeText={(brand) => setForm({ ...form, brand })} />
+
+          <Text style={styles.fieldLabel}>Available Colors</Text>
+          <View style={styles.chipsContainer}>
+            {PRESET_COLORS.map((c) => {
+              const selected = (form.colors || []).includes(c);
+              return (
+                <TouchableOpacity key={c} style={[styles.chip, selected && styles.chipSelected]} onPress={() => toggleColor(c)}>
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{selected ? '✓ ' : ''}{c}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={styles.customAddRow}>
+            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Add custom color" value={customColor} onChangeText={setCustomColor} />
+            <TouchableOpacity style={styles.addChipBtn} onPress={addCustomColor}><Text style={styles.addChipBtnText}>+ Add</Text></TouchableOpacity>
+          </View>
+
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Available Sizes</Text>
+          <View style={styles.chipsContainer}>
+            {PRESET_SIZES.map((s) => {
+              const selected = (form.sizes || []).includes(s);
+              return (
+                <TouchableOpacity key={s} style={[styles.chip, selected && styles.chipSelected]} onPress={() => toggleSize(s)}>
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{selected ? '✓ ' : ''}{s}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={styles.customAddRow}>
+            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Add custom size" value={customSize} onChangeText={setCustomSize} />
+            <TouchableOpacity style={styles.addChipBtn} onPress={addCustomSize}><Text style={styles.addChipBtnText}>+ Add</Text></TouchableOpacity>
+          </View>
+
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Country of Origin</Text>
+          <TextInput style={styles.input} placeholder="Country of Origin (e.g. India, USA)" value={form.countryOfOrigin} onChangeText={(countryOfOrigin) => setForm({ ...form, countryOfOrigin })} />
+
+          <Text style={styles.fieldLabel}>Warranty / Guarantee</Text>
+          <TextInput style={styles.input} placeholder="Warranty (e.g. 1 Year Manufacturer Warranty)" value={form.warranty} onChangeText={(warranty) => setForm({ ...form, warranty })} />
+
+          <Text style={styles.fieldLabel}>Material / Fabric</Text>
+          <TextInput style={styles.input} placeholder="Material (e.g. 100% Cotton, Leather)" value={form.material} onChangeText={(material) => setForm({ ...form, material })} />
+
+          <View style={styles.row}>
+            <TextInput style={[styles.input, styles.halfInput]} placeholder="Fit (e.g. Slim, Regular)" value={form.fit} onChangeText={(fit) => setForm({ ...form, fit })} />
+            <TextInput style={[styles.input, styles.halfInput]} placeholder="Sleeve (e.g. Full, Short)" value={form.sleeve} onChangeText={(sleeve) => setForm({ ...form, sleeve })} />
+          </View>
+
+          <Text style={styles.fieldLabel}>Neck / Collar Type</Text>
+          <TextInput style={styles.input} placeholder="Neck Type (e.g. Round Neck, Polo)" value={form.neck} onChangeText={(neck) => setForm({ ...form, neck })} />
+
+          <Text style={styles.fieldLabel}>Refund & Return Policy</Text>
+          <TextInput style={styles.input} placeholder="Refund Policy (e.g. 7 Days Replacement)" value={form.refundPolicy} onChangeText={(refundPolicy) => setForm({ ...form, refundPolicy })} />
         </View>
 
         <View style={styles.card}>
@@ -232,4 +370,13 @@ const styles = StyleSheet.create({
   saveButton: { marginTop: 20, borderRadius: 18, backgroundColor: colors.primary, paddingVertical: 16, alignItems: 'center' },
   saveLabel: { color: '#fff', fontSize: 15, fontWeight: '700' },
   error: { marginTop: 10, color: colors.error, fontSize: 13, textAlign: 'center' },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#666', marginBottom: 6, textTransform: 'uppercase' },
+  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#f0f3fa', borderWidth: 1, borderColor: '#e0e6f5' },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 13, color: '#444', fontWeight: '600' },
+  chipTextSelected: { color: '#fff' },
+  customAddRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  addChipBtn: { backgroundColor: '#00c853', paddingHorizontal: 14, paddingVertical: 14, borderRadius: 12 },
+  addChipBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

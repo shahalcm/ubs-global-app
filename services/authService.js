@@ -28,6 +28,26 @@ export const loginWithPhone = async (phone) => {
   return res.data
 }
 
+// Login with password
+export const loginWithPassword = async ({ phone, email, password }) => {
+  const res = await api.post('/auth/login', { phone, email, password })
+  await saveUserData(res.data)
+  return res.data
+}
+
+// Forgot Password - Send OTP
+export const forgotPasswordSendOTP = async (phone) => {
+  const res = await api.post('/auth/forgot-password', { phone })
+  return res.data
+}
+
+// Reset Password with OTP
+export const resetPasswordWithOTP = async ({ phone, otp, newPassword }) => {
+  const res = await api.post('/auth/reset-password-otp', { phone, otp, newPassword })
+  await saveUserData(res.data)
+  return res.data
+}
+
 // Google auth
 export const googleAuth = async (googleData) => {
   const res = await api.post('/auth/google/mobile', googleData)

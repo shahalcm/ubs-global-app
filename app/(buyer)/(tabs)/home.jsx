@@ -17,7 +17,7 @@ import { Image } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getProductImageUrl } from "../../../utils/image";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import api from "../../../services/api";
 import { CategoryCard } from "../../../components/shared/CategoryCard";
@@ -26,6 +26,9 @@ import { useAuth } from "../../../context/AuthContext";
 import { updateUserLocation } from "../../../services/userService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { getRecentlyViewed } from "../../../services/recentlyViewed";
+import { useCart } from "../../../context/CartContext";
+import { toggleWishlist } from "../../../services/wishlistService";
 
 const { width } = Dimensions.get("window");
 
@@ -174,12 +177,29 @@ const BANNERS = [
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const { addToCart } = useCart();
   const [search, setSearch] = useState("");
   const [activeBanner, setActiveBanner] = useState(0);
   const [categories, setCategories] = useState(CATEGORIES);
   const [banners, setBanners] = useState(BANNERS);
   const [featuredProducts, setFeaturedProducts] = useState(FEATURED_PRODUCTS);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const loadRecentlyViewed = React.useCallback(async () => {
+    try {
+      const items = await getRecentlyViewed();
+      setRecentlyViewed(items || []);
+    } catch (e) {
+      console.log('Error loading recently viewed on home:', e);
+    }
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRecentlyViewed();
+    }, [loadRecentlyViewed])
+  );
 
   const { user, updateUser } = useAuth();
   const [locationModalVisible, setLocationModalVisible] = useState(false);
@@ -448,12 +468,19 @@ export default function HomeScreen() {
       }
       activeOpacity={0.9}
     >
-      <Image
-        source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
-        style={styles.productImage}
-        contentFit="cover"
-        transition={200}
-      />
+      <View style={{ position: 'relative' }}>
+        <Image
+          source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
+          style={styles.productImage}
+          contentFit="cover"
+          transition={200}
+        />
+        {Number(item.stock ?? 0) <= 0 && (
+          <View style={styles.outOfStockBadgeOverlay}>
+            <Text style={styles.outOfStockBadgeOverlayText}>{t('Out of Stock')}</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.productInfo}>
         <Text style={styles.productCategory} numberOfLines={1}>{t(item.category?.name || item.category)}</Text>
         <Text style={styles.productName} numberOfLines={1}>{t(item.title || item.name)}</Text>
@@ -476,6 +503,99 @@ export default function HomeScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  const renderRecentlyViewedProduct = ({ item }) => {
+    const isOutOfStock = Number(item.stock ?? 0) <= 0;
+    const hasDiscount = item.comparePrice && Number(item.comparePrice) > Number(item.price);
+    const discountPercent = hasDiscount
+      ? Math.round(((item.comparePrice - item.price) / item.comparePrice) * 100)
+      : 0;
+
+    return (
+      <TouchableOpacity
+        style={styles.recentProductCard}
+        onPress={() =>
+          router.push({
+            pathname: "/(buyer)/product-details",
+            params: { id: item._id || item.id },
+          })
+        }
+        activeOpacity={0.9}
+      >
+        <View style={{ position: 'relative' }}>
+          <Image
+            source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
+            style={styles.recentProductImage}
+            contentFit="cover"
+            transition={200}
+          />
+          {hasDiscount && (
+            <View style={styles.recentDiscountBadge}>
+              <Text style={styles.recentDiscountText}>-{discountPercent}%</Text>
+            </View>
+          )}
+          {isOutOfStock && (
+            <View style={styles.outOfStockBadgeOverlay}>
+              <Text style={styles.outOfStockBadgeOverlayText}>{t('Out of Stock')}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.recentFavBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleWishlist(item._id || item.id);
+              Alert.alert(t('Wishlist'), t('Updated wishlist!'));
+            }}
+          >
+            <MaterialCommunityIcons name="heart-outline" size={16} color="#d32f2f" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.recentProductInfo}>
+          <Text style={styles.productCategory} numberOfLines={1}>
+            {t(item.category?.name || item.category || 'General')}
+          </Text>
+          <Text style={styles.recentProductName} numberOfLines={2}>
+            {t(item.title || item.name)}
+          </Text>
+
+          <View style={styles.recentRatingSellerRow}>
+            <View style={styles.recentRatingContainer}>
+              <MaterialCommunityIcons name="star" size={12} color="#ffb300" />
+              <Text style={styles.recentRatingText}>{item.rating || 4.5}</Text>
+            </View>
+            {item.sellerId?.shopName && (
+              <Text style={styles.recentSellerText} numberOfLines={1}>
+                {item.sellerId.shopName}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.recentFooterRow}>
+            <View>
+              <Text style={styles.productPrice}>${item.price}</Text>
+              {hasDiscount && (
+                <Text style={styles.recentComparePrice}>${item.comparePrice}</Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.recentAddToCartBtn, isOutOfStock && { opacity: 0.5 }]}
+              disabled={isOutOfStock}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (!isOutOfStock) {
+                  addToCart(item);
+                  Alert.alert(t('Success'), t('Added to cart!'));
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="cart-plus" size={16} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -759,6 +879,27 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.featuredList}
         />
+
+        {/* Recently Viewed Section */}
+        {recentlyViewed && recentlyViewed.length > 0 && (
+          <View style={{ marginTop: 24, marginBottom: 8 }}>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>{t('Recently Viewed')}</Text>
+              <TouchableOpacity onPress={() => router.push("/(buyer)/recently-viewed")}>
+                <Text style={styles.viewAll}>{t('view_all')} &gt;</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={recentlyViewed}
+              renderItem={renderRecentlyViewedProduct}
+              keyExtractor={(item, index) => (item._id || item.id || index).toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.featuredList}
+            />
+          </View>
+        )}
 
         {/* Secure Payments Card */}
         <View style={styles.secureCard}>
@@ -1307,9 +1448,311 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+  outOfStockBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(211, 47, 47, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  outOfStockBadgeOverlayText: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#f5f5f5",
+    paddingTop: 6,
+  },
+  sellerText: {
+    fontSize: 10,
+    color: '#888',
+    flex: 1,
+  },
+
+  // Secure Payments Card
+  secureCard: {
+    margin: 16,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#eef1f8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  secureTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a237e",
+    marginBottom: 8,
+  },
+  secureDesc: {
+    fontSize: 13,
+    color: "#666",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  secureBadgeRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  secureBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#f5f7fc",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#eef1f8",
+  },
+  secureBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1a237e",
+  },
+  secureImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+
+  // Location Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+    maxHeight: '85%',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1a237e',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalLoading: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  gpsBtn: {
+    backgroundColor: '#e8eaf6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#c5cae9',
+  },
+  gpsBtnIcon: {
+    marginRight: 8,
+  },
+  gpsBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a237e',
+  },
+  modalOrRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#eee',
+  },
+  modalOrText: {
+    marginHorizontal: 12,
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '700',
+  },
+  modalOrTextSmall: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    marginBottom: 12,
+    fontWeight: "600",
+  },
+  modalInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: '#f5f6fa',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+  },
+  modalSubmitBtn: {
+    backgroundColor: '#1a237e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    shadowColor: '#1a237e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  outOfStockBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(211, 47, 47, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  outOfStockBadgeOverlayText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   modalSubmitText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  recentProductCard: {
+    width: 165,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    marginRight: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  recentProductImage: {
+    width: '100%',
+    height: 125,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
+  recentDiscountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#d32f2f',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  recentDiscountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  recentFavBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 5,
+  },
+  recentProductInfo: {
+    padding: 10,
+  },
+  recentProductName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1a237e',
+    marginTop: 2,
+    lineHeight: 17,
+    height: 34,
+  },
+  recentRatingSellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  recentRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  recentRatingText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#555',
+  },
+  recentSellerText: {
+    fontSize: 10,
+    color: '#888',
+    maxWidth: 80,
+  },
+  recentFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  recentComparePrice: {
+    fontSize: 10,
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  recentAddToCartBtn: {
+    backgroundColor: '#1a237e',
+    borderRadius: 10,
+    padding: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

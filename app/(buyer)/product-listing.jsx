@@ -223,10 +223,12 @@ export default function ProductListingScreen() {
            (category || item.category?.name || item.category || '').toLowerCase().trim() === 'service-portal') && (
           <View style={styles.priceRow}>
             <Text style={styles.priceText}>${item.price}</Text>
-            {item.stock > 0 && (
+            {Number(item.stock ?? 0) > 0 ? (
               <TouchableOpacity style={styles.cartBtn}>
                 <Text style={styles.cartBtnIcon}>🛒</Text>
               </TouchableOpacity>
+            ) : (
+              <Text style={{ fontSize: 10, color: '#d32f2f', fontWeight: '700' }}>Out of Stock</Text>
             )}
           </View>
         )}

@@ -36,6 +36,9 @@ const CATEGORIES = [
   { label: 'Oils', value: 'oils' },
 ]
 
+const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Navy', 'Gray', 'Beige', 'Gold', 'Silver']
+const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', '38', '40', 'Free Size']
+
 export default function AddProductScreen() {
   const { loadDashboard } = useSeller()
   const [images, setImages] = useState([])
@@ -45,6 +48,20 @@ export default function AddProductScreen() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [sku, setSku] = useState('')
+
+  // Specifications & Attributes
+  const [brand, setBrand] = useState('')
+  const [selectedColors, setSelectedColors] = useState([])
+  const [customColor, setCustomColor] = useState('')
+  const [selectedSizes, setSelectedSizes] = useState([])
+  const [customSize, setCustomSize] = useState('')
+  const [countryOfOrigin, setCountryOfOrigin] = useState('')
+  const [warranty, setWarranty] = useState('')
+  const [material, setMaterial] = useState('')
+  const [fit, setFit] = useState('')
+  const [sleeve, setSleeve] = useState('')
+  const [neck, setNeck] = useState('')
+  const [refundPolicy, setRefundPolicy] = useState('')
 
   // Pricing
   const [price, setPrice] = useState('')
@@ -67,6 +84,30 @@ export default function AddProductScreen() {
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
   const [shippingFee, setShippingFee] = useState('')
+
+  const toggleColor = (c) => {
+    setSelectedColors(prev => prev.includes(c) ? prev.filter(item => item !== c) : [...prev, c])
+  }
+
+  const addCustomColor = () => {
+    const trimmed = customColor.trim()
+    if (trimmed && !selectedColors.includes(trimmed)) {
+      setSelectedColors(prev => [...prev, trimmed])
+      setCustomColor('')
+    }
+  }
+
+  const toggleSize = (s) => {
+    setSelectedSizes(prev => prev.includes(s) ? prev.filter(item => item !== s) : [...prev, s])
+  }
+
+  const addCustomSize = () => {
+    const trimmed = customSize.trim()
+    if (trimmed && !selectedSizes.includes(trimmed)) {
+      setSelectedSizes(prev => [...prev, trimmed])
+      setCustomSize('')
+    }
+  }
 
   // Pick image from gallery
   const pickImage = async () => {
@@ -170,6 +211,17 @@ export default function AddProductScreen() {
       formData.append('height', height || '0')
       formData.append('freeShipping', freeShipping.toString())
       formData.append('shippingFee', shippingFee || '0')
+      formData.append('brand', brand.trim())
+      formData.append('color', selectedColors[0] || '')
+      formData.append('colors', JSON.stringify(selectedColors))
+      formData.append('sizes', JSON.stringify(selectedSizes))
+      formData.append('countryOfOrigin', countryOfOrigin.trim())
+      formData.append('warranty', warranty.trim())
+      formData.append('material', material.trim())
+      formData.append('fit', fit.trim())
+      formData.append('sleeve', sleeve.trim())
+      formData.append('neck', neck.trim())
+      formData.append('refundPolicy', refundPolicy.trim())
 
       const response = await api.post(
         '/products',
@@ -341,6 +393,150 @@ export default function AddProductScreen() {
               placeholderTextColor="#bbb"
               value={sku}
               onChangeText={setSku}
+            />
+          </View>
+
+          {/* PRODUCT SPECIFICATIONS & ATTRIBUTES SECTION */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Product Specifications & Details</Text>
+
+            <Text style={styles.fieldLabel}>BRAND NAME</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Nike, Samsung, Zara, UBS Exclusive..."
+              placeholderTextColor="#bbb"
+              value={brand}
+              onChangeText={setBrand}
+            />
+
+            {/* COLOR OPTIONS */}
+            <Text style={styles.fieldLabel}>AVAILABLE COLORS</Text>
+            <View style={styles.chipsContainer}>
+              {PRESET_COLORS.map((c) => {
+                const selected = selectedColors.includes(c)
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    onPress={() => toggleColor(c)}
+                  >
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                      {selected ? '✓ ' : ''}{c}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <View style={styles.customAddRow}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Add custom color (e.g. Olive Green)"
+                placeholderTextColor="#bbb"
+                value={customColor}
+                onChangeText={setCustomColor}
+              />
+              <TouchableOpacity style={styles.addChipBtn} onPress={addCustomColor}>
+                <Text style={styles.addChipBtnText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* SIZE OPTIONS */}
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>AVAILABLE SIZES</Text>
+            <View style={styles.chipsContainer}>
+              {PRESET_SIZES.map((s) => {
+                const selected = selectedSizes.includes(s)
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    onPress={() => toggleSize(s)}
+                  >
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                      {selected ? '✓ ' : ''}{s}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <View style={styles.customAddRow}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Add custom size (e.g. 42 EU, Custom)"
+                placeholderTextColor="#bbb"
+                value={customSize}
+                onChangeText={setCustomSize}
+              />
+              <TouchableOpacity style={styles.addChipBtn} onPress={addCustomSize}>
+                <Text style={styles.addChipBtnText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>COUNTRY OF ORIGIN</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. India, USA, Italy, China..."
+              placeholderTextColor="#bbb"
+              value={countryOfOrigin}
+              onChangeText={setCountryOfOrigin}
+            />
+
+            <Text style={styles.fieldLabel}>WARRANTY / GUARANTEE</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 1 Year Manufacturer Warranty, 6 Months..."
+              placeholderTextColor="#bbb"
+              value={warranty}
+              onChangeText={setWarranty}
+            />
+
+            <Text style={styles.fieldLabel}>MATERIAL / FABRIC (OPTIONAL)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 100% Pure Cotton, Genuine Leather, Stainless Steel..."
+              placeholderTextColor="#bbb"
+              value={material}
+              onChangeText={setMaterial}
+            />
+
+            <View style={styles.dimensionsRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>FIT TYPE</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Slim, Regular"
+                  placeholderTextColor="#bbb"
+                  value={fit}
+                  onChangeText={setFit}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>SLEEVE TYPE</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Full, Short, 3/4"
+                  placeholderTextColor="#bbb"
+                  value={sleeve}
+                  onChangeText={setSleeve}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.fieldLabel}>NECK / COLLAR TYPE</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Round Neck, V-Neck, Polo Collar..."
+              placeholderTextColor="#bbb"
+              value={neck}
+              onChangeText={setNeck}
+            />
+
+            <Text style={styles.fieldLabel}>RETURN & REFUND POLICY</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 7 Days Easy Return & Replacement, Non-Returnable..."
+              placeholderTextColor="#bbb"
+              value={refundPolicy}
+              onChangeText={setRefundPolicy}
             />
           </View>
 
@@ -793,5 +989,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginVertical: 6,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#f0f3fa',
+    borderWidth: 1,
+    borderColor: '#e0e6f5',
+  },
+  chipSelected: {
+    backgroundColor: '#1a237e',
+    borderColor: '#1a237e',
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#444',
+    fontWeight: '600',
+  },
+  chipTextSelected: {
+    color: '#fff',
+  },
+  customAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  addChipBtn: {
+    backgroundColor: '#00c853',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  addChipBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
   },
 })

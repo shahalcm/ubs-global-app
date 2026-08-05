@@ -1,4 +1,3 @@
-// app/(auth)/signup.jsx
 import React, { useState } from 'react'
 import {
   View,
@@ -12,6 +11,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -157,7 +157,20 @@ export default function SignupScreen() {
 
           {/* Terms */}
           <Text style={styles.terms}>
-            {t('By continuing, you agree to UBS Global\'s Terms of Service and Privacy Policy regarding international trade and data handling.')}
+            {t('By continuing, you agree to UBS Global\'s')}{' '}
+            <Text
+              style={{ color: '#1565c0', fontWeight: '700' }}
+              onPress={() => Linking.openURL('https://www.ubsglobalapp.com/terms-and-conditions').catch(() => {})}
+            >
+              {t('Terms of Service')}
+            </Text>{' '}
+            {t('and')}{' '}
+            <Text
+              style={{ color: '#1565c0', fontWeight: '700' }}
+              onPress={() => Linking.openURL('https://www.ubsglobalapp.com/privacy-policy').catch(() => {})}
+            >
+              {t('Privacy Policy')}
+            </Text>.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

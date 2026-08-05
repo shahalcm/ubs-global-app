@@ -41,7 +41,32 @@ const getInputIcon = (field) => {
   }
 }
 
-// Ultra-Stable Standalone Memoized Input Component with Fixed Android Autofill Handling
+const getFieldConfig = (field) => {
+  switch (field) {
+    case 'fullName':
+      return { autoComplete: 'name', textContentType: 'name' }
+    case 'phone':
+      return { autoComplete: 'tel', textContentType: 'telephoneNumber' }
+    case 'email':
+      return { autoComplete: 'email', textContentType: 'emailAddress' }
+    case 'street':
+      return { autoComplete: 'street-address', textContentType: 'fullStreetAddress' }
+    case 'landmark':
+      return { autoComplete: 'off', textContentType: 'none' }
+    case 'city':
+      return { autoComplete: 'postal-address-locality', textContentType: 'addressCity' }
+    case 'state':
+      return { autoComplete: 'postal-address-region', textContentType: 'addressState' }
+    case 'country':
+      return { autoComplete: 'country', textContentType: 'countryName' }
+    case 'zipCode':
+      return { autoComplete: 'postal-code', textContentType: 'postalCode' }
+    default:
+      return { autoComplete: 'off', textContentType: 'none' }
+  }
+}
+
+// Ultra-Stable Standalone Memoized Input Component with Touch Support & Fixed Autofill
 const AddressInput = React.memo(React.forwardRef(({
   field,
   label,
@@ -59,16 +84,7 @@ const AddressInput = React.memo(React.forwardRef(({
   required = false
 }, ref) => {
   const icon = getInputIcon(field)
-
-  useEffect(() => {
-    return () => {
-      if (ref && ref.current) {
-        try {
-          ref.current.blur()
-        } catch (e) {}
-      }
-    }
-  }, [ref])
+  const fieldConfig = getFieldConfig(field)
 
   const handleChangeText = useCallback((text) => {
     onChangeText(field, text)
@@ -86,6 +102,12 @@ const AddressInput = React.memo(React.forwardRef(({
     onSubmitEditing(field)
   }, [field, onSubmitEditing])
 
+  const handleContainerPress = useCallback(() => {
+    if (ref && ref.current) {
+      ref.current.focus()
+    }
+  }, [ref])
+
   return (
     <View style={[styles.inputWrapper, halfWidth && { flex: 1 }]}>
       <Text style={[
@@ -95,11 +117,15 @@ const AddressInput = React.memo(React.forwardRef(({
       ]}>
         {label} {required && <Text style={{ color: colors.error }}>*</Text>}
       </Text>
-      <View style={[
-        styles.inputContainer,
-        isFocused && styles.inputContainerFocused,
-        !!error && styles.inputContainerError
-      ]}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={handleContainerPress}
+        style={[
+          styles.inputContainer,
+          isFocused && styles.inputContainerFocused,
+          !!error && styles.inputContainerError
+        ]}
+      >
         <MaterialCommunityIcons
           name={icon}
           size={18}
@@ -117,16 +143,15 @@ const AddressInput = React.memo(React.forwardRef(({
           onBlur={handleBlur}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
-          autoComplete="off"
-          importantForAutofill="no"
-          textContentType="none"
+          autoComplete={fieldConfig.autoComplete}
+          textContentType={fieldConfig.textContentType}
           autoCorrect={false}
           returnKeyType={returnKeyType}
           onSubmitEditing={handleSubmitEditing}
           blurOnSubmit={returnKeyType === 'done'}
           accessibilityLabel={label}
         />
-      </View>
+      </TouchableOpacity>
       {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   )
@@ -428,9 +453,10 @@ export default function OrderSummaryScreen() {
     setLoading(true)
 
     try {
+      const effectiveSellerId = sellerId || product?.sellerId
       const res = await createRazorpayOrder({
         items: [{ productId, quantity: Number(quantity) || 1 }],
-        sellerId,
+        sellerId: effectiveSellerId,
         currency: currencyCode,
         shippingSpeed,
         sellerNote: (sellerNote || '').trim(),
@@ -510,11 +536,9 @@ export default function OrderSummaryScreen() {
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 }]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={handleScrollBegin}
-          scrollEventThrottle={16}
         >
           {/* Progress Stepper Bar */}
           <View style={styles.stepperContainer}>
@@ -1458,10 +1482,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#e2e8f0',
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',

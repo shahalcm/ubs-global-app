@@ -208,18 +208,49 @@ export default function BuyerChatScreen() {
   const handleSend = async () => {
     if (!inputText.trim()) return
 
-    const messageData = {
+    const sendText = inputText.trim()
+    const tempId = 'temp_' + Date.now()
+
+    const buyerMsgObj = {
+      _id: tempId,
       senderId: user._id,
       senderType: 'buyer',
       senderName: user.name,
       senderAvatar: user.avatar,
       messageType: 'text',
-      text: inputText.trim()
+      text: sendText,
+      createdAt: new Date()
     }
 
-    socketSendMessage(roomId, messageData)
+    // Append buyer message to screen state instantly
+    setMessages(prev => [...prev, buyerMsgObj])
     setInputText('')
     scrollToBottom()
+
+    // Show bot typing animation
+    setBotTyping(true)
+    startTypingAnimation()
+
+    // Socket emit
+    socketSendMessage(roomId, buyerMsgObj)
+
+    // Backup REST call to guarantee AI response delivery even if WebSockets disconnect
+    try {
+      const res = await api.post(`/chat/${roomId}/messages`, { text: sendText })
+      setBotTyping(false)
+      if (res.data && res.data.success && res.data.aiMessage) {
+        const aiMsg = res.data.aiMessage
+        setMessages(prev => {
+          const exists = prev.find(m => m._id === aiMsg._id || m.text === aiMsg.text)
+          if (exists) return prev
+          return [...prev, aiMsg]
+        })
+        scrollToBottom()
+      }
+    } catch (err) {
+      setBotTyping(false)
+      console.log('REST send error:', err)
+    }
   }
 
   const renderMessage = ({ item }) => {
