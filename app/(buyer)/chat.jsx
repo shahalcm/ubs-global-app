@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Image,
   Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -34,6 +33,7 @@ export default function BuyerChatScreen() {
   const { user } = useAuth()
   const { startCall } = useCall()
   const router = useRouter()
+
   const [messages, setMessages] = useState([])
   const [room, setRoom] = useState(null)
   const [inputText, setInputText] = useState('')
@@ -74,7 +74,6 @@ export default function BuyerChatScreen() {
         setMessages(res.data.messages || [])
         setBotActive(res.data.botActive ?? true)
         
-        // If bot is active, but seller took over earlier (like we check bot active status)
         if (res.data.botActive === false) {
           setSellerTookOver(true)
         }
@@ -83,6 +82,76 @@ export default function BuyerChatScreen() {
     } catch (error) {
       console.log('Load messages error:', error)
     }
+  }
+
+  const setupSocket = () => {
+    joinRoom(roomId)
+
+    onReceiveMessage((message) => {
+      setMessages(prev => {
+        const exists = prev.find(m => m._id === message._id)
+        if (exists) return prev
+        return [...prev, message]
+      })
+      scrollToBottom()
+    })
+
+    const socket = getSocket()
+    socket?.on('botTyping', (data) => {
+      if (data.roomId === roomId) {
+        setBotTyping(data.isTyping)
+        if (data.isTyping) {
+          startTypingAnimation()
+        }
+      }
+    })
+
+    socket?.on('sellerTookOver', (data) => {
+      if (data.roomId === roomId) {
+        setBotActive(false)
+        setSellerTookOver(true)
+        setMessages(prev => {
+          const exists = prev.find(m => m.text === data.message && m.senderType === 'system')
+          if (exists) return prev
+          return [...prev, {
+            _id: Date.now().toString(),
+            senderType: 'system',
+            text: data.message,
+            createdAt: new Date()
+          }]
+        })
+        scrollToBottom()
+      }
+    })
+
+    socket?.on('userTyping', (data) => {
+      if (data.roomId === roomId) {
+        setSellerOnline(true)
+      }
+    })
+  }
+
+  const startTypingAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(typingAnim, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true
+        }),
+        Animated.timing(typingAnim, {
+          toValue: 0,
+          duration: 450,
+          useNativeDriver: true
+        })
+      ])
+    ).start()
+  }
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true })
+    }, 100)
   }
 
   const handleLongPressMessage = (message) => {
@@ -115,84 +184,6 @@ export default function BuyerChatScreen() {
     )
   }
 
-  const setupSocket = () => {
-    joinRoom(roomId)
-
-    // Receive messages
-    onReceiveMessage((message) => {
-      setMessages(prev => {
-        // Avoid duplicates
-        const exists = prev.find(m => m._id === message._id)
-        if (exists) return prev
-        return [...prev, message]
-      })
-      scrollToBottom()
-    })
-
-    // Bot typing indicator
-    const socket = getSocket()
-    socket?.on('botTyping', (data) => {
-      if (data.roomId === roomId) {
-        setBotTyping(data.isTyping)
-        if (data.isTyping) {
-          startTypingAnimation()
-        }
-      }
-    })
-
-    // Seller took over
-    socket?.on('sellerTookOver', (data) => {
-      if (data.roomId === roomId) {
-        setBotActive(false)
-        setSellerTookOver(true)
-        // Show system message
-        setMessages(prev => {
-          const exists = prev.find(m => m.text === data.message && m.senderType === 'system')
-          if (exists) return prev
-          return [...prev, {
-            _id: Date.now().toString(),
-            senderType: 'system',
-            text: data.message,
-            createdAt: new Date()
-          }]
-        })
-        scrollToBottom()
-      }
-    })
-
-    // User typing
-    socket?.on('userTyping', (data) => {
-      if (data.roomId === roomId) {
-        setSellerOnline(true)
-      }
-    })
-  }
-
-  const startTypingAnimation = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(typingAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true
-        }),
-        Animated.timing(typingAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true
-        })
-      ])
-    ).start()
-  }
-
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({
-        animated: true
-      })
-    }, 100)
-  }
-
   const handleCallPress = () => {
     if (!room) return
     if (!room.sellerId) {
@@ -205,155 +196,157 @@ export default function BuyerChatScreen() {
     startCall(room.sellerId, sellerName || 'Seller', avatar)
   }
 
-  const handleSend = async () => {
-    if (!inputText.trim()) return
-
-    const sendText = inputText.trim()
-    const tempId = 'temp_' + Date.now()
-
-    const buyerMsgObj = {
-      _id: tempId,
-      senderId: user._id,
-      senderType: 'buyer',
-      senderName: user.name,
-      senderAvatar: user.avatar,
-      messageType: 'text',
-      text: sendText,
-      createdAt: new Date()
+  const isMyMessage = (item) => {
+    if (!item || !user?._id) return false
+    const msgSenderId = typeof item.senderId === 'object' ? item.senderId?._id : item.senderId
+    if (msgSenderId && msgSenderId.toString() === user._id.toString()) {
+      return true
     }
-
-    // Append buyer message to screen state instantly
-    setMessages(prev => [...prev, buyerMsgObj])
-    setInputText('')
-    scrollToBottom()
-
-    // Show bot typing animation
-    setBotTyping(true)
-    startTypingAnimation()
-
-    // Socket emit
-    socketSendMessage(roomId, buyerMsgObj)
-
-    // Backup REST call to guarantee AI response delivery even if WebSockets disconnect
-    try {
-      const res = await api.post(`/chat/${roomId}/messages`, { text: sendText })
-      setBotTyping(false)
-      if (res.data && res.data.success && res.data.aiMessage) {
-        const aiMsg = res.data.aiMessage
-        setMessages(prev => {
-          const exists = prev.find(m => m._id === aiMsg._id || m.text === aiMsg.text)
-          if (exists) return prev
-          return [...prev, aiMsg]
-        })
-        scrollToBottom()
+    if (user.role === 'buyer' && item.senderType === 'buyer') {
+      if (!msgSenderId || msgSenderId.toString() === user._id.toString()) {
+        return true
       }
+    }
+    if (user.role === 'seller' && item.senderType === 'seller') {
+      return true
+    }
+    return false
+  }
+
+  const handleSend = async (customText = null) => {
+    const sendText = (customText || inputText).trim()
+    if (!sendText) return
+
+    if (!customText) setInputText('')
+
+    try {
+      const socket = getSocket()
+      const senderType = user?.role === 'seller' ? 'seller' : 'buyer'
+
+      const msgData = {
+        roomId,
+        message: {
+          senderId: user._id,
+          senderType,
+          senderName: user.name,
+          senderAvatar: user.avatar,
+          messageType: 'text',
+          text: sendText,
+          createdAt: new Date()
+        }
+      }
+
+      if (socket && socket.connected) {
+        socket.emit('sendMessage', msgData)
+      } else {
+        const res = await api.post(`/chat/${roomId}/messages`, { text: sendText })
+        if (res.data?.success && res.data?.message) {
+          setMessages(prev => {
+            const exists = prev.find(m => m._id === res.data.message._id)
+            if (exists) return prev
+            return [...prev, res.data.message]
+          })
+        }
+      }
+      scrollToBottom()
     } catch (err) {
-      setBotTyping(false)
-      console.log('REST send error:', err)
+      console.log('Send message error:', err)
+      Alert.alert('Error', 'Failed to send message')
     }
   }
 
+  const formatTime = (timestamp) => {
+    if (!timestamp) return ''
+    const d = new Date(timestamp)
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
   const renderMessage = ({ item }) => {
-    // System message
+    if (deletedMsgIds.includes(item._id)) return null
+
+    // System Message
     if (item.senderType === 'system') {
       return (
         <View style={styles.systemMsg} key={item._id}>
-          <Text style={styles.systemMsgText}>
-            {item.text}
-          </Text>
+          <Text style={styles.systemMsgText}>{item.text}</Text>
         </View>
       )
     }
 
-    // Bot message
+    // Bot / AI Assistant Message (LEFT SIDE)
     if (item.isBot || item.senderType === 'bot') {
       return (
-        <TouchableOpacity onLongPress={() => handleLongPressMessage(item)} activeOpacity={0.9} style={styles.botMsgRow} key={item._id}>
-          {/* Bot avatar */}
+        <TouchableOpacity
+          onLongPress={() => handleLongPressMessage(item)}
+          activeOpacity={0.9}
+          style={styles.leftMsgRow}
+          key={item._id}
+        >
           <View style={styles.botAvatar}>
             <Text style={styles.botAvatarIcon}>🤖</Text>
           </View>
-          <View style={styles.botMsgContent}>
-            {/* Bot label */}
-            <View style={styles.botLabel}>
-              <Text style={styles.botLabelText}>
-                {item.senderName || 'UBS Assistant'}
-              </Text>
+          <View style={styles.leftMsgContent}>
+            <View style={styles.botLabelHeader}>
+              <Text style={styles.botNameText}>{item.senderName || 'UBS Assistant'}</Text>
               <View style={styles.aiBadge}>
                 <Text style={styles.aiBadgeText}>AI</Text>
               </View>
             </View>
-            {/* Bot bubble */}
-            <View style={[
-              styles.msgBubble,
-              styles.botBubble,
-              item.isTakeover && styles.takeoverBubble
-            ]}>
-              <Text style={styles.botMsgText}>
-                {item.text}
-              </Text>
+            <View style={[styles.msgBubble, styles.botBubble]}>
+              <Text style={styles.botMsgText}>{item.text}</Text>
             </View>
-            <Text style={styles.msgTime}>
-              {formatTime(item.createdAt)}
-            </Text>
+            <Text style={styles.msgTimeLeft}>{formatTime(item.createdAt)}</Text>
           </View>
         </TouchableOpacity>
       )
     }
 
-    // Buyer message (right side)
-    if (item.senderType === 'buyer') {
-      const isMe = item.senderId === user?._id
-      if (isMe) {
-        return (
-          <TouchableOpacity onLongPress={() => handleLongPressMessage(item)} activeOpacity={0.9} style={styles.myMsgRow} key={item._id}>
-            <View style={[
-              styles.msgBubble,
-              styles.myBubble
-            ]}>
-              <Text style={styles.myMsgText}>
-                {item.text}
-              </Text>
+    // My Message (RIGHT SIDE)
+    if (isMyMessage(item)) {
+      return (
+        <TouchableOpacity
+          onLongPress={() => handleLongPressMessage(item)}
+          activeOpacity={0.9}
+          style={styles.rightMsgRow}
+          key={item._id}
+        >
+          <View style={styles.rightMsgContent}>
+            <View style={[styles.msgBubble, styles.myBubble]}>
+              <Text style={styles.myMsgText}>{item.text}</Text>
             </View>
-            <Text style={[
-              styles.msgTime,
-              { textAlign: 'right' }
-            ]}>
-              {formatTime(item.createdAt)}
-            </Text>
-          </TouchableOpacity>
-        )
-      }
+            <Text style={styles.msgTimeRight}>{formatTime(item.createdAt)}</Text>
+          </View>
+        </TouchableOpacity>
+      )
     }
 
-    // Seller message (left side)
+    // Other User / Seller Message (LEFT SIDE)
     return (
-      <TouchableOpacity onLongPress={() => handleLongPressMessage(item)} activeOpacity={0.9} style={styles.sellerMsgRow} key={item._id}>
+      <TouchableOpacity
+        onLongPress={() => handleLongPressMessage(item)}
+        activeOpacity={0.9}
+        style={styles.leftMsgRow}
+        key={item._id}
+      >
         <Image
           source={{
-            uri: item.senderAvatar || 'https://via.placeholder.com/32'
+            uri: item.senderAvatar || 'https://via.placeholder.com/36'
           }}
           style={styles.sellerAvatar}
         />
-        <View style={{ flex: 1 }}>
-          <View style={[
-            styles.msgBubble,
-            styles.sellerBubble
-          ]}>
-            <Text style={styles.sellerMsgText}>
-              {item.text}
-            </Text>
+        <View style={styles.leftMsgContent}>
+          <Text style={styles.senderNameText}>{item.senderName || sellerName || 'Seller'}</Text>
+          <View style={[styles.msgBubble, styles.sellerBubble]}>
+            <Text style={styles.sellerMsgText}>{item.text}</Text>
           </View>
-          <Text style={styles.msgTime}>
-            {formatTime(item.createdAt)}
-          </Text>
+          <Text style={styles.msgTimeLeft}>{formatTime(item.createdAt)}</Text>
         </View>
       </TouchableOpacity>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -361,122 +354,92 @@ export default function BuyerChatScreen() {
       >
         {/* TOP BAR */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/messages')}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(buyer)/messages'))}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#1a237e" />
           </TouchableOpacity>
+
           <View style={styles.topInfo}>
-            <Text style={styles.topName}>
-              {sellerName || 'Chat'}
-            </Text>
+            <Text style={styles.topName} numberOfLines={1}>{sellerName || 'UBS Global Support'}</Text>
             <View style={styles.statusRow}>
               {botActive ? (
                 <>
                   <View style={styles.botDot} />
-                  <Text style={styles.statusText}>
-                    AI Assistant Active
-                  </Text>
+                  <Text style={styles.statusText}>AI Assistant Active</Text>
                 </>
               ) : (
                 <>
-                  <View style={styles.humanDot} />
-                  <Text style={styles.statusText}>
-                    Seller Online
-                  </Text>
+                  <View style={[styles.botDot, { backgroundColor: sellerOnline ? '#4caf50' : '#ffa000' }]} />
+                  <Text style={styles.statusText}>{sellerOnline ? 'Online' : 'Seller Active'}</Text>
                 </>
               )}
             </View>
           </View>
-          {productTitle && (
-            <View style={styles.productTag}>
-              <Text style={styles.productTagText} numberOfLines={1}>
-                📦 {productTitle}
-              </Text>
-            </View>
-          )}
 
-          <TouchableOpacity
-            style={styles.callButton}
-            onPress={handleCallPress}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons name="phone" size={22} color="#1a237e" />
+          <TouchableOpacity style={styles.callBtn} onPress={handleCallPress}>
+            <MaterialCommunityIcons name="phone" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* AI STATUS BANNER */}
+        {/* AI BANNER */}
         {botActive && (
           <View style={styles.aiBanner}>
             <Text style={styles.aiBannerIcon}>🤖</Text>
-            <Text style={styles.aiBannerText}>
-              AI Assistant is handling this chat
-            </Text>
-          </View>
-        )}
-
-        {sellerTookOver && (
-          <View style={styles.sellerBanner}>
-            <Text style={styles.sellerBannerIcon}>👨‍💼</Text>
-            <Text style={styles.sellerBannerText}>
-              Seller has joined the conversation
-            </Text>
+            <Text style={styles.aiBannerText}>UBS AI Assistant is handling this chat for instant responses</Text>
           </View>
         )}
 
         {/* MESSAGES LIST */}
         <FlatList
           ref={flatListRef}
-          data={messages.filter(m => !deletedMsgIds.includes(m._id))}
+          data={messages}
           renderItem={renderMessage}
-          keyExtractor={item => item._id?.toString() || Math.random().toString()}
+          keyExtractor={(item, index) => item._id || index.toString()}
           contentContainerStyle={styles.messagesList}
           onContentSizeChange={scrollToBottom}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>Start a conversation...</Text>
-          }
+          onLayout={scrollToBottom}
         />
 
         {/* BOT TYPING INDICATOR */}
         {botTyping && (
-          <View style={styles.typingContainer}>
-            <View style={styles.botAvatar}>
-              <Text style={styles.botAvatarIcon}>🤖</Text>
+          <View style={styles.typingRow}>
+            <View style={styles.botAvatarSmall}>
+              <Text style={{ fontSize: 12 }}>🤖</Text>
             </View>
-            <View style={styles.typingBubble}>
-              <View style={styles.typingDots}>
-                <Animated.View style={[
-                  styles.dot,
-                  { opacity: typingAnim }
-                ]} />
-                <Animated.View style={[
-                  styles.dot,
-                  { opacity: typingAnim }
-                ]} />
-                <Animated.View style={[
-                  styles.dot,
-                  { opacity: typingAnim }
-                ]} />
-              </View>
-            </View>
+            <Animated.View style={[styles.typingBubble, { opacity: typingAnim }]}>
+              <Text style={styles.typingText}>UBS Assistant is typing...</Text>
+            </Animated.View>
           </View>
         )}
 
+        {/* QUICK SUGGESTION CHIPS */}
+        <View style={styles.chipRow}>
+          <TouchableOpacity style={styles.chip} onPress={() => handleSend('What is the price & minimum order?')}>
+            <Text style={styles.chipText}>🏷️ Price & Quotes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.chip} onPress={() => handleSend('Is this item in stock?')}>
+            <Text style={styles.chipText}>📦 Stock Availability</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.chip} onPress={() => handleSend('What are the shipping details?')}>
+            <Text style={styles.chipText}>✈️ Shipping Info</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.chip} onPress={() => handleSend('I want to speak to human agent')}>
+            <Text style={styles.chipText}>👤 Speak to Agent</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* INPUT BAR */}
-        <View style={styles.inputBar}>
+        <View style={styles.inputContainer}>
           <TextInput
-            style={styles.textInput}
+            style={styles.input}
             placeholder="Type a message..."
-            placeholderTextColor="#aaa"
+            placeholderTextColor="#888"
             value={inputText}
             onChangeText={setInputText}
             multiline
-            maxLength={500}
           />
           <TouchableOpacity
-            style={[
-              styles.sendBtn,
-              !inputText.trim() && styles.sendBtnDisabled
-            ]}
-            onPress={handleSend}
+            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+            onPress={() => handleSend()}
             disabled={!inputText.trim()}
           >
             <MaterialCommunityIcons name="send" size={20} color="#fff" />
@@ -488,10 +451,9 @@ export default function BuyerChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f7fc'
-  },
+  container: { flex: 1, backgroundColor: '#f5f7fc' },
+
+  // Top Bar
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -499,273 +461,81 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    gap: 10,
+    borderBottomColor: '#eaeaea',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  topInfo: { flex: 1 },
-  topName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a237e',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  botDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#29b6f6',
-  },
-  humanDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22c55e',
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#888',
-  },
-  productTag: {
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    maxWidth: 120,
-  },
-  productTagText: {
-    fontSize: 11,
-    color: '#1a237e',
-    fontWeight: '500',
-  },
+  topInfo: { flex: 1, marginLeft: 14 },
+  topName: { fontSize: 16, fontWeight: '800', color: '#1a237e' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  botDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0288d1', marginRight: 6 },
+  statusText: { fontSize: 11, color: '#666', fontWeight: '600' },
+  callBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center' },
+
+  // AI Banner
   aiBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#e3f2fd',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#bbdefb',
-  },
-  aiBannerIcon: { fontSize: 16 },
-  aiBannerText: {
-    fontSize: 13,
-    color: '#1565c0',
-    fontWeight: '500',
-  },
-  sellerBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e8f5e9',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     gap: 8,
   },
-  sellerBannerIcon: { fontSize: 16 },
-  sellerBannerText: {
-    fontSize: 13,
-    color: '#2e7d32',
-    fontWeight: '500',
-  },
-  messagesList: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 20,
-  },
-  systemMsg: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  systemMsgText: {
-    fontSize: 12,
-    color: '#888',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 12,
-    textAlign: 'center',
-  },
-  botMsgRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginBottom: 8,
-  },
-  botAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#e3f2fd',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  botAvatarIcon: { fontSize: 18 },
-  botMsgContent: { flex: 1 },
-  botLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  botLabelText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1a237e',
-  },
-  aiBadge: {
-    backgroundColor: '#1a237e',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  aiBadgeText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  msgBubble: {
-    maxWidth: '80%',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  botBubble: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e3f2fd',
-    borderTopLeftRadius: 4,
-  },
-  takeoverBubble: {
-    backgroundColor: '#fff8e1',
-    borderColor: '#ffe082',
-  },
-  botMsgText: {
-    fontSize: 14,
-    color: '#222',
-    lineHeight: 20,
-  },
-  myMsgRow: {
-    alignItems: 'flex-end',
-    marginBottom: 8,
-  },
-  myBubble: {
-    backgroundColor: '#1a237e',
-    borderTopRightRadius: 4,
-    alignSelf: 'flex-end',
-  },
-  myMsgText: {
-    fontSize: 14,
-    color: '#fff',
-    lineHeight: 20,
-  },
-  sellerMsgRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginBottom: 8,
-  },
-  sellerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  sellerBubble: {
-    backgroundColor: '#f0f0f0',
-    borderTopLeftRadius: 4,
-  },
-  sellerMsgText: {
-    fontSize: 14,
-    color: '#222',
-    lineHeight: 20,
-  },
-  msgTime: {
-    fontSize: 11,
-    color: '#aaa',
-    marginTop: 4,
-  },
-  typingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  typingBubble: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#e3f2fd',
-  },
-  typingDots: {
-    flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#29b6f6',
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    gap: 8,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: '#f5f7fc',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    maxHeight: 100,
-    borderWidth: 1,
-    borderColor: '#e8ecf4',
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#1a237e',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendBtnDisabled: {
-    backgroundColor: '#c5cae9',
-  },
-  callButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f5f7fc',
-    marginLeft: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#aaa',
-    marginTop: 40
-  }
-})
+  aiBannerIcon: { fontSize: 14 },
+  aiBannerText: { fontSize: 12, color: '#0d47a1', fontWeight: '600' },
 
-// Helper
-const formatTime = (date) => {
-  if (!date) return ''
-  return new Date(date).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+  // Messages List
+  messagesList: { paddingHorizontal: 14, paddingVertical: 16 },
+
+  // System Message
+  systemMsg: { alignSelf: 'center', backgroundColor: '#eef2ff', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12, marginVertical: 8 },
+  systemMsgText: { fontSize: 11, color: '#1a237e', fontWeight: '600' },
+
+  // Left Message (Bot / Seller)
+  leftMsgRow: { flexDirection: 'row', alignItems: 'flex-start', marginVertical: 6, maxWidth: '82%', alignSelf: 'flex-start' },
+  botAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#e3f2fd', justifyContent: 'center', alignItems: 'center', marginRight: 8, marginTop: 2 },
+  botAvatarIcon: { fontSize: 18 },
+  sellerAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 8, marginTop: 2, backgroundColor: '#ddd' },
+  leftMsgContent: { flex: 1 },
+  botLabelHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 6 },
+  botNameText: { fontSize: 11, fontWeight: '700', color: '#1a237e' },
+  senderNameText: { fontSize: 11, fontWeight: '700', color: '#666', marginBottom: 4 },
+  aiBadge: { backgroundColor: '#1a237e', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  aiBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  botBubble: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e3f2fd' },
+  sellerBubble: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0' },
+  botMsgText: { fontSize: 14, color: '#1a237e', lineHeight: 20 },
+  sellerMsgText: { fontSize: 14, color: '#333', lineHeight: 20 },
+  msgTimeLeft: { fontSize: 10, color: '#999', marginTop: 4, marginLeft: 2 },
+
+  // Right Message (Current User)
+  rightMsgRow: { flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 6, maxWidth: '82%', alignSelf: 'flex-end' },
+  rightMsgContent: { alignItems: 'flex-end' },
+  myBubble: { backgroundColor: '#1a237e' },
+  myMsgText: { fontSize: 14, color: '#ffffff', lineHeight: 20 },
+  msgTimeRight: { fontSize: 10, color: '#999', marginTop: 4, textAlign: 'right', marginRight: 2 },
+
+  // Generic Bubble
+  msgBubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16 },
+
+  // Typing
+  typingRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
+  botAvatarSmall: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#e3f2fd', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  typingBubble: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#e3f2fd' },
+  typingText: { fontSize: 12, color: '#0d47a1', fontStyle: 'italic' },
+
+  // Quick Chips
+  chipRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 6, flexWrap: 'wrap', gap: 6, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  chip: { backgroundColor: '#f0f4fe', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#d0e0fc' },
+  chipText: { fontSize: 11, fontWeight: '700', color: '#1a237e' },
+
+  // Input Container
+  inputContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eaeaea' },
+  input: { flex: 1, backgroundColor: '#f5f7fc', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: '#333', maxHeight: 100 },
+  sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
+  sendBtnDisabled: { backgroundColor: '#c5cae9' },
+})
