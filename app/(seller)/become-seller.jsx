@@ -522,7 +522,7 @@ export default function BecomeSellerScreen() {
                   </TouchableOpacity>
                 </View>
               </>
-            ) : (
+            ) : step === 2 ? (
               /* Step 2 payment details form */
               <View style={styles.fieldsContainer}>
                 <Text style={styles.label}>{t("BANK NAME")}</Text>
