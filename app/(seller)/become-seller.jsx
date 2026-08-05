@@ -345,24 +345,62 @@ export default function BecomeSellerScreen() {
                   </View>
 
                   <Text style={styles.label}>{t("UPLOAD ID PROOF")}</Text>
-                  <TouchableOpacity
-                    style={styles.uploadDashed}
-                    onPress={() => pickImage("idProof")}
-                  >
-                    <View style={styles.uploadIconCircle}>
-                      <MaterialCommunityIcons
-                        name="file-upload-outline"
-                        size={20}
-                        color="#0575E6"
-                      />
+                  {form.idProof ? (
+                    <View style={styles.uploadedIdBox}>
+                      <View style={styles.uploadedHeader}>
+                        <View style={styles.uploadedTitleRow}>
+                          <MaterialCommunityIcons
+                            name="check-circle"
+                            size={22}
+                            color="#2e7d32"
+                          />
+                          <Text style={styles.uploadedTextBold}>
+                            {t("ID Proof Uploaded Successfully")}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.changeIdBtn}
+                          onPress={() => pickImage("idProof")}
+                        >
+                          <MaterialCommunityIcons name="pencil" size={14} color="#0575E6" />
+                          <Text style={styles.changeIdBtnText}>{t("Change")}</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.idPreviewContainer}>
+                        <Image
+                          source={{ uri: form.idProof }}
+                          style={styles.idPreviewImage}
+                          resizeMode="cover"
+                        />
+                        <TouchableOpacity
+                          style={styles.removeIdBtn}
+                          onPress={() => setForm({ ...form, idProof: null })}
+                        >
+                          <MaterialCommunityIcons name="trash-can-outline" size={18} color="#d32f2f" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <Text style={styles.uploadTextBold}>
-                      {t("Tap to upload your ID or Business License")}
-                    </Text>
-                    <Text style={styles.uploadTextSmall}>
-                      {t("PDF, JPG, or PNG (Max 5MB)")}
-                    </Text>
-                  </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.uploadDashed}
+                      onPress={() => pickImage("idProof")}
+                    >
+                      <View style={styles.uploadIconCircle}>
+                        <MaterialCommunityIcons
+                          name="file-upload-outline"
+                          size={20}
+                          color="#0575E6"
+                        />
+                      </View>
+                      <Text style={styles.uploadTextBold}>
+                        {t("Tap to upload your ID or Business License")}
+                      </Text>
+                      <Text style={styles.uploadTextSmall}>
+                        {t("PDF, JPG, or PNG (Max 5MB)")}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
                   {/* Continue to Step 2 Button */}
                   <TouchableOpacity
@@ -762,6 +800,65 @@ const styles = StyleSheet.create({
   uploadTextSmall: {
     fontSize: 11,
     color: "#777",
+  },
+  uploadedIdBox: {
+    borderWidth: 1.5,
+    borderColor: "#4caf50",
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: "#f1f8e9",
+    marginBottom: 16,
+  },
+  uploadedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  uploadedTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  uploadedTextBold: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2e7d32",
+  },
+  changeIdBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#e3f2fd",
+    borderRadius: 8,
+  },
+  changeIdBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0575E6",
+  },
+  idPreviewContainer: {
+    position: "relative",
+    width: "100%",
+    height: 140,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#e0e0e0",
+  },
+  idPreviewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  removeIdBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    padding: 6,
+    borderRadius: 20,
+    elevation: 2,
   },
   submitBtn: {
     backgroundColor: "#1a237e",
