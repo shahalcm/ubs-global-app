@@ -119,17 +119,29 @@ export default function OTPScreen() {
 
   const isComplete = otp.every((d) => d !== '')
 
+  const scrollViewRef = useRef(null)
+
+  const handleInputFocus = () => {
+    // Scroll down so OTP boxes and Verify button remain cleanly visible above keyboard
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 160, animated: true })
+    }, 100)
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={{ flex: 1 }}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
         >
 
           {/* Top Bar */}
@@ -148,12 +160,12 @@ export default function OTPScreen() {
 
           {/* Globe Banner Image */}
           <View style={styles.bannerContainer}>
-          <Image
-            source={require('../../assets/images/ubs-otp-logo.jpg')}
-            style={styles.bannerImage}
-            resizeMode="cover"
-            accessibilityLabel="UBS Global OTP banner"
-          />
+            <Image
+              source={require('../../assets/images/ubs-otp-logo.jpg')}
+              style={styles.bannerImage}
+              resizeMode="cover"
+              accessibilityLabel="UBS Global OTP banner"
+            />
             {/* Secure Portal Badge */}
             <View style={styles.secureBadge}>
               <Text style={styles.secureBadgeIcon}>🛡</Text>
@@ -184,6 +196,7 @@ export default function OTPScreen() {
                 value={digit}
                 onChangeText={(val) => handleOtpChange(val, index)}
                 onKeyPress={(e) => handleKeyPress(e, index)}
+                onFocus={handleInputFocus}
                 keyboardType="number-pad"
                 maxLength={1}
                 textAlign="center"
