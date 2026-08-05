@@ -351,18 +351,18 @@ export default function BecomeSellerScreen() {
                         <View style={styles.uploadedTitleRow}>
                           <MaterialCommunityIcons
                             name="check-circle"
-                            size={22}
+                            size={20}
                             color="#2e7d32"
                           />
-                          <Text style={styles.uploadedTextBold}>
-                            {t("ID Proof Uploaded Successfully")}
+                          <Text style={styles.uploadedTextBold} numberOfLines={1}>
+                            {t("ID Proof Uploaded")}
                           </Text>
                         </View>
                         <TouchableOpacity
                           style={styles.changeIdBtn}
                           onPress={() => pickImage("idProof")}
                         >
-                          <MaterialCommunityIcons name="pencil" size={14} color="#0575E6" />
+                          <MaterialCommunityIcons name="pencil" size={13} color="#0575E6" />
                           <Text style={styles.changeIdBtnText}>{t("Change")}</Text>
                         </TouchableOpacity>
                       </View>
@@ -814,28 +814,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 10,
+    width: "100%",
   },
   uploadedTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
   },
   uploadedTextBold: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
     color: "#2e7d32",
+    flexShrink: 1,
   },
   changeIdBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     backgroundColor: "#e3f2fd",
-    borderRadius: 8,
+    borderRadius: 6,
+    shrink: 0,
   },
   changeIdBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: "#0575E6",
   },
