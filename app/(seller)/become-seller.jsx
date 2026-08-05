@@ -52,6 +52,11 @@ export default function BecomeSellerScreen() {
     phone: "",
     address: "",
     businessType: "",
+    gstNumber: "",
+    website: "",
+    categories: "",
+    yearEstablished: "",
+    description: "",
     idProof: null,
     shopLogo: null,
     bankDetails: {
@@ -341,6 +346,93 @@ export default function BecomeSellerScreen() {
                       placeholderTextColor="#bbb"
                       value={form.address}
                       onChangeText={(text) => setForm({ ...form, address: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("TAX / GST / VAT ID (OPTIONAL)")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="text-box-check-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("22AAAAA0000A1Z5")}
+                      placeholderTextColor="#bbb"
+                      autoCapitalize="characters"
+                      value={form.gstNumber}
+                      onChangeText={(text) => setForm({ ...form, gstNumber: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("PRIMARY PRODUCT CATEGORIES")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="shape-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("Textiles, Electronics, Agriculture, Machinery")}
+                      placeholderTextColor="#bbb"
+                      value={form.categories}
+                      onChangeText={(text) => setForm({ ...form, categories: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("YEAR ESTABLISHED")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="calendar-month-outline"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("2018")}
+                      placeholderTextColor="#bbb"
+                      keyboardType="numeric"
+                      maxLength={4}
+                      value={form.yearEstablished}
+                      onChangeText={(text) => setForm({ ...form, yearEstablished: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("COMPANY WEBSITE (OPTIONAL)")}</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons
+                      name="web"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t("https://www.yourcompany.com")}
+                      placeholderTextColor="#bbb"
+                      keyboardType="url"
+                      autoCapitalize="none"
+                      value={form.website}
+                      onChangeText={(text) => setForm({ ...form, website: text })}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>{t("BUSINESS DESCRIPTION / ABOUT SHOP")}</Text>
+                  <View style={[styles.inputContainer, { height: 80, alignItems: 'flex-start', paddingTop: 10 }]}>
+                    <MaterialCommunityIcons
+                      name="text-account"
+                      size={20}
+                      color="#888"
+                    />
+                    <TextInput
+                      style={[styles.input, { textAlignVertical: 'top' }]}
+                      placeholder={t("Briefly describe your export/import products and capabilities...")}
+                      placeholderTextColor="#bbb"
+                      multiline
+                      numberOfLines={3}
+                      value={form.description}
+                      onChangeText={(text) => setForm({ ...form, description: text })}
                     />
                   </View>
 

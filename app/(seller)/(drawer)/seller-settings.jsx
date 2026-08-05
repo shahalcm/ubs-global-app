@@ -268,6 +268,60 @@ export default function SellerSettings() {
       ],
     },
     {
+      title: 'Business Credentials',
+      items: [
+        { 
+          label: 'TAX / GST / VAT ID', 
+          icon: 'text-box-check-outline', 
+          value: sellerProfile?.gstNumber || (loadingProfile ? 'Loading...' : 'Not Provided'), 
+          onPress: () => {
+            setEditField('gstNumber');
+            setEditLabel('TAX / GST ID');
+            setEditValue(sellerProfile?.gstNumber || '');
+            setEditModalVisible(true);
+          }
+        },
+        { 
+          label: 'Product Categories', 
+          icon: 'shape-outline', 
+          value: sellerProfile?.categories || (loadingProfile ? 'Loading...' : 'Not Specified'), 
+          onPress: () => {
+            setEditField('categories');
+            setEditLabel('Product Categories');
+            setEditValue(sellerProfile?.categories || '');
+            setEditModalVisible(true);
+          }
+        },
+        { 
+          label: 'Year Established', 
+          icon: 'calendar-month-outline', 
+          value: sellerProfile?.yearEstablished || (loadingProfile ? 'Loading...' : 'Not Specified'), 
+          onPress: () => {
+            setEditField('yearEstablished');
+            setEditLabel('Year Established');
+            setEditValue(sellerProfile?.yearEstablished || '');
+            setEditModalVisible(true);
+          }
+        },
+        { 
+          label: 'Company Website', 
+          icon: 'web', 
+          value: sellerProfile?.website || (loadingProfile ? 'Loading...' : 'Not Provided'), 
+          onPress: () => {
+            setEditField('website');
+            setEditLabel('Company Website');
+            setEditValue(sellerProfile?.website || '');
+            setEditModalVisible(true);
+          }
+        },
+        { 
+          label: 'ID Proof Document', 
+          icon: 'file-check-outline', 
+          value: sellerProfile?.idProof ? 'Uploaded & Verified ✅' : 'Not Uploaded'
+        },
+      ],
+    },
+    {
       title: 'Payment Details',
       items: [
         {
