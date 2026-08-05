@@ -4,15 +4,22 @@ import api from './api'
 export const applyAsSeller = async (sellerData) => {
   const formData = new FormData()
   Object.keys(sellerData).forEach((key) => {
+    if (sellerData[key] === null || sellerData[key] === undefined) {
+      return;
+    }
     if (key === 'shopLogo' || key === 'idProof') {
-      if (sellerData[key]) {
+      if (typeof sellerData[key] === 'string' && sellerData[key].length > 0) {
+        const uri = sellerData[key]
+        const filename = uri.split('/').pop() || `${key}.jpg`
+        const match = /\.(\w+)$/.exec(filename)
+        const type = match ? `image/${match[1]}` : 'image/jpeg'
         formData.append(key, {
-          uri: sellerData[key],
-          type: 'image/jpeg',
-          name: `${key}.jpg`
+          uri,
+          name: filename,
+          type
         })
       }
-    } else if (key === 'bankDetails' && typeof sellerData[key] === 'object' && sellerData[key] !== null) {
+    } else if (key === 'bankDetails' && typeof sellerData[key] === 'object') {
       formData.append(key, JSON.stringify(sellerData[key]))
     } else {
       formData.append(key, sellerData[key])

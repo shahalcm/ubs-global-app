@@ -11,13 +11,16 @@ import {
   Image,
   ActivityIndicator,
   Modal,
-  FlatList,
+  Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../../services/api";
+import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
