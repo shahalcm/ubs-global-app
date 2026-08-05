@@ -23,10 +23,18 @@ export default function SellerHeader({ title, showShadow = true }) {
       </View>
       <View style={styles.rightGroup}>
         <TouchableOpacity 
+          style={styles.buyerModeBtn}
+          onPress={() => router.replace('/(buyer)/home')}
+        >
+          <MaterialCommunityIcons name="shopping-outline" size={16} color="#0575E6" />
+          <Text style={styles.buyerModeText}>{t('Buyer Mode')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
           style={styles.bellButton}
           onPress={() => router.push('/(seller)/seller-notifications')}
         >
-          <MaterialCommunityIcons name="bell-outline" size={24} color={colors.primary} />
+          <MaterialCommunityIcons name="bell-outline" size={22} color={colors.primary} />
           {unreadNotifications > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{unreadNotifications}</Text>
@@ -55,7 +63,22 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: colors.primary },
   iconButton: { padding: 10 },
   rightGroup: { flexDirection: 'row', alignItems: 'center' },
-  bellButton: { marginRight: 12 },
+  buyerModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginRight: 10,
+    gap: 4,
+  },
+  buyerModeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0575E6',
+  },
+  bellButton: { marginRight: 10 },
   badge: {
     position: 'absolute',
     top: -4,

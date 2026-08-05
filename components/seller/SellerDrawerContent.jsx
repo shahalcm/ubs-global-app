@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 const menuItems = [
   { icon: 'home-outline', label: 'Dashboard', route: '/(seller)/dashboard' },
+  { icon: 'shopping-outline', label: 'Buyer Marketplace', route: '/(buyer)/home' },
   { icon: 'cube-outline', label: 'My Products', route: '/(seller)/my-products' },
   { icon: 'clipboard-list-outline', label: 'Orders', route: '/(seller)/seller-orders' },
   { icon: 'cash-multiple', label: 'Earnings', route: '/(seller)/seller-earnings' },
