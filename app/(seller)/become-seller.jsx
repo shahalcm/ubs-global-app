@@ -97,7 +97,7 @@ export default function BecomeSellerScreen() {
   const checkSellerStatus = async () => {
     try {
       const res = await getSellerProfile();
-      if (res.success && res.seller) {
+      if (res.success && res.seller && res.seller.registrationFeePaid) {
         if (res.seller.status === 'approved') {
           router.replace("/(seller)/dashboard");
         } else {

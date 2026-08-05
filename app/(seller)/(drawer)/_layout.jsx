@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Drawer } from 'expo-router/drawer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSegments } from 'expo-router';
+import { useSegments, useRouter } from 'expo-router';
 import { useSeller } from '../../../context/SellerContext';
 import SellerDrawerContent from '../../../components/seller/SellerDrawerContent';
 import SellerBottomNav from '../../../components/seller/SellerBottomNav';
@@ -19,7 +19,21 @@ const hiddenDrawerOptions = {
 export default function SellerDrawerLayout() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
+  const router = useRouter();
+  const { seller, loading, loadProfile } = useSeller();
   const activeSegment = segments[segments.length - 1] || 'dashboard';
+
+  React.useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  React.useEffect(() => {
+    if (!loading) {
+      if (!seller || !seller.registrationFeePaid) {
+        router.replace('/(seller)/become-seller');
+      }
+    }
+  }, [seller, loading]);
   
   // Since sub-pages become-seller, add-product, edit-product, order-details are moved to the outer stack,
   // we do not need to hide the bottom nav for them here, but we still match dashboard, products, etc.
