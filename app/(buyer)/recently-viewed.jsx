@@ -87,7 +87,9 @@ export default function RecentlyViewedScreen() {
   };
 
   const filteredAndSortedProducts = useMemo(() => {
-    let list = [...products];
+    let list = [...products].filter(
+      (item) => item && (item._id || item.id) && !item.isDeleted && item.status !== 'inactive'
+    );
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();

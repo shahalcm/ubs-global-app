@@ -12,22 +12,20 @@ export async function getRecentlyViewed() {
     if (token) {
       try {
         const res = await api.get('/users/recently-viewed');
-        if (res.data?.success && Array.isArray(res.data.products) && res.data.products.length > 0) {
-          const backendItems = res.data.products;
-          const map = new Map();
-          [...backendItems, ...localItems].forEach((item) => {
-            if (item && (item._id || item.id)) {
-              const key = (item._id || item.id).toString();
-              if (!map.has(key)) map.set(key, item);
-            }
-          });
-          localItems = Array.from(map.values()).slice(0, 20);
+        if (res.data?.success && Array.isArray(res.data.products)) {
+          localItems = res.data.products;
           await AsyncStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(localItems));
         }
       } catch (backendErr) {
         console.log('Backend getRecentlyViewed fallback to local storage:', backendErr?.message);
       }
     }
+
+    // Filter out deleted or inactive products
+    localItems = (localItems || []).filter(
+      (item) => item && (item._id || item.id) && !item.isDeleted && item.status !== 'inactive'
+    );
+
     return localItems;
   } catch (err) {
     console.error('Error in getRecentlyViewed:', err);
