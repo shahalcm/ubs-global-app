@@ -17,7 +17,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../../services/api";
 import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
@@ -40,8 +39,16 @@ const COUNTRIES = [
   { code: '+55', flag: '🇧🇷', name: 'BR' },
 ];
 
+let useTranslation;
+try {
+  useTranslation = require('react-i18next').useTranslation;
+} catch (e) {
+  useTranslation = null;
+}
+
 export default function BecomeSellerScreen() {
-  const { t } = useTranslation();
+  const i18n = useTranslation ? useTranslation() : null;
+  const t = i18n?.t || ((str) => str);
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(1);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
