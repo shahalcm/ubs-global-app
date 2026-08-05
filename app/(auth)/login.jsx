@@ -103,17 +103,22 @@ export default function LoginScreen() {
         if (res.user) {
           await updateUser(res.user)
         }
-        if (res.user?.role) {
+        if (res.user?.role === 'seller') {
+          router.replace('/(seller)/home')
+        } else if (res.user?.role === 'buyer') {
+          router.replace('/(buyer)/(tabs)/home')
+        } else if (res.user?.role) {
           router.replace('/(buyer)/(tabs)/home')
         } else {
           router.replace('/(auth)/role-select')
         }
       } else {
-        Alert.alert(t('Login Failed'), res?.message || t('Invalid phone number or password.'))
+        Alert.alert(t('Incorrect Password'), res?.message || t('Please enter correct password.'))
       }
     } catch (error) {
       console.log('Password login error:', error)
-      Alert.alert(t('Login Failed'), error?.response?.data?.message || t('Incorrect phone number or password.'))
+      const errMsg = error?.response?.data?.message || t('Incorrect password. Please enter correct password.')
+      Alert.alert(t('Incorrect Password'), errMsg)
     } finally {
       setLoading(false)
     }
@@ -205,7 +210,11 @@ export default function LoginScreen() {
         }
         setShowForgotModal(false)
         Alert.alert(t('Success'), t('Password reset successfully! Logged in.'))
-        if (res.user?.role) {
+        if (res.user?.role === 'seller') {
+          router.replace('/(seller)/home')
+        } else if (res.user?.role === 'buyer') {
+          router.replace('/(buyer)/(tabs)/home')
+        } else if (res.user?.role) {
           router.replace('/(buyer)/(tabs)/home')
         } else {
           router.replace('/(auth)/role-select')
