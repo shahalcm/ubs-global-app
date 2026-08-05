@@ -240,10 +240,18 @@ export default function CompleteProfileScreen() {
     }
   }
 
+  const scrollViewRef = React.useRef(null);
+
+  const handleInputFocus = (yOffset) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
+    }, 100);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         {/* Top Bar */}
@@ -258,6 +266,7 @@ export default function CompleteProfileScreen() {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           style={{ flex: 1 }}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
@@ -295,6 +304,7 @@ export default function CompleteProfileScreen() {
                 setFullName(v);
                 setErrors((e) => ({ ...e, fullName: null }));
               }}
+              onFocus={() => handleInputFocus(40)}
               autoCapitalize="words"
             />
           </View>
@@ -315,6 +325,7 @@ export default function CompleteProfileScreen() {
                 setEmail(v);
                 setErrors((e) => ({ ...e, email: null }));
               }}
+              onFocus={() => handleInputFocus(140)}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -334,6 +345,7 @@ export default function CompleteProfileScreen() {
                 setPassword(v);
                 setErrors((e) => ({ ...e, password: null }));
               }}
+              onFocus={() => handleInputFocus(240)}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
             />
@@ -370,6 +382,7 @@ export default function CompleteProfileScreen() {
                 setConfirmPassword(v);
                 setErrors((e) => ({ ...e, confirmPassword: null }));
               }}
+              onFocus={() => handleInputFocus(340)}
               secureTextEntry={!showConfirm}
               autoCapitalize="none"
             />
@@ -416,43 +429,19 @@ export default function CompleteProfileScreen() {
                 placeholderTextColor="#bbb"
                 value={pincode}
                 onChangeText={setPincode}
+                onFocus={() => handleInputFocus(460)}
                 keyboardType="numeric"
                 maxLength={6}
               />
             </View>
           </View>
 
-          {/* OR Divider */}
-          <View style={styles.orRow}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>{t('OR')}</Text>
-            <View style={styles.orLine} />
-          </View>
-
-          {/* Google Button */}
-          <TouchableOpacity
-            style={[styles.googleBtn, (googleLoading || loading) && { opacity: 0.6 }]}
-            onPress={handleGoogleContinue}
-            disabled={googleLoading || loading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#1a237e" size="small" />
-            ) : (
-              <>
-                <View style={styles.googleIconBox}>
-                  <Text style={styles.googleIconText}>G</Text>
-                </View>
-                <Text style={styles.googleBtnText}>{t('Continue with Google')}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Spacer for sticky button */}
-          <View style={{ height: 110 }} />
+          {/* Spacer */}
+          <View style={{ height: 30 }} />
         </ScrollView>
 
-        {/* Sticky Continue Button */}
-        <View style={[styles.stickyBottom, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {/* Continue Button Container */}
+        <View style={[styles.bottomButtonContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <TouchableOpacity
             style={[styles.continueBtn, loading && { opacity: 0.6 }]}
             onPress={handleContinue}
@@ -681,23 +670,24 @@ const styles = StyleSheet.create({
     color: "#1a237e",
   },
 
-  // Sticky Bottom
-  stickyBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
+  // Bottom Button Container
+  bottomButtonContainer: {
+    backgroundColor: "#eef1f8",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderTopColor: "#e0e4f0",
   },
   continueBtn: {
     backgroundColor: "#1a237e",
     borderRadius: 14,
     paddingVertical: 18,
     alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   continueBtnText: {
     color: "#fff",
