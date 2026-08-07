@@ -3,13 +3,14 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView,
   Image, Alert, Switch, ActivityIndicator,
-  KeyboardAvoidingView, Platform
+  KeyboardAvoidingView, Platform, NativeModules
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import { Picker } from '@react-native-picker/picker'
 import RazorpayCheckout from 'react-native-razorpay'
+import Constants, { ExecutionEnvironment } from 'expo-constants'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { Ionicons } from '@expo/vector-icons'
@@ -262,6 +263,28 @@ export default function PostPropertyScreen() {
             name: user?.name || ''
           },
           theme: { color: '#1a237e' }
+        }
+
+        const isExpoGoApp = Constants.appOwnership === 'expo' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+        const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout && typeof RazorpayCheckout?.open === 'function')
+
+        if (!isNativeModuleAvailable) {
+          if (isExpoGoApp) {
+            console.log('ℹ️ Running in Expo Go environment: Native Razorpay SDK requires standalone APK / development build')
+            Alert.alert(
+              'Expo Go Notice',
+              'Razorpay native checkout is not available in Expo Go. Please build a Standalone APK or Development Build ("npx expo run:android" or "eas build") for native payment checkout.'
+            )
+          } else {
+            console.warn('⚠️ Native Razorpay module (RNRazorpayCheckout) is missing from current app binary!')
+            Alert.alert(
+              'Native Build Required',
+              'Razorpay native checkout module is missing from this app binary. Please ensure react-native-razorpay is linked.'
+            )
+          }
+          setLoading(false)
+          setPaymentLoading(false)
+          return
         }
 
         try {

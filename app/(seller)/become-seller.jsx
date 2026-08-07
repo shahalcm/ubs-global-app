@@ -16,6 +16,7 @@ import {
   NativeModules,
 } from "react-native";
 import RazorpayCheckout from "react-native-razorpay";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -189,7 +190,8 @@ export default function BecomeSellerScreen() {
           const key = orderRes.data.key;
           const rzpAmount = orderRes.data.amount;
 
-          const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout || NativeModules?.RazorpayCheckout);
+          const isExpoGoApp = Constants.appOwnership === 'expo' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+          const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout && typeof RazorpayCheckout?.open === 'function');
 
           if (isNativeModuleAvailable && key) {
             const options = {
@@ -209,6 +211,22 @@ export default function BecomeSellerScreen() {
             const rzpData = await RazorpayCheckout.open(options);
             razorpayPaymentId = rzpData?.razorpay_payment_id || '';
             razorpaySignature = rzpData?.razorpay_signature || '';
+          } else if (isExpoGoApp) {
+            console.log('ℹ️ Running in Expo Go environment: Native Razorpay SDK requires standalone APK / development build');
+            Alert.alert(
+              t("Expo Go Notice"),
+              t("Native Razorpay checkout is not available inside Expo Go. Please build a Standalone APK or Development Build (npx expo run:android) to perform native Razorpay payments.")
+            );
+            setLoading(false);
+            return;
+          } else {
+            console.warn('⚠️ Native Razorpay module (RNRazorpayCheckout) is missing from current app binary');
+            Alert.alert(
+              t("Native Build Required"),
+              t("Razorpay native checkout module is missing from this app binary. Please ensure react-native-razorpay is linked.")
+            );
+            setLoading(false);
+            return;
           }
         }
       } catch (rzpErr) {
@@ -239,13 +257,14 @@ export default function BecomeSellerScreen() {
         router.replace("/(seller)/dashboard");
       } else {
         Alert.alert(
-          t("Error"),
+          t("Notice"),
           res.message || t("Failed to submit application"),
         );
       }
     } catch (error) {
       console.log("Apply seller error:", error);
-      Alert.alert(t("Error"), t("Something went wrong. Please try again."));
+      const errMsg = error.response?.data?.message || error.message || t("Something went wrong. Please try again.");
+      Alert.alert(t("Error"), errMsg);
     } finally {
       setLoading(false);
     }

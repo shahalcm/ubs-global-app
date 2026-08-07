@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Activity
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import RazorpayCheckout from 'react-native-razorpay'
+import Constants, { ExecutionEnvironment } from 'expo-constants'
 import { verifyPayment } from '../../services/paymentService'
 import { useAuth } from '../../context/AuthContext'
 import { useCurrency } from '../../context/CurrencyContext'
@@ -63,14 +64,23 @@ export default function PaymentScreen() {
         theme: { color: '#1a237e' }
       }
 
-      const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout || NativeModules?.RazorpayCheckout)
+      const isExpoGoApp = Constants.appOwnership === 'expo' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+      const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout && typeof RazorpayCheckout?.open === 'function')
 
       if (!isNativeModuleAvailable) {
-        console.warn('⚠️ Native Razorpay module (RNRazorpayCheckout) is missing from current app binary!')
-        Alert.alert(
-          'Native Build Required',
-          'Razorpay native checkout module is not available in Expo Go or this app binary. Please build a custom Development APK using "npx expo run:android" or "eas build -p android".'
-        )
+        if (isExpoGoApp) {
+          console.log('ℹ️ Running in Expo Go environment: Native Razorpay SDK requires standalone APK / development build')
+          Alert.alert(
+            'Expo Go Notice',
+            'Razorpay native checkout overlay is not supported inside Expo Go. Please build a Standalone APK or Development Build ("npx expo run:android" or "eas build") to perform native payments.'
+          )
+        } else {
+          console.warn('⚠️ Native Razorpay module (RNRazorpayCheckout) is missing from current app binary!')
+          Alert.alert(
+            'Native Build Required',
+            'Razorpay native checkout module is missing from this app binary. Please ensure react-native-razorpay is linked.'
+          )
+        }
         setLoading(false)
         return
       }
