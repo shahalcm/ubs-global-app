@@ -11,36 +11,52 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput
+  TextInput,
+  Linking
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { trackOrder, cancelOrder } from '../../services/orderService'
+import { downloadOrderInvoice, downloadShippingLabel } from '../../services/shipmentService'
 
 export default function OrderTrackingScreen() {
   const { orderId } = useLocalSearchParams()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
     if (orderId) {
       loadOrder()
+    } else {
+      setLoading(false)
+      setError('Order ID is missing in navigation params')
     }
+    return () => { isMounted = false }
   }, [orderId])
 
   const loadOrder = async () => {
     try {
       setLoading(true)
-      const res = await trackOrder(orderId)
-      if (res.success) {
+      setError(null)
+      const res = await Promise.race([
+        trackOrder(orderId),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000))
+      ])
+
+      if (res && res.success && res.order) {
         setOrder(res.order)
+      } else {
+        setError(res?.message || 'Unable to retrieve order tracking information.')
       }
     } catch (err) {
       console.log('Error tracking order:', err)
+      setError(err.message || 'Network failure while fetching tracking details.')
     } finally {
       setLoading(false)
     }
@@ -100,8 +116,8 @@ export default function OrderTrackingScreen() {
   }
 
   const handleCopyTrackingNumber = () => {
-    if (order?.trackingNumber) {
-      Alert.alert('Copied', `Tracking number ${order.trackingNumber} copied to clipboard!`)
+    if (order?.trackingNumber || order?.awbCode) {
+      Alert.alert('Copied', `Tracking number ${order.trackingNumber || order.awbCode} copied to clipboard!`)
     }
   }
 
@@ -109,22 +125,35 @@ export default function OrderTrackingScreen() {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#1a237e" />
-        <Text style={{ marginTop: 12, color: '#666' }}>Loading order tracking...</Text>
+        <Text style={{ marginTop: 12, color: '#666', fontWeight: 'bold' }}>Loading shipment & tracking details...</Text>
       </SafeAreaView>
     )
   }
 
-  if (!order) {
+  if (error || !order) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
-        <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#ff4444" />
-        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: 'bold', color: '#333' }}>Order Not Found</Text>
-        <TouchableOpacity 
-          style={{ marginTop: 20, backgroundColor: '#1a237e', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }} 
-          onPress={() => router.replace('/(buyer)/home')}
-        >
-          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Back to Home</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <MaterialCommunityIcons name="alert-circle-outline" size={56} color="#ff4444" />
+        <Text style={{ marginTop: 14, fontSize: 18, fontWeight: 'bold', color: '#333' }}>
+          {error ? 'Unable to Load Tracking' : 'Order Not Found'}
+        </Text>
+        <Text style={{ marginTop: 8, fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          {error || 'The requested order details could not be found or fetched.'}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#1a237e', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }} 
+            onPress={loadOrder}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Retry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#f0f0f0', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }} 
+            onPress={() => router.replace('/(buyer)/orders')}
+          >
+            <Text style={{ color: '#333', fontWeight: 'bold' }}>My Orders</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     )
   }
@@ -228,6 +257,16 @@ export default function OrderTrackingScreen() {
           </ImageBackground>
         </View>
 
+        {/* Pending Pickup Notice */}
+        {!order.awbCode && !order.trackingNumber && order.orderStatus !== 'cancelled' && (
+          <View style={{ backgroundColor: '#e3f2fd', padding: 14, borderRadius: 12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#1976d2', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <MaterialCommunityIcons name="information" size={24} color="#1976d2" />
+            <Text style={{ color: '#0d47a1', fontSize: 13, fontWeight: 'bold', flex: 1 }}>
+              Tracking will be available once your shipment is picked up.
+            </Text>
+          </View>
+        )}
+
         {/* Cancellation Info Banner */}
         {order.orderStatus === 'cancelled' && (
           <View style={styles.cancelledBanner}>
@@ -278,13 +317,76 @@ export default function OrderTrackingScreen() {
           <View style={styles.trackingBox}>
             <View>
               <Text style={styles.trackingLabel}>TRACKING NUMBER</Text>
-              <Text style={styles.trackingNumber}>{order.trackingNumber || 'Pending Assignment'}</Text>
+              <Text style={styles.trackingNumber}>{order.trackingNumber || order.awbCode || 'Pending Assignment'}</Text>
             </View>
-            {order.trackingNumber && (
+            {(order.trackingNumber || order.awbCode) && (
               <TouchableOpacity style={styles.copyBtn} onPress={handleCopyTrackingNumber}>
                 <MaterialCommunityIcons name="content-copy" size={20} color="#666" />
               </TouchableOpacity>
             )}
+          </View>
+
+          {/* Shiprocket Documents: Invoice & Label */}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#1a237e',
+                paddingVertical: 10,
+                borderRadius: 8,
+                gap: 6
+              }}
+              onPress={async () => {
+                if (order.invoiceUrl) {
+                  Linking.openURL(order.invoiceUrl)
+                } else {
+                  try {
+                    const res = await downloadOrderInvoice(order._id)
+                    if (res && res.invoiceUrl) {
+                      Linking.openURL(res.invoiceUrl)
+                    }
+                  } catch (e) {
+                    console.log('Invoice download error:', e)
+                  }
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="file-pdf-box" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Download Invoice</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#008b8b',
+                paddingVertical: 10,
+                borderRadius: 8,
+                gap: 6
+              }}
+              onPress={async () => {
+                if (order.labelUrl) {
+                  Linking.openURL(order.labelUrl)
+                } else {
+                  try {
+                    const res = await downloadShippingLabel(order._id)
+                    if (res && res.labelUrl) {
+                      Linking.openURL(res.labelUrl)
+                    }
+                  } catch (e) {
+                    console.log('Label download error:', e)
+                  }
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="barcode-scan" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Shipping Label</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

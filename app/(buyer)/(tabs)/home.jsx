@@ -901,6 +901,46 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Real Estate Category Promotional Banner */}
+        {(() => {
+          const realestateBanner = banners.find(b => b.position === 'realestate') || {
+            title: 'Find Your Dream Luxury Property',
+            subtitle: 'Explore villas, apartments, plots & commercial spaces worldwide.',
+            image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80',
+            linkUrl: '/(buyer)/real-estate'
+          };
+          return (
+            <TouchableOpacity
+              style={styles.realEstateBannerCard}
+              onPress={() => router.push(realestateBanner.linkUrl || "/(buyer)/real-estate")}
+              activeOpacity={0.9}
+            >
+              <Image
+                source={{ uri: realestateBanner.image }}
+                style={styles.realEstateBannerImage}
+                contentFit="cover"
+                transition={200}
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(15, 23, 42, 0.92)']}
+                style={styles.realEstateBannerOverlay}
+              >
+                <View style={styles.realEstateBadge}>
+                  <MaterialCommunityIcons name="home-city" size={14} color="#ffd700" />
+                  <Text style={styles.realEstateBadgeText}>REAL ESTATE MARKETPLACE</Text>
+                </View>
+                <Text style={styles.realEstateTitle}>{t(realestateBanner.title)}</Text>
+                {realestateBanner.subtitle && (
+                  <Text style={styles.realEstateSubtitle}>{t(realestateBanner.subtitle)}</Text>
+                )}
+                <View style={styles.realEstateBtn}>
+                  <Text style={styles.realEstateBtnText}>Browse Properties →</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          );
+        })()}
+
         {/* Secure Payments Card */}
         <View style={styles.secureCard}>
           <Text style={styles.secureTitle}>{t('secure_payments')}</Text>
@@ -1754,5 +1794,68 @@ const styles = StyleSheet.create({
     padding: 7,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  realEstateBannerCard: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 16,
+    height: 190,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4
+  },
+  realEstateBannerImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute'
+  },
+  realEstateBannerOverlay: {
+    flex: 1,
+    padding: 18,
+    justifyContent: 'flex-end'
+  },
+  realEstateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 6,
+    gap: 6
+  },
+  realEstateBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5
+  },
+  realEstateTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  realEstateSubtitle: {
+    color: '#e2e8f0',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '500'
+  },
+  realEstateBtn: {
+    marginTop: 12,
+    backgroundColor: '#1a237e',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10
+  },
+  realEstateBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 12
   },
 });

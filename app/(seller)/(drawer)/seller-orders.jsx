@@ -111,62 +111,93 @@ export default function SellerOrdersScreen() {
 
     const currentStatus = order.orderStatus
 
-    switch (currentStatus) {
-      case 'placed':
-        return (
-          <View style={styles.actionRow}>
+    return (
+      <View style={{ gap: 8, marginTop: 8 }}>
+        <View style={styles.actionRow}>
+          {currentStatus === 'placed' && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: '#ffebee', borderWidth: 1, borderColor: colors.error, marginRight: 8 }]}
+                onPress={() => handleUpdateStatus(order._id, 'cancelled')}
+              >
+                <Text style={[styles.actionBtnText, { color: colors.error }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                onPress={() => handleUpdateStatus(order._id, 'confirmed')}
+              >
+                <Text style={styles.actionBtnText}>Confirm</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {currentStatus === 'confirmed' && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: '#ffebee', borderWidth: 1, borderColor: colors.error, marginRight: 8 }]}
+                onPress={() => handleUpdateStatus(order._id, 'cancelled')}
+              >
+                <Text style={[styles.actionBtnText, { color: colors.error }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.accent }]}
+                onPress={() => handleUpdateStatus(order._id, 'packed')}
+              >
+                <Text style={styles.actionBtnText}>Pack Order</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {currentStatus === 'packed' && (
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#ffebee', borderWidth: 1, borderColor: colors.error, marginRight: 8 }]}
-              onPress={() => handleUpdateStatus(order._id, 'cancelled')}
+              style={[styles.actionBtn, { backgroundColor: '#651fff' }]}
+              onPress={() => handleUpdateStatus(order._id, 'shipped')}
             >
-              <Text style={[styles.actionBtnText, { color: colors.error }]}>Cancel</Text>
+              <Text style={styles.actionBtnText}>Ship Order</Text>
             </TouchableOpacity>
+          )}
+
+          {currentStatus === 'shipped' && (
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-              onPress={() => handleUpdateStatus(order._id, 'confirmed')}
+              style={[styles.actionBtn, { backgroundColor: colors.success }]}
+              onPress={() => handleUpdateStatus(order._id, 'delivered')}
             >
-              <Text style={styles.actionBtnText}>Confirm</Text>
+              <Text style={styles.actionBtnText}>Mark Delivered</Text>
             </TouchableOpacity>
-          </View>
-        )
-      case 'confirmed':
-        return (
-          <View style={styles.actionRow}>
+          )}
+        </View>
+
+        {/* Shiprocket Quick Document Download Buttons */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+          {order.invoiceUrl ? (
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#ffebee', borderWidth: 1, borderColor: colors.error, marginRight: 8 }]}
-              onPress={() => handleUpdateStatus(order._id, 'cancelled')}
+              style={{ backgroundColor: '#1a237e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+              onPress={() => Linking.openURL(order.invoiceUrl)}
             >
-              <Text style={[styles.actionBtnText, { color: colors.error }]}>Cancel</Text>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>📄 Invoice PDF</Text>
             </TouchableOpacity>
+          ) : null}
+
+          {order.labelUrl ? (
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.accent }]}
-              onPress={() => handleUpdateStatus(order._id, 'packed')}
+              style={{ backgroundColor: '#008b8b', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+              onPress={() => Linking.openURL(order.labelUrl)}
             >
-              <Text style={styles.actionBtnText}>Pack Order</Text>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>🏷️ Label PDF</Text>
             </TouchableOpacity>
-          </View>
-        )
-      case 'packed':
-        return (
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#651fff' }]}
-            onPress={() => handleUpdateStatus(order._id, 'shipped')}
-          >
-            <Text style={styles.actionBtnText}>Ship Order</Text>
-          </TouchableOpacity>
-        )
-      case 'shipped':
-        return (
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.success }]}
-            onPress={() => handleUpdateStatus(order._id, 'delivered')}
-          >
-            <Text style={styles.actionBtnText}>Mark Delivered</Text>
-          </TouchableOpacity>
-        )
-      default:
-        return null
-    }
+          ) : null}
+
+          {order.manifestUrl ? (
+            <TouchableOpacity
+              style={{ backgroundColor: '#ff8f00', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+              onPress={() => Linking.openURL(order.manifestUrl)}
+            >
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>📋 Manifest PDF</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+    )
   }
 
   const filteredOrders = orders.filter(o => selectedTab === 'all' || o.orderStatus === selectedTab)
@@ -248,12 +279,22 @@ export default function SellerOrdersScreen() {
               <View key={order._id} style={styles.card}>
                 {/* Card Header */}
                 <View style={styles.cardHeader}>
-                  <Text style={styles.orderId}>#{order.orderNumber}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                      {statusStyle.label}
-                    </Text>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.orderId}>#{order.orderNumber}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                      <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                        {statusStyle.label}
+                      </Text>
+                    </View>
                   </View>
+
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#e0e7ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    onPress={() => router.push(`/(seller)/order-details?orderId=${order._id}`)}
+                  >
+                    <MaterialCommunityIcons name="eye-outline" size={14} color="#1a237e" />
+                    <Text style={{ color: '#1a237e', fontWeight: 'bold', fontSize: 12 }}>View Details</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Items List Checklist */}

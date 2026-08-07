@@ -81,6 +81,7 @@ colors.onChange = () => {
 import { AuthProvider } from '../context/AuthContext'
 import { CallProvider } from '../context/CallContext'
 import { CartProvider } from '../context/CartContext'
+import { CurrencyProvider } from '../context/CurrencyContext'
 import { ThemeProvider, useTheme } from '../context/ThemeContext'
 import { ErrorBoundary } from '../components/shared/ErrorBoundary'
 import { Slot } from 'expo-router'
@@ -178,20 +179,22 @@ function RootLayoutInner() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <CallProvider>
-        <CartProvider>
-          <View style={{ flex: 1, backgroundColor: colors.background }}>
-            <StatusBar style={darkTheme ? "light" : "dark"} backgroundColor={darkTheme ? "#121212" : "#1A237E"} translucent={false} />
-            {Platform.OS === 'ios' && (
-              <View style={{ height: insets.top, backgroundColor: darkTheme ? "#121212" : "#1A237E" }} />
-            )}
-            <View style={{ flex: 1 }}>
-              {i18nLoaded ? <Slot /> : null}
+      <CurrencyProvider>
+        <CallProvider>
+          <CartProvider>
+            <View style={{ flex: 1, backgroundColor: colors.background }}>
+              <StatusBar style={darkTheme ? "light" : "dark"} backgroundColor={darkTheme ? "#121212" : "#1A237E"} translucent={false} />
+              {Platform.OS === 'ios' && (
+                <View style={{ height: insets.top, backgroundColor: darkTheme ? "#121212" : "#1A237E" }} />
+              )}
+              <View style={{ flex: 1 }}>
+                {i18nLoaded ? <Slot /> : null}
+              </View>
+              <CustomAlertContainer />
             </View>
-            <CustomAlertContainer />
-          </View>
-        </CartProvider>
-      </CallProvider>
+          </CartProvider>
+        </CallProvider>
+      </CurrencyProvider>
     </I18nextProvider>
   )
 }

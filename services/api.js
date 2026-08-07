@@ -78,7 +78,7 @@ api.interceptors.response.use(
       config.__retryCount += 1;
       const delay = RETRY_DELAY_BASE * Math.pow(2, config.__retryCount); // Exponential backoff: 2s, 4s, 8s
       
-      console.warn(`⚠️ [API Retry] ${config.method?.toUpperCase()} ${config.url} failed (${message}). Retrying in ${delay}ms... (Attempt ${config.__retryCount}/${MAX_RETRIES})`);
+      console.log(`ℹ️ [API Retry] ${config.method?.toUpperCase()} ${config.url} failed (${message}). Retrying in ${delay}ms... (Attempt ${config.__retryCount}/${MAX_RETRIES})`);
       
       await new Promise(resolve => setTimeout(resolve, delay));
       return api(config);

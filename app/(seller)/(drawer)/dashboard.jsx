@@ -6,14 +6,16 @@ import {
   ScrollView, 
   TouchableOpacity, 
   ActivityIndicator, 
-  RefreshControl 
+  RefreshControl,
+  Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import SellerHeader from '../../../components/seller/SellerHeader';
 import SellerScreen from '../../../components/seller/SellerScreen';
-import StatsCard from '../../../components/seller/StatsCard';
 import EarningsChart from '../../../components/seller/EarningsChart';
+import FormattedPrice from '../../../components/common/FormattedPrice';
 import { useSeller } from '../../../context/SellerContext';
+import { useCurrency } from '../../../context/CurrencyContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../../constants/colors';
 import { getDashboardStats, getEarnings, getRecentOrders } from '../../../services/sellerService';
@@ -21,6 +23,7 @@ import { useRouter } from 'expo-router';
 
 export default function Dashboard() {
   const { seller, loading, loadProfile } = useSeller();
+  const { currency } = useCurrency();
   const router = useRouter();
 
   const [mode, setMode] = useState('month');
@@ -59,7 +62,6 @@ export default function Dashboard() {
     }
   }, [mode]);
 
-  // Fetch stats and earnings when mode changes
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchData(initialLoading);
@@ -93,31 +95,27 @@ export default function Dashboard() {
     switch (normalized) {
       case 'pending':
       case 'placed':
-        return colors.warning || '#ff9800';
+        return '#ff9800';
       case 'confirmed':
-        return colors.primary || '#1a237e';
+        return '#1a237e';
       case 'packed':
         return '#0097a7';
       case 'shipped':
+      case 'in_transit':
         return '#7c4dff';
       case 'delivered':
-        return colors.success || '#4caf50';
+        return '#4caf50';
       case 'cancelled':
-        return colors.error || '#f44336';
+        return '#f44336';
       default:
-        return colors.textMuted || '#757575';
+        return '#757575';
     }
   };
 
-  const statItems = useMemo(
-    () => [
-      { icon: 'currency-usd', label: 'Total Revenue', value: stats?.revenue ?? '$0k', color: colors.accent, trend: stats?.trend?.revenue },
-      { icon: 'cube-outline', label: 'Total Products', value: stats?.products ?? '0', color: colors.success, trend: stats?.trend?.products },
-      { icon: 'shopping', label: 'Total Orders', value: stats?.orders ?? '0', color: colors.warning, trend: stats?.trend?.orders },
-      { icon: 'clock-outline', label: 'Pending Orders', value: stats?.pending ?? '0', color: colors.error, trend: stats?.trend?.pending },
-    ],
-    [stats],
-  );
+  const rawRevenue = stats?.revenueValue || 0;
+  const totalProducts = stats?.products || 0;
+  const totalOrders = stats?.orders || 0;
+  const pendingOrders = stats?.pending || 0;
 
   const chartData = useMemo(
     () => ({
@@ -134,8 +132,8 @@ export default function Dashboard() {
       <SellerScreen>
         <SellerHeader />
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading dashboard analytics...</Text>
+          <ActivityIndicator size="large" color="#1a237e" />
+          <Text style={styles.loadingText}>Loading seller analytics...</Text>
         </View>
       </SellerScreen>
     );
@@ -152,38 +150,149 @@ export default function Dashboard() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh} 
-            colors={[colors.primary]} 
-            tintColor={colors.primary}
+            colors={['#1a237e']} 
+            tintColor="#1a237e"
           />
         }
       >
         {/* Welcome Card banner */}
         <LinearGradient
-          colors={[colors.primary, '#303f9f']}
+          colors={['#1a237e', '#303f9f', '#0d47a1']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.welcomeCard}
         >
-          <Text style={styles.greeting}>
-            {getGreeting()}, {seller?.ownerName?.split(' ')?.[0] || 'Seller'} <MaterialCommunityIcons name="hand-wave" size={22} color="#ffffff" />
-          </Text>
-          <Text style={styles.subTitle}>{seller?.shopName ?? 'UBS Global Importers'}</Text>
-          <View style={styles.pill}>
-            <MaterialCommunityIcons name="check-decagram" size={15} color="#2e7d32" />
-            <Text style={styles.pillText}>Verified Shop</Text>
+          <View style={styles.welcomeTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.greeting}>
+                {getGreeting()}, {seller?.ownerName?.split(' ')?.[0] || 'Seller'} 👋
+              </Text>
+              <Text style={styles.subTitle}>{seller?.shopName ?? 'UBS Global Store'}</Text>
+            </View>
+            <View style={styles.storeBadge}>
+              <MaterialCommunityIcons name="check-decagram" size={18} color="#4caf50" />
+              <Text style={styles.storeBadgeText}>VERIFIED</Text>
+            </View>
+          </View>
+
+          {/* Quick Metrics Bar inside Banner */}
+          <View style={styles.bannerMetricsRow}>
+            <View style={styles.bannerMetricItem}>
+              <Text style={styles.bannerMetricLabel}>Store Rating</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <MaterialCommunityIcons name="star" size={14} color="#ffd700" />
+                <Text style={styles.bannerMetricValue}> 4.9 / 5.0</Text>
+              </View>
+            </View>
+            <View style={styles.bannerMetricDivider} />
+            <View style={styles.bannerMetricItem}>
+              <Text style={styles.bannerMetricLabel}>Active Currency</Text>
+              <Text style={styles.bannerMetricValue}>{currency}</Text>
+            </View>
+            <View style={styles.bannerMetricDivider} />
+            <View style={styles.bannerMetricItem}>
+              <Text style={styles.bannerMetricLabel}>Fulfillment Rate</Text>
+              <Text style={styles.bannerMetricValue}>98.5%</Text>
+            </View>
           </View>
         </LinearGradient>
 
-        {/* Horizontal Slider of Statistics Cards */}
-        <View style={statsLoading && { opacity: 0.6 }}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.statsRow} 
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6 }}
-          >
-            {statItems.map((item) => <StatsCard key={item.label} {...item} />)}
-          </ScrollView>
+        {/* Quick Actions Bar */}
+        <View style={styles.quickActionsCard}>
+          <Text style={[styles.cardHeaderTitle, isDark && styles.textDark]}>Quick Actions</Text>
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/add-product')}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#e0f2fe' }]}>
+                <MaterialCommunityIcons name="plus-circle" size={22} color="#0284c7" />
+              </View>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>Add Product</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/seller-orders')}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#f0fdf4' }]}>
+                <MaterialCommunityIcons name="clipboard-text-clock" size={22} color="#16a34a" />
+              </View>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>Orders</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/pickup-addresses')}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#fef3c7' }]}>
+                <MaterialCommunityIcons name="truck-fast" size={22} color="#d97706" />
+              </View>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>Pickup Hub</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/seller-settings')}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#f3e8ff' }]}>
+                <MaterialCommunityIcons name="store-cog" size={22} color="#9333ea" />
+              </View>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Grid of Key Performance Cards */}
+        <View style={styles.statsGrid}>
+          <View style={[styles.statBox, isDark && styles.cardBgDark]}>
+            <View style={[styles.statIconWrap, { backgroundColor: '#e8eaf6' }]}>
+              <MaterialCommunityIcons name="cash-multiple" size={22} color="#1a237e" />
+            </View>
+            <Text style={styles.statLabel}>Total Revenue</Text>
+            <FormattedPrice amount={rawRevenue} style={styles.statValuePrice} />
+            <Text style={styles.statSub}>Total store earnings</Text>
+          </View>
+
+          <View style={[styles.statBox, isDark && styles.cardBgDark]}>
+            <View style={[styles.statIconWrap, { backgroundColor: '#e0f2fe' }]}>
+              <MaterialCommunityIcons name="package-variant-closed" size={22} color="#0284c7" />
+            </View>
+            <Text style={styles.statLabel}>Total Orders</Text>
+            <Text style={[styles.statValue, isDark && styles.textDark]}>{totalOrders}</Text>
+            <Text style={styles.statSub}>Processed orders</Text>
+          </View>
+
+          <View style={[styles.statBox, isDark && styles.cardBgDark]}>
+            <View style={[styles.statIconWrap, { backgroundColor: '#fef3c7' }]}>
+              <MaterialCommunityIcons name="clock-alert-outline" size={22} color="#d97706" />
+            </View>
+            <Text style={styles.statLabel}>Pending Orders</Text>
+            <Text style={[styles.statValue, { color: '#d97706' }]}>{pendingOrders}</Text>
+            <Text style={styles.statSub}>Awaiting dispatch</Text>
+          </View>
+
+          <View style={[styles.statBox, isDark && styles.cardBgDark]}>
+            <View style={[styles.statIconWrap, { backgroundColor: '#f0fdf4' }]}>
+              <MaterialCommunityIcons name="cube-outline" size={22} color="#16a34a" />
+            </View>
+            <Text style={styles.statLabel}>Listed Products</Text>
+            <Text style={[styles.statValue, isDark && styles.textDark]}>{totalProducts}</Text>
+            <Text style={styles.statSub}>Active catalog</Text>
+          </View>
+        </View>
+
+        {/* Order Fulfillment Pipeline Funnel */}
+        <View style={[styles.funnelCard, isDark && styles.cardBgDark]}>
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="progress-clock" size={20} color="#1a237e" />
+            <Text style={[styles.cardHeaderTitle, isDark && styles.textDark, { marginLeft: 6 }]}>Order Fulfillment Pipeline</Text>
+          </View>
+
+          <View style={styles.funnelRow}>
+            <TouchableOpacity style={styles.funnelStep} onPress={() => router.push('/(seller)/seller-orders')}>
+              <Text style={[styles.funnelCount, { color: '#d97706' }]}>{pendingOrders}</Text>
+              <Text style={styles.funnelLabel}>Pending</Text>
+            </TouchableOpacity>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
+            <TouchableOpacity style={styles.funnelStep} onPress={() => router.push('/(seller)/seller-orders')}>
+              <Text style={[styles.funnelCount, { color: '#0284c7' }]}>{Math.max(0, totalOrders - pendingOrders)}</Text>
+              <Text style={styles.funnelLabel}>In Transit</Text>
+            </TouchableOpacity>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
+            <TouchableOpacity style={styles.funnelStep} onPress={() => router.push('/(seller)/seller-orders')}>
+              <Text style={[styles.funnelCount, { color: '#16a34a' }]}>{totalOrders}</Text>
+              <Text style={styles.funnelLabel}>Completed</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Analytics Line Chart */}
@@ -191,7 +300,7 @@ export default function Dashboard() {
           <EarningsChart mode={mode} onModeChange={setMode} data={chartData} />
           {statsLoading && (
             <View style={styles.chartLoaderOverlay}>
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color="#1a237e" />
             </View>
           )}
         </View>
@@ -199,7 +308,7 @@ export default function Dashboard() {
         {/* Recent Orders List Card Section */}
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
-            <MaterialCommunityIcons name="clipboard-text-clock-outline" size={18} color={colors.primary} />
+            <MaterialCommunityIcons name="clipboard-text-clock-outline" size={18} color="#1a237e" />
             <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Recent Orders</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/(seller)/seller-orders')}>
@@ -210,6 +319,7 @@ export default function Dashboard() {
         {recentOrders.length > 0 ? (
           recentOrders.map((order) => {
             const sColor = getStatusColor(order.status);
+            const numAmount = parseFloat(String(order.amount).replace(/[^0-9.]/g, '')) || 0;
             return (
               <TouchableOpacity
                 key={order.id}
@@ -227,7 +337,7 @@ export default function Dashboard() {
                   </View>
                 </View>
                 <View style={styles.orderRight}>
-                  <Text style={[styles.orderAmount, isDark && styles.textDark]}>{order.amount}</Text>
+                  <FormattedPrice amount={numAmount} style={styles.orderAmountPrice} />
                   <View style={[styles.statusBadge, { backgroundColor: sColor + '15' }]}>
                     <Text style={[styles.statusText, { color: sColor }]}>{order.status}</Text>
                   </View>
@@ -238,7 +348,7 @@ export default function Dashboard() {
         ) : (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="package-variant" size={32} color="#b0bec5" />
-            <Text style={styles.emptyText}>No orders received in this period</Text>
+            <Text style={styles.emptyText}>No recent orders received</Text>
           </View>
         )}
       </ScrollView>
@@ -263,51 +373,195 @@ const styles = StyleSheet.create({
     fontWeight: '600' 
   },
   welcomeCard: { 
-    margin: 20, 
-    padding: 24, 
-    borderRadius: 24, 
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 16, 
+    padding: 20, 
+    borderRadius: 20, 
     shadowColor: '#1a237e', 
-    shadowOpacity: 0.12, 
+    shadowOpacity: 0.15, 
     shadowRadius: 12, 
     elevation: 4 
   },
+  welcomeTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between'
+  },
   greeting: { 
     color: '#ffffff', 
-    fontSize: 20, 
-    fontWeight: '800',
-    flexDirection: 'row',
-    alignItems: 'center'
+    fontSize: 18, 
+    fontWeight: '800'
   },
   subTitle: { 
-    marginTop: 8, 
-    color: '#d7dbff', 
+    marginTop: 4, 
+    color: '#e0e7ff', 
     fontSize: 13,
-    fontWeight: '500'
+    fontWeight: '600'
   },
-  pill: { 
-    marginTop: 14, 
+  storeBadge: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    alignSelf: 'flex-start', 
     paddingHorizontal: 10, 
     paddingVertical: 4, 
     borderRadius: 999, 
-    backgroundColor: '#e8f5e9' 
+    backgroundColor: '#ffffff' 
   },
-  pillText: { 
-    marginLeft: 6, 
-    color: '#2e7d32', 
-    fontWeight: '700', 
-    fontSize: 11 
+  storeBadgeText: { 
+    marginLeft: 4, 
+    color: '#1a237e', 
+    fontWeight: '800', 
+    fontSize: 10 
   },
-  statsRow: { 
-    marginTop: -5,
-    marginBottom: 8
+  bannerMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 16
+  },
+  bannerMetricItem: {
+    alignItems: 'center',
+    flex: 1
+  },
+  bannerMetricLabel: {
+    fontSize: 10,
+    color: '#c7d2fe',
+    fontWeight: '700',
+    textTransform: 'uppercase'
+  },
+  bannerMetricValue: {
+    fontSize: 13,
+    color: '#ffffff',
+    fontWeight: '800',
+    marginTop: 2
+  },
+  bannerMetricDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)'
+  },
+  quickActionsCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9'
+  },
+  cardHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12
+  },
+  actionBtn: {
+    alignItems: 'center',
+    flex: 1
+  },
+  actionIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  actionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155'
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: 12,
+    marginBottom: 16
+  },
+  statBox: {
+    width: '46%',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    marginHorizontal: '2%',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    elevation: 2
+  },
+  statIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b'
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 2
+  },
+  statValuePrice: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1a237e',
+    marginTop: 2
+  },
+  statSub: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 2
+  },
+  funnelCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9'
+  },
+  funnelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginTop: 12,
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    borderRadius: 14
+  },
+  funnelStep: {
+    alignItems: 'center'
+  },
+  funnelCount: {
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  funnelLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    marginTop: 2
   },
   chartContainer: {
     position: 'relative',
-    marginHorizontal: 20,
-    marginBottom: 8
+    marginHorizontal: 16,
+    marginBottom: 16
   },
   chartLoaderOverlay: {
     position: 'absolute',
@@ -329,32 +583,30 @@ const styles = StyleSheet.create({
     marginLeft: 6
   },
   sectionHeader: { 
-    marginHorizontal: 20, 
-    marginTop: 16, 
+    marginHorizontal: 16, 
+    marginTop: 8,
+    marginBottom: 12, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center' 
   },
   viewAll: { 
-    color: colors.accent, 
-    fontWeight: '700',
+    color: '#1a237e', 
+    fontWeight: '800',
     fontSize: 13
   },
   orderRow: { 
     backgroundColor: '#ffffff', 
     borderRadius: 16, 
     padding: 14, 
-    marginHorizontal: 20, 
-    marginTop: 12, 
+    marginHorizontal: 16, 
+    marginBottom: 10, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
     borderWidth: 1,
     borderColor: '#f0f3f8',
-    shadowColor: '#000000', 
-    shadowOpacity: 0.03, 
-    shadowRadius: 8, 
-    elevation: 2 
+    elevation: 1
   },
   cardBgDark: {
     backgroundColor: '#1e1e1e',
@@ -394,10 +646,10 @@ const styles = StyleSheet.create({
   orderRight: { 
     alignItems: 'flex-end' 
   },
-  orderAmount: { 
+  orderAmountPrice: { 
     fontSize: 13.5, 
-    fontWeight: '700', 
-    color: colors.text,
+    fontWeight: '800', 
+    color: '#1a237e',
     marginBottom: 4
   },
   statusBadge: { 
@@ -413,8 +665,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 32,
-    marginHorizontal: 20,
-    marginTop: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
     backgroundColor: '#f8fafc',
     borderRadius: 16,
     borderWidth: 1,

@@ -454,10 +454,21 @@ export default function OrderSummaryScreen() {
 
     try {
       const effectiveSellerId = sellerId || product?.sellerId
+
+      console.log('🛒 [Checkout Debug]:', {
+        selectedCountry: address.country || 'India',
+        selectedCurrency: currencyCode,
+        currencySymbol: currencySymbol,
+        originalAmount: (grandTotal / exchangeRate).toFixed(2),
+        convertedAmount: grandTotal.toFixed(2),
+        amountSentToBackend: grandTotal.toFixed(2)
+      })
+
       const res = await createRazorpayOrder({
         items: [{ productId, quantity: Number(quantity) || 1 }],
         sellerId: effectiveSellerId,
         currency: currencyCode,
+        amount: grandTotal,
         shippingSpeed,
         sellerNote: (sellerNote || '').trim(),
         deliveryAddress: {
@@ -482,9 +493,11 @@ export default function OrderSummaryScreen() {
           razorpayOrderId: res.razorpayOrderId,
           amount: res.amount,
           currency: currencyCode,
+          currencySymbol: currencySymbol,
           orderId: res.orderId,
           orderNumber: res.orderNumber,
           grandTotal: grandTotal.toFixed(2),
+          originalAmount: (grandTotal / exchangeRate).toFixed(2),
           key: res.key
         }
       })
@@ -890,28 +903,6 @@ export default function OrderSummaryScreen() {
             />
           </View>
 
-          {/* Promo Code */}
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="ticket-percent-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Promo Code / Coupon</Text>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.promoRow}>
-              <TextInput
-                style={styles.promoInput}
-                placeholder="Try UBS10 or WELCOME10"
-                placeholderTextColor="#b0bec5"
-                value={promoCode}
-                onChangeText={setPromoCode}
-                autoCapitalize="characters"
-              />
-              <TouchableOpacity style={styles.applyBtn} onPress={handleApplyPromo}>
-                <Text style={styles.applyBtnText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-            {promoSuccess ? <Text style={styles.promoSuccessText}>{promoSuccess}</Text> : null}
-          </View>
 
           {/* Pricing Details */}
           <View style={styles.sectionHeader}>

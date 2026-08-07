@@ -13,7 +13,9 @@ import {
   Modal,
   Alert,
   FlatList,
+  NativeModules,
 } from "react-native";
+import RazorpayCheckout from "react-native-razorpay";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -22,6 +24,8 @@ import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../../services/api";
 import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
+import FormattedPrice from "../../components/common/FormattedPrice";
+import { useCurrency } from "../../context/CurrencyContext";
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -53,7 +57,7 @@ export default function BecomeSellerScreen() {
   const [step, setStep] = useState(1);
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-  const [registrationFee, setRegistrationFee] = useState(15);
+  const [registrationFee, setRegistrationFee] = useState(10);
   const [selectedPayMethod, setSelectedPayMethod] = useState("card");
   const [form, setForm] = useState({
     shopName: "",
@@ -172,16 +176,65 @@ export default function BecomeSellerScreen() {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+
+      let razorpayOrderId = '';
+      let razorpayPaymentId = '';
+      let razorpaySignature = '';
+
+      // Step 1: Create Razorpay Subscription Order ($10 USD / year)
+      try {
+        const orderRes = await api.post('/sellers/create-subscription-order');
+        if (orderRes.data?.success && orderRes.data?.razorpayOrderId) {
+          razorpayOrderId = orderRes.data.razorpayOrderId;
+          const key = orderRes.data.key;
+          const rzpAmount = orderRes.data.amount;
+
+          const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout || NativeModules?.RazorpayCheckout);
+
+          if (isNativeModuleAvailable && key) {
+            const options = {
+              description: `UBS Global Seller Yearly Membership ($10/year)`,
+              image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
+              currency: 'INR',
+              key: key,
+              amount: rzpAmount,
+              name: 'UBS Global Seller Subscription',
+              order_id: razorpayOrderId,
+              prefill: {
+                name: form.ownerName || '',
+                phone: form.phone || ''
+              },
+              theme: { color: '#021B79' }
+            };
+            const rzpData = await RazorpayCheckout.open(options);
+            razorpayPaymentId = rzpData?.razorpay_payment_id || '';
+            razorpaySignature = rzpData?.razorpay_signature || '';
+          }
+        }
+      } catch (rzpErr) {
+        console.warn('Razorpay seller subscription checkout notice:', rzpErr);
+        if (rzpErr?.code === 2 || rzpErr?.code === 0 || rzpErr?.description === 'Payment cancelled by user') {
+          Alert.alert(t("Payment Cancelled"), t("Seller subscription payment was cancelled."));
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Step 2: Submit Application with Payment Verification
       const res = await applyAsSeller({
         ...form,
         phone: `${selectedCountry.code}${form.phone}`,
         registrationFeeAmount: registrationFee,
-        paymentMethod: selectedPayMethod === 'card' ? 'Credit/Debit Card' : selectedPayMethod === 'upi' ? 'UPI Wallet' : 'Bank Transfer'
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature,
+        paymentMethod: 'Razorpay ($10/Year Plan)'
       });
+
       if (res.success) {
         Alert.alert(
           t("Success"),
-          t(`Application & $${registrationFee.toFixed(2)} Store Registration Fee received! Awaiting approval.`),
+          t(`Application & $${registrationFee.toFixed(2)} Yearly Seller Membership Fee received! Valid for 1 year (Renews annually).`),
         );
         router.replace("/(seller)/dashboard");
       } else {
@@ -628,68 +681,48 @@ export default function BecomeSellerScreen() {
                 {/* Fee Header Card */}
                 <View style={styles.feeBannerCard}>
                   <View style={styles.feeBadgeContainer}>
-                    <Text style={styles.feeBadgeText}>{t("OFFICIAL ONBOARDING")}</Text>
+                    <Text style={styles.feeBadgeText}>{t("YEARLY SUBSCRIPTION PLAN")}</Text>
                   </View>
-                  <Text style={styles.feeAmountText}>${registrationFee.toFixed(2)}</Text>
-                  <Text style={styles.feeTitleText}>{t("Store Registration & Verification Fee")}</Text>
+                  <FormattedPrice amount={registrationFee} style={styles.feeAmountText} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0575E6', marginTop: 4 }}>
+                    {t("$10.00 / Year • Valid for 1 Year (Renews Annually)")}
+                  </Text>
+                  <Text style={styles.feeTitleText}>{t("Annual Seller Store Membership & Verification")}</Text>
                   <Text style={styles.feeDescText}>
-                    {t("One-time registration fee to setup your verified global export store, seller dashboard, and AI assistant.")}
+                    {t("Annual subscription fee ($10/year) to activate your verified global export store, seller dashboard, AI assistant, and international buyer network. Valid for 1 year and renews annually.")}
                   </Text>
                 </View>
 
-                {/* Payment Method Selector */}
-                <Text style={styles.label}>{t("SELECT PAYMENT METHOD")}</Text>
+                {/* Payment Gateway Selector */}
+                <Text style={styles.label}>{t("SECURE PAYMENT GATEWAY")}</Text>
                 
-                <TouchableOpacity
-                  style={[styles.payMethodOption, selectedPayMethod === 'card' && styles.payMethodActive]}
-                  onPress={() => setSelectedPayMethod('card')}
-                >
-                  <MaterialCommunityIcons name="credit-card-outline" size={22} color={selectedPayMethod === 'card' ? '#0575E6' : '#666'} />
+                <View style={[styles.payMethodOption, styles.payMethodActive]}>
+                  <MaterialCommunityIcons name="credit-card-outline" size={24} color="#0575E6" />
                   <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.payMethodTitle}>{t("Credit / Debit Card")}</Text>
-                    <Text style={styles.payMethodSub}>{t("Visa, MasterCard, Amex (Instant)")}</Text>
+                    <Text style={styles.payMethodTitle}>{t("Razorpay Payment Gateway")}</Text>
+                    <Text style={styles.payMethodSub}>{t("UPI, Credit/Debit Cards, Net Banking & Wallets")}</Text>
                   </View>
-                  <MaterialCommunityIcons name={selectedPayMethod === 'card' ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={selectedPayMethod === 'card' ? '#0575E6' : '#bbb'} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.payMethodOption, selectedPayMethod === 'upi' && styles.payMethodActive]}
-                  onPress={() => setSelectedPayMethod('upi')}
-                >
-                  <MaterialCommunityIcons name="wallet-outline" size={22} color={selectedPayMethod === 'upi' ? '#0575E6' : '#666'} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.payMethodTitle}>{t("UPI & Digital Wallets")}</Text>
-                    <Text style={styles.payMethodSub}>{t("Google Pay, Apple Pay, PhonePe")}</Text>
-                  </View>
-                  <MaterialCommunityIcons name={selectedPayMethod === 'upi' ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={selectedPayMethod === 'upi' ? '#0575E6' : '#bbb'} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.payMethodOption, selectedPayMethod === 'wire' && styles.payMethodActive]}
-                  onPress={() => setSelectedPayMethod('wire')}
-                >
-                  <MaterialCommunityIcons name="bank-transfer" size={22} color={selectedPayMethod === 'wire' ? '#0575E6' : '#666'} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.payMethodTitle}>{t("Bank Wire Transfer")}</Text>
-                    <Text style={styles.payMethodSub}>{t("Direct transfer to UBS Escrow")}</Text>
-                  </View>
-                  <MaterialCommunityIcons name={selectedPayMethod === 'wire' ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={selectedPayMethod === 'wire' ? '#0575E6' : '#bbb'} />
-                </TouchableOpacity>
+                  <MaterialCommunityIcons name="check-circle" size={20} color="#0575E6" />
+                </View>
 
                 {/* Price Summary Breakdown */}
                 <View style={styles.summaryCard}>
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>{t("Store Registration Fee")}</Text>
-                    <Text style={styles.summaryVal}>${registrationFee.toFixed(2)}</Text>
+                    <Text style={styles.summaryLabel}>{t("Seller Membership (Yearly Plan)")}</Text>
+                    <FormattedPrice amount={registrationFee} style={styles.summaryVal} />
                   </View>
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>{t("Marketplace Onboarding")}</Text>
-                    <Text style={[styles.summaryVal, { color: '#4caf50' }]}>{t("FREE")}</Text>
+                    <Text style={styles.summaryLabel}>{t("Validity Period")}</Text>
+                    <Text style={[styles.summaryVal, { color: '#0575E6' }]}>{t("1 Year (Renews Annually)")}</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>{t("Global Marketplace Access")}</Text>
+                    <Text style={[styles.summaryVal, { color: '#4caf50' }]}>{t("INCLUDED")}</Text>
                   </View>
                   <View style={styles.summaryDivider} />
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryTotalLabel}>{t("Total Due Now")}</Text>
-                    <Text style={styles.summaryTotalVal}>${registrationFee.toFixed(2)}</Text>
+                    <FormattedPrice amount={registrationFee} style={styles.summaryTotalVal} />
                   </View>
                 </View>
 
@@ -703,7 +736,7 @@ export default function BecomeSellerScreen() {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={styles.submitBtnText}>
-                      {t(`Pay $${registrationFee.toFixed(2)} & Submit Application`)}
+                      Pay $10 & Submit Application
                     </Text>
                   )}
                 </TouchableOpacity>

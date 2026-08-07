@@ -1,54 +1,120 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator, ScrollView, NativeModules, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import RazorpayCheckout from 'react-native-razorpay'
 import { verifyPayment } from '../../services/paymentService'
 import { useAuth } from '../../context/AuthContext'
+import { useCurrency } from '../../context/CurrencyContext'
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets()
   const { user } = useAuth()
-  const { razorpayOrderId, amount, orderId, orderNumber, grandTotal, key } = useLocalSearchParams()
+  const { razorpayOrderId, amount, orderId, orderNumber, grandTotal, currency, currencySymbol, originalAmount, key } = useLocalSearchParams()
   const [loading, setLoading] = useState(false)
+
+  const payCurrency = (currency || 'USD').toUpperCase()
+  const paySymbol = currencySymbol || '$'
+  const payAmount = Number(grandTotal || 0).toFixed(2)
+  const inrAmountFormatted = (Number(amount || 0) / 100).toFixed(2)
+  const isDifferentCurrency = payCurrency !== 'INR'
+  const displayAmountText = `₹${inrAmountFormatted} INR`
+
+  console.log('💳 [PaymentScreen Debug]:', {
+    selectedCurrency: payCurrency,
+    currencySymbol: paySymbol,
+    convertedAmount: payAmount,
+    inrChargedAmount: inrAmountFormatted,
+    originalAmount: originalAmount || 'N/A',
+    razorpayOrderId: razorpayOrderId,
+    razorpayAmount: amount
+  })
 
   const handlePayNow = async () => {
     setLoading(true)
     try {
-      let paymentId = 'pay_mock_' + Math.random().toString(36).substring(7)
-      let signature = 'sig_mock_' + Math.random().toString(36).substring(7)
+      if (!razorpayOrderId || !key) {
+        Alert.alert('Payment Error', 'Missing Razorpay order parameters. Please go back and retry checkout.')
+        setLoading(false)
+        return
+      }
 
-      if (key && key !== 'rzp_test_your_key_id' && razorpayOrderId && !razorpayOrderId.startsWith('order_mock_')) {
-        const options = {
-          description: `UBS Global Order #${orderNumber}`,
-          image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
-          currency: 'USD',
-          key: key,
-          amount: amount,
-          name: 'UBS Global',
-          order_id: razorpayOrderId,
-          prefill: {
-            email: user?.email || '',
-            contact: user?.phone || '',
-            name: user?.name || ''
-          },
-          theme: { color: '#1a237e' }
+      console.log('💳 [Razorpay Pre-Checkout Setup]:', {
+        key,
+        amount,
+        currency: 'INR',
+        order_id: razorpayOrderId
+      })
+
+      const options = {
+        description: `UBS Global Order #${orderNumber} • ₹${inrAmountFormatted} INR`,
+        image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
+        currency: 'INR',
+        key: key,
+        amount: Number(amount),
+        name: 'UBS Global',
+        order_id: razorpayOrderId,
+        prefill: {
+          email: user?.email || '',
+          contact: user?.phone || '',
+          name: user?.name || ''
+        },
+        theme: { color: '#1a237e' }
+      }
+
+      const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout || NativeModules?.RazorpayCheckout)
+
+      if (!isNativeModuleAvailable) {
+        console.warn('⚠️ Native Razorpay module (RNRazorpayCheckout) is missing from current app binary!')
+        Alert.alert(
+          'Native Build Required',
+          'Razorpay native checkout module is not available in Expo Go or this app binary. Please build a custom Development APK using "npx expo run:android" or "eas build -p android".'
+        )
+        setLoading(false)
+        return
+      }
+
+      let data
+      try {
+        data = await RazorpayCheckout.open(options)
+      } catch (rzpErr) {
+        console.warn('⚠️ Razorpay Checkout Error:', rzpErr)
+        if (rzpErr?.code === 2 || rzpErr?.code === 0 || rzpErr?.description === 'Payment cancelled by user') {
+          Alert.alert('Payment Cancelled', 'You cancelled the payment transaction.')
+          setLoading(false)
+          return
         }
-        const data = await RazorpayCheckout.open(options)
-        paymentId = data.razorpay_payment_id
-        signature = data.razorpay_signature
+        Alert.alert('Payment Error', rzpErr?.description || rzpErr?.message || 'Payment initiation failed on device.')
+        setLoading(false)
+        return
+      }
+
+      console.log('💳 [Razorpay SDK Returned Credentials]:', {
+        razorpay_order_id: data?.razorpay_order_id,
+        razorpay_payment_id: data?.razorpay_payment_id,
+        razorpay_signature: data?.razorpay_signature
+      })
+
+      const returnedOrderId = data?.razorpay_order_id || razorpayOrderId
+      const returnedPaymentId = data?.razorpay_payment_id
+      const returnedSignature = data?.razorpay_signature
+
+      if (!returnedPaymentId || !returnedSignature) {
+        Alert.alert('Payment Error', 'Incomplete payment credentials returned from Razorpay SDK.')
+        setLoading(false)
+        return
       }
 
       const verifyRes = await verifyPayment({
-        razorpayOrderId: razorpayOrderId,
-        razorpayPaymentId: paymentId,
-        razorpaySignature: signature,
+        razorpayOrderId: returnedOrderId,
+        razorpayPaymentId: returnedPaymentId,
+        razorpaySignature: returnedSignature,
         orderId: orderId
       })
 
-      if (verifyRes.success) {
-        Alert.alert('✅ Payment Successful!', `$${grandTotal} paid successfully`, [
+      if (verifyRes && verifyRes.success) {
+        Alert.alert('✅ Payment Successful!', `₹${inrAmountFormatted} INR paid successfully.`, [
           {
             text: 'OK',
             onPress: () => {
@@ -59,14 +125,13 @@ export default function PaymentScreen() {
             }
           }
         ])
+      } else {
+        Alert.alert('Payment Error', verifyRes?.message || 'Verification failed. Please try again.')
       }
     } catch (error) {
-      if (error && (error.code === 2 || error.code === 0)) {
-        Alert.alert('Cancelled', 'Payment was cancelled')
-      } else {
-        console.log('Payment error details:', error)
-        Alert.alert('Failed', 'Payment failed. Please try again.')
-      }
+      console.error('Payment execution error:', error)
+      const errorMsg = error?.response?.data?.message || error?.message || 'Payment failed. Please try again.'
+      Alert.alert('Payment Status', errorMsg)
     } finally {
       setLoading(false)
     }
@@ -87,23 +152,26 @@ export default function PaymentScreen() {
         </View>
 
         <View style={styles.amountCard}>
-          <Text style={styles.amountLabel}>Total Amount</Text>
-          <Text style={styles.amountValue}>${grandTotal} <Text style={styles.currencyLabel}>USD</Text></Text>
+          <Text style={styles.amountLabel}>Amount to be Charged via Razorpay</Text>
+          <Text style={styles.amountValue}>₹{inrAmountFormatted} <Text style={styles.currencyLabel}>INR</Text></Text>
+          {isDifferentCurrency && (
+            <Text style={styles.approxText}>≈ {paySymbol}{payAmount} {payCurrency} (Estimated)</Text>
+          )}
           <Text style={styles.orderLabel}>Order: #{orderNumber}</Text>
         </View>
 
         <View style={styles.methodCard}>
           <MaterialCommunityIcons name="credit-card-outline" size={24} color="#1a237e" />
           <View style={styles.methodTextContainer}>
-            <Text style={styles.methodTitle}>Pay with Razorpay</Text>
-            <Text style={styles.methodDesc}>Cards, UPI, Net Banking, Wallets</Text>
+            <Text style={styles.methodTitle}>Pay with Razorpay (₹{inrAmountFormatted} INR)</Text>
+            <Text style={styles.methodDesc}>UPI, Cards, Net Banking, Wallets</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.payBtn} onPress={handlePayNow} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Pay Now ${grandTotal}</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Pay ₹{inrAmountFormatted} INR →</Text>}
         </TouchableOpacity>
         <Text style={styles.tosText}>By paying you agree to our Terms of Service</Text>
       </View>
@@ -120,9 +188,10 @@ const styles = StyleSheet.create({
   secureText: { fontSize: 12, fontWeight: '600', color: '#2e7d32', marginLeft: 6 },
   amountCard: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#eaeaea' },
   amountLabel: { fontSize: 12, color: '#666', marginBottom: 2 },
-  amountValue: { fontSize: 28, fontWeight: '800', color: '#1a237e' },
-  currencyLabel: { fontSize: 14, fontWeight: '600', color: '#666' },
-  orderLabel: { fontSize: 12, color: '#999', marginTop: 6 },
+  amountValue: { fontSize: 32, fontWeight: '800', color: '#1a237e' },
+  currencyLabel: { fontSize: 16, fontWeight: '700', color: '#1a237e' },
+  approxText: { fontSize: 13, fontWeight: '600', color: '#666', marginTop: 4 },
+  orderLabel: { fontSize: 12, color: '#999', marginTop: 8 },
   methodCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#eaeaea' },
   methodTextContainer: { flex: 1, marginLeft: 10 },
   methodTitle: { fontSize: 14, fontWeight: '700', color: '#333' },

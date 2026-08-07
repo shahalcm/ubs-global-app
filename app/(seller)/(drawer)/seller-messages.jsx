@@ -372,9 +372,22 @@ export default function SellerMessages() {
                     );
                   }
 
-                  const isMine = message.senderId === myId;
+                  const msgSenderId = typeof message.senderId === 'object' ? message.senderId?._id : message.senderId;
+                  const isMine = (msgSenderId && myId && msgSenderId.toString() === myId.toString()) || message.senderType === 'seller';
+                  const buyerName = activeChat?.buyerId?.name || 'Buyer';
+
                   return (
-                    <TouchableOpacity key={message._id || index} onLongPress={() => handleLongPressMessage(message)} activeOpacity={0.9} style={[styles.bubble, isMine ? styles.rightBubble : styles.leftBubble]}>
+                    <TouchableOpacity 
+                      key={message._id || index} 
+                      onLongPress={() => handleLongPressMessage(message)} 
+                      activeOpacity={0.9} 
+                      style={[styles.bubble, isMine ? styles.rightBubble : styles.leftBubble]}
+                    >
+                      {!isMine && (
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1565c0', marginBottom: 3 }}>
+                          👤 {buyerName}
+                        </Text>
+                      )}
                       <Text style={[styles.bubbleText, isMine && styles.rightText]}>{message.text}</Text>
                       <Text style={[styles.timeLabel, isMine && styles.rightTimeLabel]}>{formatTime(message.createdAt)}</Text>
                     </TouchableOpacity>

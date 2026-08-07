@@ -66,3 +66,20 @@ export const getRecentOrders = async (period = 'month') => {
   })
   return res.data
 }
+
+// Pickup Addresses
+export const getPickupAddresses = async () => {
+  const res = await api.get('/sellers/pickup-addresses')
+  return res.data
+}
+
+export const addPickupAddress = async (data) => {
+  const res = await api.post('/sellers/pickup-addresses', data)
+  return res.data
+}
+
+export const setDefaultPickupAddress = async (locationId) => {
+  const res = await api.patch(`/sellers/pickup-addresses/${locationId}/default`)
+  return res.data
+}
+
