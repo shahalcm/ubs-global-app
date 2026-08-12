@@ -14,19 +14,19 @@ import {
   Alert,
   FlatList,
   NativeModules,
+  Clipboard,
 } from "react-native";
 import RazorpayCheckout from "react-native-razorpay";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../../services/api";
 import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
 import FormattedPrice from "../../components/common/FormattedPrice";
-import { useCurrency } from "../../context/CurrencyContext";
 
 const COUNTRIES = [
   { code: '+1', flag: '🇺🇸', name: 'US' },
@@ -54,12 +54,34 @@ export default function BecomeSellerScreen() {
   } catch (e) {
     // i18n fallback
   }
+
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams() || {};
+  const fromSource = params.from;
+
+  const handleGoBackStep1 = () => {
+    if (fromSource === 'role-select') {
+      router.replace('/(auth)/role-select');
+    } else if (fromSource === 'buyer-profile') {
+      router.replace('/(buyer)/(tabs)/profile');
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(buyer)/(tabs)/profile');
+    }
+  };
+
   const [step, setStep] = useState(1);
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[2]); // Default to +91 IN
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-  const [registrationFee, setRegistrationFee] = useState(10);
-  const [selectedPayMethod, setSelectedPayMethod] = useState("card");
+  
+  // Regional Offer State
+  const [offer, setOffer] = useState(null);
+  const [offerLoading, setOfferLoading] = useState(true);
+  const [offerError, setOfferError] = useState(null);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [applyingPromo, setApplyingPromo] = useState(false);
+
   const [form, setForm] = useState({
     shopName: "",
     ownerName: "",
@@ -80,22 +102,83 @@ export default function BecomeSellerScreen() {
       upiId: ""
     }
   });
+
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
 
   useEffect(() => {
     checkSellerStatus();
-    fetchRegistrationFee();
+    loadRegistrationOffer();
   }, []);
 
-  const fetchRegistrationFee = async () => {
+  const loadRegistrationOffer = async () => {
     try {
-      const res = await api.get('/sellers/registration-fee');
-      if (res.data?.success && res.data?.registrationFee) {
-        setRegistrationFee(res.data.registrationFee);
+      setOfferLoading(true);
+      setOfferError(null);
+      const res = await api.get('/seller-registration/offer');
+      if (res.data?.success) {
+        setOffer(res.data);
+        if (res.data.promo?.code) {
+          setPromoCodeInput(res.data.promo.code);
+        }
+        // Match country phone prefix if matching code
+        const matched = COUNTRIES.find(c => c.name === res.data.country);
+        if (matched) {
+          setSelectedCountry(matched);
+        }
+      } else {
+        setOfferError(res.data?.message || t("Regional offer could not be loaded."));
       }
     } catch (err) {
-      console.log('Error fetching registration fee:', err);
+      console.log('Error loading registration offer:', err);
+      setOfferError(err.response?.data?.message || t("Regional offer could not be loaded."));
+    } finally {
+      setOfferLoading(false);
+    }
+  };
+
+  const handleValidatePromo = async () => {
+    if (!promoCodeInput.trim()) {
+      Alert.alert(t("Error"), t("Please enter a promo code."));
+      return;
+    }
+    try {
+      setApplyingPromo(true);
+      const res = await api.post('/seller-registration/promo/validate', {
+        offerId: offer.offerId,
+        code: promoCodeInput.trim()
+      });
+      if (res.data?.success) {
+        Alert.alert(t("Success"), t("Promo code applied successfully!"));
+        setOffer({
+          ...offer,
+          finalAmount: res.data.finalAmount,
+          discount: {
+            ...offer.discount,
+            amount: res.data.discountAmount,
+            value: res.data.promo.discountValue,
+            type: res.data.promo.discountType
+          },
+          promo: {
+            available: true,
+            code: res.data.promo.code
+          }
+        });
+      } else {
+        Alert.alert(t("Error"), res.data?.message || t("Invalid promo code."));
+      }
+    } catch (err) {
+      console.log('Error validating promo code:', err);
+      Alert.alert(t("Error"), err.response?.data?.message || t("This promotion is no longer available."));
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
+  const copyToClipboard = (code) => {
+    if (code) {
+      Clipboard.setString(code);
+      Alert.alert(t("Copied"), t("Promo code copied to clipboard!"));
     }
   };
 
@@ -149,7 +232,7 @@ export default function BecomeSellerScreen() {
     setForm({ ...form, businessType: businessTypes[nextIndex] });
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (
       !form.shopName ||
       !form.ownerName ||
@@ -159,7 +242,15 @@ export default function BecomeSellerScreen() {
       Alert.alert(t("Error"), t("Please fill all required fields"));
       return;
     }
-    setStep(2);
+
+    try {
+      const fullPhone = `${selectedCountry.code}${form.phone}`;
+      await api.patch('/users/profile', { phone: fullPhone });
+    } catch (err) {
+      console.log('Error updating user phone profile:', err);
+    }
+
+    setStep(3); // Step 3: Bank Details
   };
 
   const handleStep2Next = () => {
@@ -171,88 +262,100 @@ export default function BecomeSellerScreen() {
       Alert.alert(t("Error"), t("Please fill all required payment fields"));
       return;
     }
-    setStep(3);
+    loadRegistrationOffer();
+    setStep(4); // Step 4: Summary & Payment
   };
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
 
+      if (!offer) {
+        Alert.alert(t("Error"), t("Your seller registration offer has expired. Please refresh."));
+        setLoading(false);
+        return;
+      }
+
       let razorpayOrderId = '';
       let razorpayPaymentId = '';
       let razorpaySignature = '';
 
-      // Step 1: Create Razorpay Subscription Order ($10 USD / year)
-      try {
-        const orderRes = await api.post('/sellers/create-subscription-order');
-        if (orderRes.data?.success && orderRes.data?.razorpayOrderId) {
-          razorpayOrderId = orderRes.data.razorpayOrderId;
-          const key = orderRes.data.key;
-          const rzpAmount = orderRes.data.amount;
+      if (offer.finalAmount > 0) {
+        // Step 1: Create Razorpay Checkout Order
+        try {
+          const orderRes = await api.post('/seller-registration/create-payment', { offerId: offer.offerId });
+          if (orderRes.data?.success) {
+            razorpayOrderId = orderRes.data.razorpayOrderId;
+            const key = orderRes.data.key;
+            const rzpAmount = orderRes.data.amount;
 
-          const isExpoGoApp = Constants.appOwnership === 'expo' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-          const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout && typeof RazorpayCheckout?.open === 'function');
+            const isExpoGoApp = Constants.appOwnership === 'expo' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+            const isNativeModuleAvailable = !!(NativeModules?.RNRazorpayCheckout && typeof RazorpayCheckout?.open === 'function');
 
-          if (isNativeModuleAvailable && key) {
-            const options = {
-              description: `UBS Global Seller Yearly Membership ($10/year)`,
-              image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
-              currency: 'INR',
-              key: key,
-              amount: rzpAmount,
-              name: 'UBS Global Seller Subscription',
-              order_id: razorpayOrderId,
-              prefill: {
-                name: form.ownerName || '',
-                phone: form.phone || ''
-              },
-              theme: { color: '#021B79' }
-            };
-            const rzpData = await RazorpayCheckout.open(options);
-            razorpayPaymentId = rzpData?.razorpay_payment_id || '';
-            razorpaySignature = rzpData?.razorpay_signature || '';
-          } else if (isExpoGoApp) {
-            console.log('ℹ️ Running in Expo Go environment: Native Razorpay SDK requires standalone APK / development build');
-            Alert.alert(
-              t("Expo Go Notice"),
-              t("Native Razorpay checkout is not available inside Expo Go. Please build a Standalone APK or Development Build (npx expo run:android) to perform native Razorpay payments.")
-            );
-            setLoading(false);
-            return;
-          } else {
-            console.warn('⚠️ Native Razorpay module (RNRazorpayCheckout) is missing from current app binary');
-            Alert.alert(
-              t("Native Build Required"),
-              t("Razorpay native checkout module is missing from this app binary. Please ensure react-native-razorpay is linked.")
-            );
+            if (isNativeModuleAvailable && key) {
+              const options = {
+                description: `UBS Global Seller Regional Registration`,
+                image: 'https://cdn-icons-png.flaticon.com/512/3143/3143212.png',
+                currency: 'INR',
+                key: key,
+                amount: rzpAmount,
+                name: 'UBS Global Seller Registration',
+                order_id: razorpayOrderId,
+                prefill: {
+                  name: form.ownerName || '',
+                  phone: form.phone || ''
+                },
+                theme: { color: '#021B79' }
+              };
+              const rzpData = await RazorpayCheckout.open(options);
+              razorpayPaymentId = rzpData?.razorpay_payment_id || '';
+              razorpaySignature = rzpData?.razorpay_signature || '';
+            } else if (isExpoGoApp) {
+              console.log('ℹ️ Running in Expo Go environment: Standalone payment bypass active for development');
+              Alert.alert(
+                t("Expo Go Notice"),
+                t("Native Razorpay checkout is not available inside Expo Go. Please build a Standalone APK or Development Build to perform native Razorpay payments.")
+              );
+              setLoading(false);
+              return;
+            } else {
+              console.warn('⚠️ Native Razorpay module is missing');
+              Alert.alert(
+                t("Native Build Required"),
+                t("Razorpay native checkout module is missing from this app binary.")
+              );
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (rzpErr) {
+          console.warn('Razorpay seller registration order error:', rzpErr);
+          if (rzpErr?.code === 2 || rzpErr?.code === 0 || rzpErr?.description === 'Payment cancelled by user') {
+            Alert.alert(t("Payment Cancelled"), t("Seller registration payment was cancelled."));
             setLoading(false);
             return;
           }
         }
-      } catch (rzpErr) {
-        console.warn('Razorpay seller subscription checkout notice:', rzpErr);
-        if (rzpErr?.code === 2 || rzpErr?.code === 0 || rzpErr?.description === 'Payment cancelled by user') {
-          Alert.alert(t("Payment Cancelled"), t("Seller subscription payment was cancelled."));
-          setLoading(false);
-          return;
-        }
+      } else {
+        // Free promo offer registration
+        razorpayPaymentId = `FREE-REG-${Date.now()}`;
       }
 
-      // Step 2: Submit Application with Payment Verification
+      // Step 2: Submit profile and verify payment signature on backend
       const res = await applyAsSeller({
         ...form,
         phone: `${selectedCountry.code}${form.phone}`,
-        registrationFeeAmount: registrationFee,
+        offerId: offer.offerId,
         razorpayOrderId,
         razorpayPaymentId,
         razorpaySignature,
-        paymentMethod: 'Razorpay ($10/Year Plan)'
+        paymentMethod: offer.finalAmount > 0 ? 'Razorpay Regional Fee' : 'Free Registration'
       });
 
       if (res.success) {
         Alert.alert(
           t("Success"),
-          t(`Application & $${registrationFee.toFixed(2)} Yearly Seller Membership Fee received! Valid for 1 year (Renews annually).`),
+          t(`Application submitted successfully! Your account registration is complete.`),
         );
         router.replace("/(seller)/dashboard");
       } else {
@@ -291,20 +394,36 @@ export default function BecomeSellerScreen() {
             style={[styles.headerArea, { paddingTop: Math.max(insets.top + 24, 70), paddingBottom: 70 }]}
           >
             <View style={styles.headerSafeArea}>
-              <Text style={styles.headerTitle}>UBS Global</Text>
-              <Text style={styles.headerSubtitle}>{t("Become a Seller")}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (step === 1) {
+                      handleGoBackStep1();
+                    } else {
+                      setStep(step - 1);
+                    }
+                  }}
+                  style={{ paddingRight: 12, paddingVertical: 4 }}
+                >
+                  <MaterialCommunityIcons name="arrow-left" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+                <View>
+                  <Text style={styles.headerTitle}>UBS Global</Text>
+                  <Text style={styles.headerSubtitle}>{t("Become a Seller")}</Text>
+                </View>
+              </View>
 
               <View style={styles.progressContainer}>
                 <View style={styles.progressTextRow}>
                   <Text style={styles.stepTextBold}>
-                    {step === 1 ? t("Step 1 of 3") : step === 2 ? t("Step 2 of 3") : t("Step 3 of 3")}
+                    {step === 1 ? t("Step 1 of 4") : step === 2 ? t("Step 2 of 4") : step === 3 ? t("Step 3 of 4") : t("Step 4 of 4")}
                   </Text>
                   <Text style={styles.stepText}>
-                    {step === 1 ? t("Business Details") : step === 2 ? t("Bank Details") : t("Store Fee Payment")}
+                    {step === 1 ? t("Regional Offer") : step === 2 ? t("Business Details") : step === 3 ? t("Bank Details") : t("Store Fee Payment")}
                   </Text>
                 </View>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: step === 1 ? "33%" : step === 2 ? "66%" : "100%" }]} />
+                  <View style={[styles.progressBarFill, { width: step === 1 ? "25%" : step === 2 ? "50%" : step === 3 ? "75%" : "100%" }]} />
                 </View>
               </View>
             </View>
@@ -313,6 +432,131 @@ export default function BecomeSellerScreen() {
           {/* White Form Card */}
           <View style={styles.formCard}>
             {step === 1 ? (
+              /* Regional Offer Screen */
+              <View style={styles.fieldsContainer}>
+                {offerLoading ? (
+                  <View style={{ py: 40, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator size="large" color="#0575E6" />
+                    <Text style={{ marginTop: 12, color: '#666', fontSize: 13 }}>{t("Detecting region and loading pricing...")}</Text>
+                  </View>
+                ) : offerError ? (
+                  <View style={{ py: 30, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#d32f2f" />
+                    <Text style={{ marginVertical: 12, color: '#d32f2f', textAlign: 'center', fontWeight: '600' }}>{offerError}</Text>
+                    <TouchableOpacity style={styles.submitBtn} onPress={loadRegistrationOffer}>
+                      <Text style={styles.submitBtnText}>{t("Retry")}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.offerTitle}>{t("REGIONAL SELLER OFFER")}</Text>
+                    <Text style={styles.offerDesc}>
+                      {t("Grow your business with UBS Global. A special regional offer has been custom-tailored for your country coordinates.")}
+                    </Text>
+
+                    {/* Offer Summary Box */}
+                    <View style={styles.offerBox}>
+                      <View style={styles.offerBoxRow}>
+                        <Text style={styles.offerBoxLabel}>{t("Standard Registration")}</Text>
+                        <FormattedPrice amount={offer.baseAmount} style={styles.offerBoxValCrossed} />
+                      </View>
+
+                      {offer.discount?.value > 0 && (
+                        <View style={styles.offerBoxRow}>
+                          <Text style={styles.offerBoxLabel}>
+                            {t("Regional Discount")} ({offer.discount.value}% {t("OFF")})
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={styles.offerBoxDiscountText}>-</Text>
+                            <FormattedPrice 
+                              amount={offer.discount.amount} 
+                              style={styles.offerBoxDiscountText} 
+                            />
+                          </View>
+                        </View>
+                      )}
+
+                      <View style={styles.offerBoxDivider} />
+
+                      <View style={styles.offerBoxRow}>
+                        <Text style={styles.offerBoxTotalLabel}>{t("Your Registration Fee")}</Text>
+                        <FormattedPrice amount={offer.finalAmount} style={styles.offerBoxTotalVal} />
+                      </View>
+                    </View>
+
+                    {/* Promo Code section */}
+                    {offer.promo?.available && (
+                      <View style={styles.promoDisplayCard}>
+                        <View style={styles.promoInfoRow}>
+                          <MaterialCommunityIcons name="ticket-percent-outline" size={24} color="#0575E6" />
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <Text style={styles.promoCodeLabel}>{t("PROMO CODE")}</Text>
+                            <Text style={styles.promoCodeValue}>{offer.promo.code}</Text>
+                          </View>
+                          <TouchableOpacity 
+                            style={styles.copyPromoBtn} 
+                            onPress={() => copyToClipboard(offer.promo.code)}
+                          >
+                            <MaterialCommunityIcons name="content-copy" size={16} color="#0575E6" />
+                            <Text style={styles.copyPromoText}>{t("Copy")}</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <Text style={styles.promoAppliedMessage}>
+                          {t("Special regional pricing has been automatically applied to this registration session.")}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Manual Coupon Validation Input */}
+                    <View style={{ marginTop: 10, marginBottom: 20 }}>
+                      <Text style={styles.label}>{t("ENTER PROMO CODE (OPTIONAL)")}</Text>
+                      <View style={styles.promoInputRow}>
+                        <TextInput
+                          style={styles.promoTextInput}
+                          placeholder={t("e.g. UBSLOW60")}
+                          placeholderTextColor="#bbb"
+                          autoCapitalize="characters"
+                          value={promoCodeInput}
+                          onChangeText={setPromoCodeInput}
+                        />
+                        <TouchableOpacity 
+                          style={styles.promoApplyBtn} 
+                          onPress={handleValidatePromo}
+                          disabled={applyingPromo}
+                        >
+                          {applyingPromo ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Text style={styles.promoApplyBtnText}>{t("Apply")}</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Continue Button */}
+                    <TouchableOpacity
+                      style={styles.submitBtn}
+                      onPress={() => setStep(2)}
+                    >
+                      <Text style={styles.submitBtnText}>
+                        {t("Continue")}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Back Button */}
+                    <TouchableOpacity
+                      style={[styles.backBtn, { marginTop: 12 }]}
+                      onPress={handleGoBackStep1}
+                    >
+                      <Text style={styles.backBtnText}>
+                        {fromSource === 'role-select' ? t("Back to Role Selection") : t("Back to Profile")}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            ) : step === 2 ? (
+              /* Step 2 Business Details Form (previously step 1) */
               <>
                 {/* Logo Upload (Overlapping) */}
                 <View style={styles.logoSection}>
@@ -348,7 +592,7 @@ export default function BecomeSellerScreen() {
                   <Text style={styles.logoLabel}>{t("UPLOAD SHOP LOGO")}</Text>
                 </View>
 
-                {/* Form Fields Step 1 */}
+                {/* Form Fields Step 2 */}
                 <View style={styles.fieldsContainer}>
                   <Text style={styles.label}>{t("SHOP NAME")}</Text>
                   <View style={styles.inputContainer}>
@@ -593,7 +837,7 @@ export default function BecomeSellerScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {/* Continue to Step 2 Button */}
+                  {/* Continue to Step 3 Button */}
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={handleNextStep}
@@ -602,10 +846,20 @@ export default function BecomeSellerScreen() {
                       {t("Continue to Payment Details")}
                     </Text>
                   </TouchableOpacity>
+
+                  {/* Back to Step 1 */}
+                  <TouchableOpacity
+                    style={styles.backBtn}
+                    onPress={() => setStep(1)}
+                  >
+                    <Text style={styles.backBtnText}>
+                      {t("Back to Regional Offer")}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </>
-            ) : step === 2 ? (
-              /* Step 2 payment details form */
+            ) : step === 3 ? (
+              /* Step 3 Bank Details Form (previously step 2) */
               <View style={styles.fieldsContainer}>
                 <Text style={styles.label}>{t("BANK NAME")}</Text>
                 <View style={styles.inputContainer}>
@@ -674,74 +928,102 @@ export default function BecomeSellerScreen() {
                   />
                 </View>
 
-                {/* Continue to Step 3 Button */}
+                {/* Continue to Step 4 Button */}
                 <TouchableOpacity
                   style={styles.submitBtn}
                   onPress={handleStep2Next}
                 >
                   <Text style={styles.submitBtnText}>
-                    {t("Continue to Registration Fee")}
+                    {t("Continue to Registration Summary")}
                   </Text>
                 </TouchableOpacity>
 
-                {/* Back to Step 1 Button */}
+                {/* Back to Step 2 Button */}
                 <TouchableOpacity
                   style={styles.backBtn}
-                  onPress={() => setStep(1)}
+                  onPress={() => setStep(2)}
                 >
                   <Text style={styles.backBtnText}>
-                    {t("Back to Step 1")}
+                    {t("Back to Step 2")}
                   </Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              /* Step 3 Store Registration Fee Payment */
+              /* Step 4 Store Registration Fee Payment (previously step 3) */
               <View style={styles.fieldsContainer}>
                 {/* Fee Header Card */}
                 <View style={styles.feeBannerCard}>
                   <View style={styles.feeBadgeContainer}>
-                    <Text style={styles.feeBadgeText}>{t("YEARLY SUBSCRIPTION PLAN")}</Text>
+                    <Text style={styles.feeBadgeText}>{t("MEMBERSHIP REGISTRATION")}</Text>
                   </View>
-                  <FormattedPrice amount={registrationFee} style={styles.feeAmountText} />
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0575E6', marginTop: 4 }}>
-                    {t("$10.00 / Year • Valid for 1 Year (Renews Annually)")}
+                  <FormattedPrice amount={offer?.finalAmount || 0} style={styles.feeAmountText} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#33D1FF', marginTop: 4 }}>
+                    {t("UBS Global Seller Membership • Valid for 1 Year")}
                   </Text>
-                  <Text style={styles.feeTitleText}>{t("Annual Seller Store Membership & Verification")}</Text>
+                  <Text style={styles.feeTitleText}>{t("Special Regional Offer Active")}</Text>
                   <Text style={styles.feeDescText}>
-                    {t("Annual subscription fee ($10/year) to activate your verified global export store, seller dashboard, AI assistant, and international buyer network. Valid for 1 year and renews annually.")}
+                    {t("Annual fee to activate your verified global export store, seller dashboard, AI assistant, and international buyer network. Valid for 1 year and renews annually.")}
                   </Text>
                 </View>
 
                 {/* Payment Gateway Selector */}
-                <Text style={styles.label}>{t("SECURE PAYMENT GATEWAY")}</Text>
-                
-                <View style={[styles.payMethodOption, styles.payMethodActive]}>
-                  <MaterialCommunityIcons name="credit-card-outline" size={24} color="#0575E6" />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.payMethodTitle}>{t("Razorpay Payment Gateway")}</Text>
-                    <Text style={styles.payMethodSub}>{t("UPI, Credit/Debit Cards, Net Banking & Wallets")}</Text>
+                {offer?.finalAmount > 0 ? (
+                  <>
+                    <Text style={styles.label}>{t("SECURE PAYMENT GATEWAY")}</Text>
+                    
+                    <View style={[styles.payMethodOption, styles.payMethodActive]}>
+                      <MaterialCommunityIcons name="credit-card-outline" size={24} color="#0575E6" />
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={styles.payMethodTitle}>{t("Razorpay Payment Gateway")}</Text>
+                        <Text style={styles.payMethodSub}>{t("UPI, Credit/Debit Cards, Net Banking & Wallets")}</Text>
+                      </View>
+                      <MaterialCommunityIcons name="check-circle" size={20} color="#0575E6" />
+                    </View>
+                  </>
+                ) : (
+                  <View style={[styles.payMethodOption, styles.payMethodActive, { backgroundColor: '#e8f5e9', borderColor: '#4caf50' }]}>
+                    <MaterialCommunityIcons name="check-decagram-outline" size={24} color="#4caf50" />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[styles.payMethodTitle, { color: '#2e7d32' }]}>{t("100% Free Promotion Applied")}</Text>
+                      <Text style={[styles.payMethodSub, { color: '#388e3c' }]}>{t("No checkout payment required.")}</Text>
+                    </View>
                   </View>
-                  <MaterialCommunityIcons name="check-circle" size={20} color="#0575E6" />
-                </View>
+                )}
 
                 {/* Price Summary Breakdown */}
                 <View style={styles.summaryCard}>
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>{t("Seller Membership (Yearly Plan)")}</Text>
-                    <FormattedPrice amount={registrationFee} style={styles.summaryVal} />
+                    <Text style={styles.summaryLabel}>{t("Standard Registration Fee")}</Text>
+                    <FormattedPrice amount={offer?.baseAmount || 200} style={styles.summaryVal} />
                   </View>
+                  {offer?.discount?.value > 0 && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>
+                        {t("Regional Discount")} ({offer.discount.value}% {t("OFF")})
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={[styles.summaryVal, { color: '#e53935' }]}>-</Text>
+                        <FormattedPrice 
+                          amount={offer.discount.amount} 
+                          style={[styles.summaryVal, { color: '#e53935' }]} 
+                        />
+                      </View>
+                    </View>
+                  )}
+                  {offer?.promoCode ? (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>{t("Coupon Applied")}</Text>
+                      <Text style={[styles.summaryVal, { color: '#4caf50' }]}>{offer.promoCode}</Text>
+                    </View>
+                  ) : null}
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>{t("Validity Period")}</Text>
-                    <Text style={[styles.summaryVal, { color: '#0575E6' }]}>{t("1 Year (Renews Annually)")}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>{t("Global Marketplace Access")}</Text>
-                    <Text style={[styles.summaryVal, { color: '#4caf50' }]}>{t("INCLUDED")}</Text>
+                    <Text style={[styles.summaryVal, { color: '#0575E6' }]}>{t("1 Year")}</Text>
                   </View>
                   <View style={styles.summaryDivider} />
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryTotalLabel}>{t("Total Due Now")}</Text>
-                    <FormattedPrice amount={registrationFee} style={styles.summaryTotalVal} />
+                    <FormattedPrice amount={offer?.finalAmount || 0} style={styles.summaryTotalVal} />
                   </View>
                 </View>
 
@@ -755,19 +1037,21 @@ export default function BecomeSellerScreen() {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={styles.submitBtnText}>
-                      Pay $10 & Submit Application
+                      {offer?.finalAmount > 0 
+                        ? `${t("Pay")} $${offer.finalAmount.toFixed(2)} & ${t("Submit Application")}`
+                        : t("Submit Free Application")}
                     </Text>
                   )}
                 </TouchableOpacity>
 
-                {/* Back to Step 2 Button */}
+                {/* Back to Step 3 Button */}
                 <TouchableOpacity
                   style={styles.backBtn}
-                  onPress={() => setStep(2)}
+                  onPress={() => setStep(3)}
                   disabled={loading}
                 >
                   <Text style={styles.backBtnText}>
-                    {t("Back to Step 2")}
+                    {t("Back to Step 3")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1153,7 +1437,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-  // Step 3 Fee Payment Styles
+  // Step 4 Fee Payment Styles
   feeBannerCard: {
     backgroundColor: "#021B79",
     borderRadius: 16,
@@ -1327,5 +1611,142 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666',
     fontWeight: '600',
+  },
+
+  // Regional Offer Styles
+  offerTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a237e",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  offerDesc: {
+    fontSize: 13,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  offerBox: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    marginBottom: 20,
+  },
+  offerBoxRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  offerBoxLabel: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  offerBoxValCrossed: {
+    fontSize: 14,
+    color: "#94A3B8",
+    fontWeight: "700",
+    textDecorationLine: "line-through",
+  },
+  offerBoxDiscountText: {
+    fontSize: 13,
+    color: "#EF4444",
+    fontWeight: "700",
+  },
+  offerBoxDivider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 10,
+  },
+  offerBoxTotalLabel: {
+    fontSize: 15,
+    color: "#0F172A",
+    fontWeight: "800",
+  },
+  offerBoxTotalVal: {
+    fontSize: 18,
+    color: "#0575E6",
+    fontWeight: "900",
+  },
+  promoDisplayCard: {
+    backgroundColor: "#ECF5FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+  },
+  promoInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  promoCodeLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0575E6",
+    letterSpacing: 0.5,
+  },
+  promoCodeValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#1E3A8A",
+    marginTop: 1,
+  },
+  copyPromoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#BFDBFE",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  copyPromoText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0575E6",
+    marginLeft: 4,
+  },
+  promoAppliedMessage: {
+    fontSize: 11,
+    color: "#475569",
+    marginTop: 10,
+    lineHeight: 16,
+  },
+  promoInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  promoTextInput: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "600",
+    marginRight: 10,
+  },
+  promoApplyBtn: {
+    backgroundColor: "#0575E6",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  promoApplyBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

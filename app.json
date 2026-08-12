@@ -4,7 +4,7 @@
     "name": "UBS Global",
     "slug": "client",
     "owner": "ubsglobalapp923s-team",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "client",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.ubsglobal.app",
-      "versionCode": 5,
+      "versionCode": 8,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",

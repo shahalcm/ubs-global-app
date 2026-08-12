@@ -32,6 +32,8 @@ export default function ProductDetailsScreen() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [categoryProducts, setCategoryProducts] = useState([]);
+  const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com");
+  const [supportPhone, setSupportPhone] = useState("9544755008");
   const { refreshCart } = useCart();
   const { user } = useAuth();
 
@@ -129,6 +131,19 @@ export default function ProductDetailsScreen() {
       loadProduct();
       loadReviews();
     }
+    
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings');
+        if (res.data?.success && res.data.settings) {
+          if (res.data.settings.supportEmail) setSupportEmail(res.data.settings.supportEmail);
+          if (res.data.settings.contactPhone) setSupportPhone(res.data.settings.contactPhone);
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err);
+      }
+    };
+    fetchSupport();
   }, [id]);
 
   const loadCategoryProducts = async (catIdentifier, currentProdId, categoryObj) => {
@@ -395,7 +410,7 @@ export default function ProductDetailsScreen() {
 
           {!isJobOrService && product.price !== undefined && product.price !== null && (
             <View style={styles.priceRow}>
-              <Text style={styles.price}>${Number(product.price).toFixed(2)}</Text>
+              <Text style={styles.price}>${Number(product.price).toFixed(2)}{product.priceUnit ? ` ${product.priceUnit}` : ''}</Text>
               {product.comparePrice !== undefined && product.comparePrice !== null && Number(product.comparePrice) > Number(product.price) && (
                 <Text style={styles.originalPrice}>${Number(product.comparePrice).toFixed(2)}</Text>
               )}
@@ -485,7 +500,7 @@ export default function ProductDetailsScreen() {
               />
               <View style={styles.supplierInfo}>
                 <Text style={styles.supplierName}>{t("UBS Global Admin Panel")}</Text>
-                <Text style={styles.supplierBadge}>{t("ubsimportingexporting@gmail.com • 9544755008")}</Text>
+                <Text style={styles.supplierBadge}>{t(`${supportEmail} • ${supportPhone}`)}</Text>
                 <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
                   {t("Careers & services managed directly by UBS Administration.")}
                 </Text>

@@ -457,52 +457,103 @@ export default function HomeScreen() {
 
 
 
-  const renderFeaturedProduct = ({ item }) => (
-    <TouchableOpacity
-      style={styles.productCard}
-      onPress={() =>
-        router.push({
-          pathname: "/(buyer)/product-details",
-          params: { id: item._id || item.id },
-        })
-      }
-      activeOpacity={0.9}
-    >
-      <View style={{ position: 'relative' }}>
-        <Image
-          source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
-          style={styles.productImage}
-          contentFit="cover"
-          transition={200}
-        />
-        {Number(item.stock ?? 0) <= 0 && (
-          <View style={styles.outOfStockBadgeOverlay}>
-            <Text style={styles.outOfStockBadgeOverlayText}>{t('Out of Stock')}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.productInfo}>
-        <Text style={styles.productCategory} numberOfLines={1}>{t(item.category?.name || item.category)}</Text>
-        <Text style={styles.productName} numberOfLines={1}>{t(item.title || item.name)}</Text>
-        {!(
-          (item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
-          (item.category?.name || item.category || '').toLowerCase().trim() === 'service portal'
-        ) && (
-          <View style={styles.priceRow}>
-            <Text style={styles.productPrice}>${item.price}</Text>
-          </View>
-        )}
-        {item.sellerId && (
-          <View style={styles.sellerRow}>
-            <MaterialCommunityIcons name="storefront" size={10} color="#888" style={{ marginRight: 2 }} />
-            <Text style={styles.sellerText} numberOfLines={1}>
-              {item.sellerId.shopName}
+  const renderFeaturedProduct = ({ item }) => {
+    const isOutOfStock = Number(item.stock ?? 0) <= 0;
+    const hasDiscount = item.comparePrice && Number(item.comparePrice) > Number(item.price);
+    const discountPercent = hasDiscount
+      ? Math.round(((item.comparePrice - item.price) / item.comparePrice) * 100)
+      : 0;
+
+    return (
+      <TouchableOpacity
+        style={styles.productCard}
+        onPress={() =>
+          router.push({
+            pathname: "/(buyer)/product-details",
+            params: { id: item._id || item.id },
+          })
+        }
+        activeOpacity={0.9}
+      >
+        <View style={{ position: 'relative' }}>
+          <Image
+            source={{ uri: getProductImageUrl(item.images?.[0] || item.image) }}
+            style={styles.productImage}
+            contentFit="cover"
+            transition={200}
+          />
+          {hasDiscount && (
+            <View style={styles.recentDiscountBadge}>
+              <Text style={styles.recentDiscountText}>-{discountPercent}%</Text>
+            </View>
+          )}
+          {isOutOfStock && (
+            <View style={styles.outOfStockBadgeOverlay}>
+              <Text style={styles.outOfStockBadgeOverlayText}>{t('Out of Stock')}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.recentFavBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleWishlist(item._id || item.id);
+              Alert.alert(t('Wishlist'), t('Updated wishlist!'));
+            }}
+          >
+            <MaterialCommunityIcons name="heart-outline" size={14} color="#d32f2f" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.productInfo}>
+          <Text style={styles.productCategory} numberOfLines={1}>
+            {t(item.category?.name || item.category || 'General')}
+          </Text>
+          <Text style={styles.productName} numberOfLines={1}>
+            {t(item.title || item.name)}
+          </Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 4 }}>
+            <MaterialCommunityIcons name="star" size={11} color="#ffb300" />
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#444' }}>
+              {item.rating || 4.5}
             </Text>
+            {item.totalSales > 0 && (
+              <Text style={{ fontSize: 10, color: '#888' }}>
+                • {item.totalSales} {t('sold')}
+              </Text>
+            )}
           </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+
+          {!(
+            (item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
+            (item.category?.name || item.category || '').toLowerCase().trim() === 'service portal'
+          ) && (
+            <View style={styles.priceRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                <Text style={styles.productPrice}>
+                  ${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}
+                </Text>
+                {hasDiscount && (
+                  <Text style={{ fontSize: 10, color: '#999', textDecorationLine: 'line-through' }}>
+                    ${item.comparePrice}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
+          {item.sellerId && (
+            <View style={styles.sellerRow}>
+              <MaterialCommunityIcons name="storefront" size={10} color="#888" style={{ marginRight: 2 }} />
+              <Text style={styles.sellerText} numberOfLines={1}>
+                {item.sellerId.shopName}
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderRecentlyViewedProduct = ({ item }) => {
     const isOutOfStock = Number(item.stock ?? 0) <= 0;
@@ -573,7 +624,7 @@ export default function HomeScreen() {
 
           <View style={styles.recentFooterRow}>
             <View>
-              <Text style={styles.productPrice}>${item.price}</Text>
+              <Text style={styles.productPrice}>${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}</Text>
               {hasDiscount && (
                 <Text style={styles.recentComparePrice}>${item.comparePrice}</Text>
               )}

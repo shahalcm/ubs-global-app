@@ -33,6 +33,7 @@ export default function BuyerChatScreen() {
   const { user } = useAuth()
   const { startCall } = useCall()
   const router = useRouter()
+  const [supportPhone, setSupportPhone] = useState('9544755008')
 
   const [messages, setMessages] = useState([])
   const [room, setRoom] = useState(null)
@@ -48,6 +49,19 @@ export default function BuyerChatScreen() {
   useEffect(() => {
     loadMessages()
     setupSocket()
+
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings');
+        if (res.data?.success && res.data.settings?.contactPhone) {
+          setSupportPhone(res.data.settings.contactPhone);
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err);
+      }
+    };
+    fetchSupport();
+
     return () => {
       removeListener('receiveMessage')
       removeListener('botTyping')
@@ -187,7 +201,7 @@ export default function BuyerChatScreen() {
   const handleCallPress = () => {
     if (!room) return
     if (!room.sellerId) {
-      Linking.openURL('tel:9544755008').catch(() => {
+      Linking.openURL(`tel:${supportPhone}`).catch(() => {
         Alert.alert('Error', 'Unable to dial phone number.')
       })
       return

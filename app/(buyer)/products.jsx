@@ -102,6 +102,8 @@ export default function ProductsScreen() {
   const [categories, setCategories] = useState(CATEGORIES)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com")
+  const [supportPhone, setSupportPhone] = useState("9544755008")
 
   const handleRequestQuote = () => {
     Alert.alert(
@@ -110,11 +112,11 @@ export default function ProductsScreen() {
       [
         {
           text: "Email Requirements",
-          onPress: () => Linking.openURL('mailto:ubsimportingexporting@gmail.com?subject=Wholesale Sourcing & Quote Request')
+          onPress: () => Linking.openURL(`mailto:${supportEmail}?subject=Wholesale Sourcing & Quote Request`)
         },
         {
           text: "Call Hotline",
-          onPress: () => Linking.openURL('tel:9544755008')
+          onPress: () => Linking.openURL(`tel:${supportPhone}`)
         },
         {
           text: "Cancel",
@@ -132,6 +134,19 @@ export default function ProductsScreen() {
 
   useEffect(() => {
     loadCategories()
+
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings')
+        if (res.data?.success && res.data.settings) {
+          if (res.data.settings.supportEmail) setSupportEmail(res.data.settings.supportEmail)
+          if (res.data.settings.contactPhone) setSupportPhone(res.data.settings.contactPhone)
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err)
+      }
+    }
+    fetchSupport()
   }, [])
 
   const loadCategories = async () => {

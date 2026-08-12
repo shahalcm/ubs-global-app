@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import api from "../../services/api";
 import {
   View,
   Text,
@@ -32,6 +33,9 @@ export default function SettingsScreen() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com");
+  const [supportPhone, setSupportPhone] = useState("9544755008");
+
   // Load preferences from AsyncStorage on mount
   useEffect(() => {
     const loadPreferences = async () => {
@@ -45,6 +49,19 @@ export default function SettingsScreen() {
       }
     };
     loadPreferences();
+
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings');
+        if (res.data?.success && res.data.settings) {
+          if (res.data.settings.supportEmail) setSupportEmail(res.data.settings.supportEmail);
+          if (res.data.settings.contactPhone) setSupportPhone(res.data.settings.contactPhone);
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err);
+      }
+    };
+    fetchSupport();
   }, []);
 
   const handleNotificationsChange = async (val) => {
@@ -63,11 +80,11 @@ export default function SettingsScreen() {
       [
         {
           text: t("Email Support"),
-          onPress: () => Linking.openURL('mailto:ubsimportingexporting@gmail.com?subject=UBS Global Support Request')
+          onPress: () => Linking.openURL(`mailto:${supportEmail}?subject=UBS Global Support Request`)
         },
         {
           text: t("Call Hotline"),
-          onPress: () => Linking.openURL('tel:9544755008')
+          onPress: () => Linking.openURL(`tel:${supportPhone}`)
         },
         {
           text: t("Cancel"),

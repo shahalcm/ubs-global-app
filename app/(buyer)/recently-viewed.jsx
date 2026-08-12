@@ -188,7 +188,7 @@ export default function RecentlyViewedScreen() {
 
           <View style={styles.priceRow}>
             <View>
-              <Text style={styles.price}>${item.price}</Text>
+              <Text style={styles.price}>${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}</Text>
               {hasDiscount && <Text style={styles.comparePrice}>${item.comparePrice}</Text>}
             </View>
             <TouchableOpacity

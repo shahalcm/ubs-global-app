@@ -43,7 +43,7 @@ export default function RoleSelectScreen() {
       if (selectedRole === 'buyer') {
         router.replace('/(buyer)/home')
       } else {
-        router.replace('/(seller)/become-seller')
+        router.push({ pathname: '/(seller)/become-seller', params: { from: 'role-select' } })
       }
     } catch (error) {
       console.log(error)

@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../../services/api'
 import {
   View,
   Text,
@@ -39,6 +40,21 @@ const COUNTRIES = [
 export default function LoginScreen() {
   const { t } = useTranslation()
   const { login, updateUser } = useAuth()
+  const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com")
+
+  useEffect(() => {
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings');
+        if (res.data?.success && res.data.settings?.supportEmail) {
+          setSupportEmail(res.data.settings.supportEmail);
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err);
+      }
+    };
+    fetchSupport();
+  }, []);
 
   // Mode: 'otp' | 'password'
   const [loginMode, setLoginMode] = useState('otp')
@@ -372,9 +388,9 @@ export default function LoginScreen() {
             <TouchableOpacity onPress={() => Linking.openURL('https://www.ubsglobalapp.com/terms-and-conditions').catch(() => Alert.alert(t('Error'), t('Unable to open Terms of Service.')))}>
               <Text style={styles.footerLink}>{t('Terms of Service')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => Linking.openURL('mailto:ubsimportingexporting@gmail.com').catch(() => Alert.alert(t('Contact Support'), 'ubsimportingexporting@gmail.com'))}>
-              <Text style={styles.footerLink}>{t('Contact Support')}</Text>
-            </TouchableOpacity>
+             <TouchableOpacity onPress={() => Linking.openURL(`mailto:${supportEmail}`).catch(() => Alert.alert(t('Contact Support'), supportEmail))}>
+               <Text style={styles.footerLink}>{t('Contact Support')}</Text>
+             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

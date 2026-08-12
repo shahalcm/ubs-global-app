@@ -307,7 +307,7 @@ export default function ProfileScreen() {
               if (user?.role === 'seller') {
                 router.push('/(seller)/dashboard')
               } else {
-                router.push('/(seller)/become-seller')
+                router.push({ pathname: '/(seller)/become-seller', params: { from: 'buyer-profile' } })
               }
             }}
           >

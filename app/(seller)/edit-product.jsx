@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,6 +11,102 @@ import { colors } from '../../constants/colors';
 
 const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Navy', 'Gray', 'Beige', 'Gold', 'Silver'];
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', '38', '40', 'Free Size'];
+
+const CATEGORIES = [
+  { label: 'Select Category', value: '' },
+  { label: 'Fashion', value: 'fashion' },
+  { label: 'Mobiles', value: 'mobiles' },
+  { label: 'Furniture', value: 'furniture' },
+  { label: 'Cosmetics', value: 'cosmetics' },
+  { label: 'Grocery', value: 'grocery' },
+  { label: 'Electronics', value: 'electronics' },
+  { label: 'Medicines', value: 'medicines' },
+  { label: 'Home & Kitchen', value: 'home-kitchen' },
+  { label: 'Real Estate', value: 'real-estate' },
+  { label: 'Building Materials', value: 'building-materials' },
+  { label: 'Machinery', value: 'machinery' },
+  { label: 'Oils', value: 'oils' },
+];
+
+const SUBCATEGORIES_MAP = {
+  fashion: [
+    { label: "Men's Wear", value: 'mens-wear' },
+    { label: "Women's Wear", value: 'womens-wear' },
+    { label: 'Kids Wear', value: 'kids-wear' },
+    { label: 'Footwear', value: 'footwear' },
+    { label: 'Accessories', value: 'accessories' }
+  ],
+  mobiles: [
+    { label: 'Smartphones', value: 'smartphones' },
+    { label: 'Feature Phones', value: 'feature-phones' },
+    { label: 'Tablets', value: 'tablets' },
+    { label: 'Mobile Accessories', value: 'mobile-accessories' }
+  ],
+  furniture: [
+    { label: 'Living Room Furniture', value: 'living-room' },
+    { label: 'Bedroom Furniture', value: 'bedroom' },
+    { label: 'Office Furniture', value: 'office-furniture' },
+    { label: 'Outdoor Furniture', value: 'outdoor-furniture' }
+  ],
+  cosmetics: [
+    { label: 'Skincare', value: 'skincare' },
+    { label: 'Haircare', value: 'haircare' },
+    { label: 'Makeup', value: 'makeup' },
+    { label: 'Fragrances', value: 'fragrances' },
+    { label: 'Personal Care', value: 'personal-care' }
+  ],
+  grocery: [
+    { label: 'Fruits & Vegetables', value: 'fruits-vegetables' },
+    { label: 'Dairy & Eggs', value: 'dairy-eggs' },
+    { label: 'Beverages', value: 'beverages' },
+    { label: 'Packaged Food', value: 'packaged-food' },
+    { label: 'Spices & Grains', value: 'spices-grains' }
+  ],
+  electronics: [
+    { label: 'Laptops & Computers', value: 'laptops-computers' },
+    { label: 'Cameras & Optics', value: 'cameras-optics' },
+    { label: 'Audio & Headphones', value: 'audio-headphones' },
+    { label: 'Smart Home Devices', value: 'smart-home' },
+    { label: 'Televisions & Media Players', value: 'televisions-media' }
+  ],
+  medicines: [
+    { label: 'Prescription Drugs', value: 'prescription' },
+    { label: 'OTC Medicines', value: 'otc' },
+    { label: 'Vitamins & Supplements', value: 'vitamins-supplements' },
+    { label: 'First Aid & Medical Supplies', value: 'first-aid' }
+  ],
+  'home-kitchen': [
+    { label: 'Cookware & Tableware', value: 'cookware-tableware' },
+    { label: 'Home Decor & Lighting', value: 'home-decor' },
+    { label: 'Kitchen Appliances', value: 'kitchen-appliances' },
+    { label: 'Bedding & Bath Linens', value: 'bedding-bath' }
+  ],
+  'real-estate': [
+    { label: 'Residential Properties', value: 'residential' },
+    { label: 'Commercial Properties', value: 'commercial' },
+    { label: 'Rentals & Leases', value: 'rentals' },
+    { label: 'Land & Plots', value: 'land-plots' }
+  ],
+  'building-materials': [
+    { label: 'Cement & Concrete', value: 'cement-concrete' },
+    { label: 'Steel & Metal Rebar', value: 'steel-rebar' },
+    { label: 'Pipes & Sanitary Fittings', value: 'pipes-fittings' },
+    { label: 'Electrical Wires & Switches', value: 'electrical-switches' },
+    { label: 'Paints & Wall Finishes', value: 'paints-finishes' }
+  ],
+  machinery: [
+    { label: 'Agricultural Machinery', value: 'agricultural' },
+    { label: 'Industrial Machinery', value: 'industrial' },
+    { label: 'Construction Equipment', value: 'construction' },
+    { label: 'Tools & Hardware Instruments', value: 'tools-hardware' }
+  ],
+  oils: [
+    { label: 'Edible cooking Oils', value: 'edible-cooking' },
+    { label: 'Industrial Lubricants', value: 'lubricants' },
+    { label: 'Essential / Aroma Oils', value: 'essential-aroma' },
+    { label: 'Hair & Cosmetic Oils', value: 'hair-cosmetic' }
+  ]
+};
 
 export default function EditProduct() {
   const { products, updateProduct, deleteProduct } = useSeller();
@@ -43,10 +140,13 @@ export default function EditProduct() {
     fit: '',
     sleeve: '',
     neck: '',
-    refundPolicy: ''
+    refundPolicy: '',
+    priceUnit: '',
+    stockUnit: 'pcs'
   });
   const [customColor, setCustomColor] = useState('');
   const [customSize, setCustomSize] = useState('');
+  const [customSubcategory, setCustomSubcategory] = useState('');
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -65,6 +165,11 @@ export default function EditProduct() {
   useEffect(() => {
     if (product) {
       const initialStockNum = Number(product.stock ?? 0);
+      const catVal = product.category?.slug || product.category?.name?.toLowerCase() || product.category || '';
+      const subcatVal = product.subcategory || '';
+      const mappedSubcats = SUBCATEGORIES_MAP[catVal] || [];
+      const isMapped = mappedSubcats.some(s => s.value === subcatVal);
+
       setForm({
         title: product.title || product.name || '',
         description: product.description || '',
@@ -72,8 +177,8 @@ export default function EditProduct() {
         price: String(product.price || ''),
         comparePrice: String(product.comparePrice || ''),
         cost: String(product.cost || ''),
-        category: product.category?.name || product.category || '',
-        subcategory: product.subcategory || '',
+        category: catVal,
+        subcategory: subcatVal ? (isMapped ? subcatVal : 'custom') : '',
         stock: String(initialStockNum),
         alertThreshold: String(product.alertThreshold ?? 3),
         inStock: initialStockNum > 0,
@@ -93,8 +198,11 @@ export default function EditProduct() {
         fit: product.fit || '',
         sleeve: product.sleeve || '',
         neck: product.neck || '',
-        refundPolicy: product.refundPolicy || ''
+        refundPolicy: product.refundPolicy || '',
+        priceUnit: product.priceUnit || '',
+        stockUnit: product.stockUnit || 'pcs'
       });
+      setCustomSubcategory(subcatVal ? (isMapped ? '' : subcatVal) : '');
       setImages(product.images || []);
     }
   }, [product]);
@@ -149,6 +257,7 @@ export default function EditProduct() {
       const finalStock = form.inStock ? (Number(form.stock) > 0 ? form.stock : '10') : '0';
       const payload = {
         ...form,
+        subcategory: form.subcategory === 'custom' ? customSubcategory.trim() : form.subcategory,
         stock: finalStock,
         inStock: form.inStock,
         images
@@ -275,12 +384,94 @@ export default function EditProduct() {
           <TextInput style={styles.input} placeholder="Price" keyboardType="decimal-pad" value={form.price} onChangeText={(price) => setForm({ ...form, price })} />
           <TextInput style={styles.input} placeholder="Compare Price" keyboardType="decimal-pad" value={form.comparePrice} onChangeText={(comparePrice) => setForm({ ...form, comparePrice })} />
           <TextInput style={styles.input} placeholder="Cost per item" keyboardType="decimal-pad" value={form.cost} onChangeText={(cost) => setForm({ ...form, cost })} />
+          
+          <Text style={[styles.fieldLabel, { marginTop: 6, marginBottom: 4 }]}>Pricing Unit (Optional)</Text>
+          <TextInput style={styles.input} placeholder="e.g. /kg, /gm, /liter" value={form.priceUnit} onChangeText={(priceUnit) => setForm({ ...form, priceUnit })} autoCapitalize="none" />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 8 }}>
+            {['/kg', '/gm', '/liter', '/pcs', '/box'].map((unit) => (
+              <TouchableOpacity
+                key={unit}
+                onPress={() => setForm({ ...form, priceUnit: unit })}
+                style={{
+                  backgroundColor: form.priceUnit === unit ? '#021B79' : '#f0f0f0',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                }}
+              >
+                <Text style={{ 
+                  fontSize: 11, 
+                  color: form.priceUnit === unit ? '#ffffff' : '#333333',
+                  fontWeight: '600'
+                }}>
+                  {unit}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {form.priceUnit ? (
+              <TouchableOpacity
+                onPress={() => setForm({ ...form, priceUnit: '' })}
+                style={{
+                  backgroundColor: '#ffebee',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                }}
+              >
+                <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Category</Text>
-          <TouchableOpacity style={styles.input} onPress={() => Alert.alert('Select category')}><Text style={styles.selectLabel}>{form.category || 'Select category'}</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.input} onPress={() => Alert.alert('Select subcategory')}><Text style={styles.selectLabel}>{form.subcategory || 'Select subcategory'}</Text></TouchableOpacity>
+          <Text style={styles.cardTitle}>Category & Subcategory</Text>
+          
+          <Text style={styles.fieldLabel}>Category</Text>
+          <View style={styles.pickerBox}>
+            <Picker
+              selectedValue={form.category}
+              onValueChange={(cat) => {
+                setForm(prev => ({ ...prev, category: cat, subcategory: '' }));
+                setCustomSubcategory('');
+              }}
+              style={styles.picker}
+            >
+              {CATEGORIES.map(cat => (
+                <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.fieldLabel}>Subcategory</Text>
+          <View style={styles.pickerBox}>
+            <Picker
+              selectedValue={form.subcategory}
+              onValueChange={(sub) => {
+                setForm(prev => ({ ...prev, subcategory: sub }));
+                if (sub !== 'custom') setCustomSubcategory('');
+              }}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Subcategory" value="" />
+              {(SUBCATEGORIES_MAP[form.category] || []).map((sub) => (
+                <Picker.Item key={sub.value} label={sub.label} value={sub.value} />
+              ))}
+              {form.category ? <Picker.Item label="Other / Custom Subcategory" value="custom" /> : null}
+            </Picker>
+          </View>
+
+          {form.subcategory === 'custom' && (
+            <View style={{ marginTop: 6 }}>
+              <Text style={styles.fieldLabel}>Custom Subcategory Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Handmade Crafts"
+                value={customSubcategory}
+                onChangeText={setCustomSubcategory}
+              />
+            </View>
+          )}
         </View>
 
         <View style={styles.card}>
@@ -307,6 +498,44 @@ export default function EditProduct() {
               value={form.alertThreshold}
               onChangeText={(alertThreshold) => setForm({ ...form, alertThreshold })}
             />
+          </View>
+
+          <Text style={[styles.fieldLabel, { marginTop: 6, marginBottom: 4 }]}>Stock Unit (Optional)</Text>
+          <TextInput style={styles.input} placeholder="e.g. kg, gm, liter, pcs, box" value={form.stockUnit} onChangeText={(stockUnit) => setForm({ ...form, stockUnit })} autoCapitalize="none" />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 8 }}>
+            {['kg', 'gm', 'liter', 'pcs', 'box'].map((unit) => (
+              <TouchableOpacity
+                key={unit}
+                onPress={() => setForm({ ...form, stockUnit: unit })}
+                style={{
+                  backgroundColor: form.stockUnit === unit ? '#021B79' : '#f0f0f0',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                }}
+              >
+                <Text style={{ 
+                  fontSize: 11, 
+                  color: form.stockUnit === unit ? '#ffffff' : '#333333',
+                  fontWeight: '600'
+                }}>
+                  {unit}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {form.stockUnit ? (
+              <TouchableOpacity
+                onPress={() => setForm({ ...form, stockUnit: '' })}
+                style={{
+                  backgroundColor: '#ffebee',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                }}
+              >
+                <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>In Stock</Text>
@@ -379,4 +608,17 @@ const styles = StyleSheet.create({
   customAddRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   addChipBtn: { backgroundColor: '#00c853', paddingHorizontal: 14, paddingVertical: 14, borderRadius: 12 },
   addChipBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  pickerBox: {
+    borderWidth: 1,
+    borderColor: '#eef0ff',
+    borderRadius: 14,
+    backgroundColor: '#fafaff',
+    marginBottom: 12,
+    overflow: 'hidden'
+  },
+  picker: {
+    width: '100%',
+    height: 50,
+    color: '#333'
+  },
 });

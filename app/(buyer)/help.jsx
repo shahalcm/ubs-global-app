@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "../../services/api";
 import {
   View,
   Text,
@@ -47,6 +48,27 @@ const FAQS = [
 export default function HelpCenterScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com");
+  const [supportPhone, setSupportPhone] = useState("9544755008");
+
+  useEffect(() => {
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings');
+        if (res.data?.success && res.data.settings) {
+          if (res.data.settings.supportEmail) setSupportEmail(res.data.settings.supportEmail);
+          if (res.data.settings.contactPhone) setSupportPhone(res.data.settings.contactPhone);
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err);
+      }
+    };
+    fetchSupport();
+  }, []);
+
+  const handleStartSupportCall = () => {
+    router.push('/(buyer)/support-call')
+  }
 
   const handleContactSupport = () => {
     Alert.alert(
@@ -54,12 +76,16 @@ export default function HelpCenterScreen() {
       "We offer 24/7 global trade assistance. How would you like to connect?",
       [
         {
+          text: "📞 Voice Call Support",
+          onPress: handleStartSupportCall
+        },
+        {
           text: "Email Support",
-          onPress: () => Linking.openURL('mailto:ubsimportingexporting@gmail.com?subject=UBS Global Support Request')
+          onPress: () => Linking.openURL(`mailto:${supportEmail}?subject=UBS Global Support Request`)
         },
         {
           text: "Call Hotline",
-          onPress: () => Linking.openURL('tel:9544755008')
+          onPress: () => Linking.openURL(`tel:${supportPhone}`)
         },
         {
           text: "Cancel",
@@ -105,13 +131,26 @@ export default function HelpCenterScreen() {
 
         {/* Contact Support */}
         <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>Need more help?</Text>
+          <Text style={styles.contactTitle}>Need live support?</Text>
           <Text style={styles.contactDesc}>
-            Our support team is available 24/7 to assist you.
+            Speak directly with an active UBS Global Customer Care Agent.
           </Text>
-          <TouchableOpacity style={styles.contactBtn} onPress={handleContactSupport}>
-            <Text style={styles.contactBtnText}>Contact Support</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <TouchableOpacity
+              style={[styles.contactBtn, { backgroundColor: '#0284c7', flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]}
+              onPress={handleStartSupportCall}
+            >
+              <MaterialCommunityIcons name="phone" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.contactBtnText}>Call Support</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.contactBtn, { backgroundColor: '#0f172a', flex: 1 }]}
+              onPress={handleContactSupport}
+            >
+              <Text style={styles.contactBtnText}>Options</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* FAQs */}

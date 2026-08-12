@@ -222,7 +222,7 @@ export default function ProductListingScreen() {
            (category || item.category?.name || item.category || '').toLowerCase().trim() === 'job-portal' ||
            (category || item.category?.name || item.category || '').toLowerCase().trim() === 'service-portal') && (
           <View style={styles.priceRow}>
-            <Text style={styles.priceText}>${item.price}</Text>
+            <Text style={styles.priceText}>${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}</Text>
             {Number(item.stock ?? 0) > 0 ? (
               <TouchableOpacity style={styles.cartBtn}>
                 <Text style={styles.cartBtnIcon}>🛒</Text>

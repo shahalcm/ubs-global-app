@@ -81,7 +81,7 @@ export default function SellerStoreScreen() {
           </Text>
         </View>
         <View style={styles.priceRow}>
-          <Text style={styles.priceText}>${item.price}</Text>
+          <Text style={styles.priceText}>${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}</Text>
           <View style={styles.cartBtn}>
             <MaterialCommunityIcons name="arrow-right" size={16} color="#0d47a1" />
           </View>

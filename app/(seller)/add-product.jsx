@@ -36,6 +36,86 @@ const CATEGORIES = [
   { label: 'Oils', value: 'oils' },
 ]
 
+const SUBCATEGORIES_MAP = {
+  fashion: [
+    { label: "Men's Wear", value: 'mens-wear' },
+    { label: "Women's Wear", value: 'womens-wear' },
+    { label: 'Kids Wear', value: 'kids-wear' },
+    { label: 'Footwear', value: 'footwear' },
+    { label: 'Accessories', value: 'accessories' }
+  ],
+  mobiles: [
+    { label: 'Smartphones', value: 'smartphones' },
+    { label: 'Feature Phones', value: 'feature-phones' },
+    { label: 'Tablets', value: 'tablets' },
+    { label: 'Mobile Accessories', value: 'mobile-accessories' }
+  ],
+  furniture: [
+    { label: 'Living Room Furniture', value: 'living-room' },
+    { label: 'Bedroom Furniture', value: 'bedroom' },
+    { label: 'Office Furniture', value: 'office-furniture' },
+    { label: 'Outdoor Furniture', value: 'outdoor-furniture' }
+  ],
+  cosmetics: [
+    { label: 'Skincare', value: 'skincare' },
+    { label: 'Haircare', value: 'haircare' },
+    { label: 'Makeup', value: 'makeup' },
+    { label: 'Fragrances', value: 'fragrances' },
+    { label: 'Personal Care', value: 'personal-care' }
+  ],
+  grocery: [
+    { label: 'Fruits & Vegetables', value: 'fruits-vegetables' },
+    { label: 'Dairy & Eggs', value: 'dairy-eggs' },
+    { label: 'Beverages', value: 'beverages' },
+    { label: 'Packaged Food', value: 'packaged-food' },
+    { label: 'Spices & Grains', value: 'spices-grains' }
+  ],
+  electronics: [
+    { label: 'Laptops & Computers', value: 'laptops-computers' },
+    { label: 'Cameras & Optics', value: 'cameras-optics' },
+    { label: 'Audio & Headphones', value: 'audio-headphones' },
+    { label: 'Smart Home Devices', value: 'smart-home' },
+    { label: 'Televisions & Media Players', value: 'televisions-media' }
+  ],
+  medicines: [
+    { label: 'Prescription Drugs', value: 'prescription' },
+    { label: 'OTC Medicines', value: 'otc' },
+    { label: 'Vitamins & Supplements', value: 'vitamins-supplements' },
+    { label: 'First Aid & Medical Supplies', value: 'first-aid' }
+  ],
+  'home-kitchen': [
+    { label: 'Cookware & Tableware', value: 'cookware-tableware' },
+    { label: 'Home Decor & Lighting', value: 'home-decor' },
+    { label: 'Kitchen Appliances', value: 'kitchen-appliances' },
+    { label: 'Bedding & Bath Linens', value: 'bedding-bath' }
+  ],
+  'real-estate': [
+    { label: 'Residential Properties', value: 'residential' },
+    { label: 'Commercial Properties', value: 'commercial' },
+    { label: 'Rentals & Leases', value: 'rentals' },
+    { label: 'Land & Plots', value: 'land-plots' }
+  ],
+  'building-materials': [
+    { label: 'Cement & Concrete', value: 'cement-concrete' },
+    { label: 'Steel & Metal Rebar', value: 'steel-rebar' },
+    { label: 'Pipes & Sanitary Fittings', value: 'pipes-fittings' },
+    { label: 'Electrical Wires & Switches', value: 'electrical-switches' },
+    { label: 'Paints & Wall Finishes', value: 'paints-finishes' }
+  ],
+  machinery: [
+    { label: 'Agricultural Machinery', value: 'agricultural' },
+    { label: 'Industrial Machinery', value: 'industrial' },
+    { label: 'Construction Equipment', value: 'construction' },
+    { label: 'Tools & Hardware Instruments', value: 'tools-hardware' }
+  ],
+  oils: [
+    { label: 'Edible cooking Oils', value: 'edible-cooking' },
+    { label: 'Industrial Lubricants', value: 'lubricants' },
+    { label: 'Essential / Aroma Oils', value: 'essential-aroma' },
+    { label: 'Hair & Cosmetic Oils', value: 'hair-cosmetic' }
+  ]
+}
+
 const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Navy', 'Gray', 'Beige', 'Gold', 'Silver']
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', '38', '40', 'Free Size']
 
@@ -67,15 +147,18 @@ export default function AddProductScreen() {
   const [price, setPrice] = useState('')
   const [comparePrice, setComparePrice] = useState('')
   const [costPerItem, setCostPerItem] = useState('')
+  const [priceUnit, setPriceUnit] = useState('')
 
   // Category
   const [category, setCategory] = useState('')
   const [subcategory, setSubcategory] = useState('')
+  const [customSubcategory, setCustomSubcategory] = useState('')
 
   // Inventory
   const [inStock, setInStock] = useState(true)
   const [stock, setStock] = useState('')
   const [lowStockAlert, setLowStockAlert] = useState('5')
+  const [stockUnit, setStockUnit] = useState('pcs')
 
   // Shipping
   const [freeShipping, setFreeShipping] = useState(false)
@@ -197,14 +280,16 @@ export default function AddProductScreen() {
       formData.append('description', description.trim())
       formData.append('sku', sku.trim() || `UBS-${Date.now()}`)
       formData.append('category', category)
-      formData.append('subcategory', subcategory)
+      formData.append('subcategory', subcategory === 'custom' ? customSubcategory.trim() : subcategory)
       formData.append('price', price)
       formData.append('comparePrice', comparePrice || '0')
       formData.append('costPerItem', costPerItem || '0')
+      formData.append('priceUnit', priceUnit || '')
       const finalStock = inStock ? (Number(stock) > 0 ? stock : '10') : '0'
       formData.append('stock', finalStock)
       formData.append('inStock', inStock.toString())
       formData.append('lowStockAlert', lowStockAlert)
+      formData.append('stockUnit', stockUnit || 'pcs')
       formData.append('weight', weight || '0')
       formData.append('length', length || '0')
       formData.append('width', width || '0')
@@ -252,10 +337,12 @@ export default function AddProductScreen() {
                 setPrice('')
                 setComparePrice('')
                 setCostPerItem('')
+                setPriceUnit('')
                 setCategory('')
                 setSubcategory('')
                 setStock('')
                 setLowStockAlert('5')
+                setStockUnit('pcs')
                 setWeight('')
                 setShippingFee('')
               }
@@ -583,6 +670,51 @@ export default function AddProductScreen() {
               />
             </View>
             <Text style={styles.helperText}>{"Customers won't see this"}</Text>
+
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>PRICING UNIT (e.g. /kg, /gm, /liter) - OPTIONAL</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. /kg, /gm, /liter, /pcs"
+              placeholderTextColor="#bbb"
+              value={priceUnit}
+              onChangeText={setPriceUnit}
+              autoCapitalize="none"
+            />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6, marginBottom: 12 }}>
+              {['/kg', '/gm', '/liter', '/pcs', '/box'].map((unit) => (
+                <TouchableOpacity
+                  key={unit}
+                  onPress={() => setPriceUnit(unit)}
+                  style={{
+                    backgroundColor: priceUnit === unit ? '#021B79' : '#f0f0f0',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}
+                >
+                  <Text style={{ 
+                    fontSize: 12, 
+                    color: priceUnit === unit ? '#ffffff' : '#333333',
+                    fontWeight: '600'
+                  }}>
+                    {unit}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {priceUnit ? (
+                <TouchableOpacity
+                  onPress={() => setPriceUnit('')}
+                  style={{
+                    backgroundColor: '#ffebee',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
 
           {/* CATEGORY SECTION */}
@@ -606,15 +738,32 @@ export default function AddProductScreen() {
             <View style={styles.pickerBox}>
               <Picker
                 selectedValue={subcategory}
-                onValueChange={setSubcategory}
+                onValueChange={(val) => {
+                  setSubcategory(val)
+                  if (val !== 'custom') setCustomSubcategory('')
+                }}
                 style={styles.picker}
               >
                 <Picker.Item label="Select Subcategory" value="" />
-                <Picker.Item label="Premium" value="premium" />
-                <Picker.Item label="Budget" value="budget" />
-                <Picker.Item label="Wholesale" value="wholesale" />
+                {(SUBCATEGORIES_MAP[category] || []).map((sub) => (
+                  <Picker.Item key={sub.value} label={sub.label} value={sub.value} />
+                ))}
+                {category ? <Picker.Item label="Other / Custom Subcategory" value="custom" /> : null}
               </Picker>
             </View>
+
+            {(subcategory === 'custom') && (
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.fieldLabel}>CUSTOM SUBCATEGORY NAME</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Handmade Crafts, Sports Equipment"
+                  placeholderTextColor="#bbb"
+                  value={customSubcategory}
+                  onChangeText={setCustomSubcategory}
+                />
+              </View>
+            )}
           </View>
 
           {/* INVENTORY SECTION */}
@@ -651,6 +800,50 @@ export default function AddProductScreen() {
               }}
               keyboardType="number-pad"
             />
+            <Text style={styles.fieldLabel}>STOCK UNIT (OPTIONAL)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. kg, gm, liter, pcs, box"
+              placeholderTextColor="#bbb"
+              value={stockUnit}
+              onChangeText={setStockUnit}
+              autoCapitalize="none"
+            />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 12 }}>
+              {['kg', 'gm', 'liter', 'pcs', 'box'].map((unit) => (
+                <TouchableOpacity
+                  key={unit}
+                  onPress={() => setStockUnit(unit)}
+                  style={{
+                    backgroundColor: stockUnit === unit ? '#021B79' : '#f0f0f0',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}
+                >
+                  <Text style={{ 
+                    fontSize: 12, 
+                    color: stockUnit === unit ? '#ffffff' : '#333333',
+                    fontWeight: '600'
+                  }}>
+                    {unit}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {stockUnit ? (
+                <TouchableOpacity
+                  onPress={() => setStockUnit('')}
+                  style={{
+                    backgroundColor: '#ffebee',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
             <Text style={styles.fieldLabel}>LOW STOCK ALERT</Text>
             <TextInput

@@ -67,11 +67,11 @@ export default function ProductCard({ product, onEdit, onDelete }) {
             (product.category?.name || product.category || '').toLowerCase().trim() === 'service portal' ||
             (product.category?.name || product.category || '').toLowerCase().trim() === 'job-portal' ||
             (product.category?.name || product.category || '').toLowerCase().trim() === 'service-portal'
-          ) && <Text style={styles.price}>${product.price}</Text>}
+          ) && <Text style={styles.price}>${product.price}{product.priceUnit ? ` ${product.priceUnit}` : ''}</Text>}
 
           <View style={styles.stockRow}>
             <Text style={[styles.stock, isCurrentlyInStock ? styles.inStock : styles.outStock]}>
-              {isCurrentlyInStock ? `${t('In Stock')} (${product.stock})` : t('Out of Stock')}
+              {isCurrentlyInStock ? `${t('In Stock')} (${product.stock} ${product.stockUnit || 'pcs'})` : t('Out of Stock')}
             </Text>
           </View>
 
