@@ -18,6 +18,7 @@ import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import api from '../../services/api'
 import { getCategoryImage } from '../../constants/categories'
+import { useTranslation } from 'react-i18next'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -98,6 +99,7 @@ const CATEGORIES = [
 ]
 
 export default function ProductsScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const [categories, setCategories] = useState(CATEGORIES)
   const [loading, setLoading] = useState(false)
@@ -203,10 +205,10 @@ export default function ProductsScreen() {
       />
       <View style={styles.categoryInfo}>
         <Text style={styles.categoryName}>
-          {item.name}
+          {t(item.name)}
         </Text>
         <Text style={styles.categoryCount}>
-          {item.count || '0+ Products'}
+          {t(item.count) || item.count || t('0+ Products')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -249,12 +251,10 @@ export default function ProductsScreen() {
         ListHeaderComponent={
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle}>
-              All Categories
+              {t("All Categories")}
             </Text>
             <Text style={styles.pageSubtitle}>
-              Explore a world of products curated for
-              international logistics and global trade
-              excellence.
+              {t("Explore a world of products curated for international logistics and global trade excellence.")}
             </Text>
           </View>
         }
@@ -263,19 +263,17 @@ export default function ProductsScreen() {
             {/* Can't find card */}
             <View style={styles.findCard}>
               <Text style={styles.findTitle}>
-                Can't find what you're looking for?
+                {t("Can't find what you're looking for?")}
               </Text>
               <Text style={styles.findDesc}>
-                Our global network of verified vendors
-                can source specific wholesale products
-                for your business needs.
+                {t("Our global network of verified vendors can source specific wholesale products for your business needs.")}
               </Text>
               <TouchableOpacity 
                 style={styles.findBtn}
                 onPress={handleRequestQuote}
               >
                 <Text style={styles.findBtnText}>
-                  Request a Quote
+                  {t("Request a Quote")}
                 </Text>
               </TouchableOpacity>
             </View>

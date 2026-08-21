@@ -18,28 +18,13 @@ import { router } from 'expo-router'
 import { sendOTP } from '../../services/authService'
 import { useTranslation } from 'react-i18next'
 
-const COUNTRIES = [
-  { code: '+1', flag: '🇺🇸', name: 'US' },
-  { code: '+44', flag: '🇬🇧', name: 'UK' },
-  { code: '+91', flag: '🇮🇳', name: 'IN' },
-  { code: '+971', flag: '🇦🇪', name: 'AE' },
-  { code: '+966', flag: '🇸🇦', name: 'SA' },
-  { code: '+92', flag: '🇵🇰', name: 'PK' },
-  { code: '+880', flag: '🇧🇩', name: 'BD' },
-  { code: '+60', flag: '🇲🇾', name: 'MY' },
-  { code: '+65', flag: '🇸🇬', name: 'SG' },
-  { code: '+86', flag: '🇨🇳', name: 'CN' },
-  { code: '+81', flag: '🇯🇵', name: 'JP' },
-  { code: '+49', flag: '🇩🇪', name: 'DE' },
-  { code: '+33', flag: '🇫🇷', name: 'FR' },
-  { code: '+34', flag: '🇪🇸', name: 'ES' },
-  { code: '+55', flag: '🇧🇷', name: 'BR' },
-]
+import { WORLD_COUNTRIES } from '../../constants/worldCountries'
+import CountrySelectorModal from '../../components/common/CountrySelectorModal'
 
 export default function SignupScreen() {
   const { t } = useTranslation()
   const [phone, setPhone] = useState('')
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
+  const [selectedCountry, setSelectedCountry] = useState(WORLD_COUNTRIES[2]) // Default India +91
   const [showPicker, setShowPicker] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -176,38 +161,12 @@ export default function SignupScreen() {
       </KeyboardAvoidingView>
 
       {/* Country Picker Modal */}
-      <Modal
+      <CountrySelectorModal
         visible={showPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setShowPicker(false)}
-        >
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>{t('Select Country')}</Text>
-            <FlatList
-              data={COUNTRIES}
-              keyExtractor={(item) => item.code + item.name}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.countryRow}
-                  onPress={() => {
-                    setSelectedCountry(item)
-                    setShowPicker(false)
-                  }}
-                >
-                  <Text style={styles.countryFlag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
-                  <Text style={styles.countryCode}>{item.code}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setShowPicker(false)}
+        onSelect={(c) => setSelectedCountry(c)}
+        selectedCountry={selectedCountry}
+      />
     </SafeAreaView>
   )
 }

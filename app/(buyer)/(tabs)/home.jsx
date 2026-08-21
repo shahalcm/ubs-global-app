@@ -709,7 +709,7 @@ export default function HomeScreen() {
             <MaterialCommunityIcons name="magnify" size={20} color="#888" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder={t('search_placeholder')}
+              placeholder={t('Search products, jobs, real estate...')}
               placeholderTextColor="#999"
               value={search}
               onChangeText={setSearch}
@@ -839,7 +839,7 @@ export default function HomeScreen() {
 
         {/* Browse by Category */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>{t('browse_category')}</Text>
+          <Text style={styles.sectionTitle}>{t('Browse by Category')}</Text>
         </View>
         <View style={styles.categoryGridContainer}>
           {categories.map((item) => (
@@ -875,33 +875,36 @@ export default function HomeScreen() {
           }}
           style={styles.bannerScroll}
         >
-          {banners.map((banner) => (
-            <View key={banner._id || banner.id} style={styles.bannerCard}>
-              <Image
-                source={{ uri: banner.image }}
-                style={styles.bannerImage}
-                contentFit="cover"
-                transition={200}
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.85)']}
-                style={styles.bannerOverlay}
-              >
-                {banner.subtitle ? (
-                  <Text style={styles.bannerSubtitle}>{t(banner.subtitle)}</Text>
-                ) : (
-                  <Text style={styles.bannerSubtitle}>{t('LIMITED OFFER')}</Text>
-                )}
-                <Text style={styles.bannerTitle}>{t(banner.title)}</Text>
-                <TouchableOpacity 
-                  style={styles.bannerBtn}
-                  onPress={() => router.push(banner.linkUrl || "/(buyer)/products")}
+          {banners.map((banner) => {
+            const bannerImg = banner.imageByLang?.[i18n.language] || banner.image;
+            const bannerTitle = banner.translations?.[i18n.language]?.title || t(banner.title);
+            const bannerSub = banner.translations?.[i18n.language]?.subtitle || t(banner.subtitle || 'LIMITED OFFER');
+            const bannerBtn = banner.translations?.[i18n.language]?.buttonText || t(banner.buttonText || banner.btn || 'Shop Now');
+
+            return (
+              <View key={banner._id || banner.id} style={styles.bannerCard}>
+                <Image
+                  source={{ uri: bannerImg }}
+                  style={styles.bannerImage}
+                  contentFit="cover"
+                  transition={200}
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.85)']}
+                  style={styles.bannerOverlay}
                 >
-                  <Text style={styles.bannerBtnText}>{t(banner.btn || 'Shop Now')}</Text>
-                </TouchableOpacity>
-              </LinearGradient>
-            </View>
-          ))}
+                  <Text style={styles.bannerSubtitle}>{bannerSub}</Text>
+                  <Text style={styles.bannerTitle}>{bannerTitle}</Text>
+                  <TouchableOpacity 
+                    style={styles.bannerBtn}
+                    onPress={() => router.push(banner.linkUrl || "/(buyer)/products")}
+                  >
+                    <Text style={styles.bannerBtnText}>{bannerBtn}</Text>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
+            );
+          })}
         </ScrollView>
 
         {/* Banner Dots */}
@@ -916,9 +919,9 @@ export default function HomeScreen() {
 
         {/* Featured Products */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>{t('featured_products')}</Text>
+          <Text style={styles.sectionTitle}>{t('Featured Products')}</Text>
           <TouchableOpacity onPress={() => router.push("/(buyer)/products")}>
-            <Text style={styles.viewAll}>{t('view_all')}</Text>
+            <Text style={styles.viewAll}>{t('View All')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -937,7 +940,7 @@ export default function HomeScreen() {
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>{t('Recently Viewed')}</Text>
               <TouchableOpacity onPress={() => router.push("/(buyer)/recently-viewed")}>
-                <Text style={styles.viewAll}>{t('view_all')} &gt;</Text>
+                <Text style={styles.viewAll}>{t('View All')} &gt;</Text>
               </TouchableOpacity>
             </View>
 
@@ -978,14 +981,14 @@ export default function HomeScreen() {
               >
                 <View style={styles.realEstateBadge}>
                   <MaterialCommunityIcons name="home-city" size={14} color="#ffd700" />
-                  <Text style={styles.realEstateBadgeText}>REAL ESTATE MARKETPLACE</Text>
+                  <Text style={styles.realEstateBadgeText}>{t('REAL ESTATE MARKETPLACE')}</Text>
                 </View>
                 <Text style={styles.realEstateTitle}>{t(realestateBanner.title)}</Text>
                 {realestateBanner.subtitle && (
                   <Text style={styles.realEstateSubtitle}>{t(realestateBanner.subtitle)}</Text>
                 )}
                 <View style={styles.realEstateBtn}>
-                  <Text style={styles.realEstateBtnText}>Browse Properties →</Text>
+                  <Text style={styles.realEstateBtnText}>{t('Browse Properties →')}</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -994,18 +997,18 @@ export default function HomeScreen() {
 
         {/* Secure Payments Card */}
         <View style={styles.secureCard}>
-          <Text style={styles.secureTitle}>{t('secure_payments')}</Text>
+          <Text style={styles.secureTitle}>{t('Secure Global Payments')}</Text>
           <Text style={styles.secureDesc}>
-            {t('secure_payments_desc')}
+            {t('Our trade assurance guarantees protection from payment to delivery for all international orders. Safe, secure, and fully tracked.')}
           </Text>
           <View style={styles.secureBadgeRow}>
             <View style={styles.secureBadge}>
               <MaterialCommunityIcons name="shield-check" size={16} color="#4caf50" />
-              <Text style={styles.secureBadgeText}>{t('verified_vendors')}</Text>
+              <Text style={styles.secureBadgeText}>{t('Verified Vendors')}</Text>
             </View>
             <View style={styles.secureBadge}>
               <MaterialCommunityIcons name="lock" size={16} color="#1a237e" />
-              <Text style={styles.secureBadgeText}>{t('escrow_support')}</Text>
+              <Text style={styles.secureBadgeText}>{t('Escrow Support')}</Text>
             </View>
           </View>
           <Image

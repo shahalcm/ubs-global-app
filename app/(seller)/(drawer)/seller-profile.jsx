@@ -19,16 +19,18 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getDashboardStats } from '../../../services/sellerService';
 import { useRouter } from 'expo-router';
 import { getSellerImageUrl } from '../../../utils/image';
+import { useTranslation } from 'react-i18next';
 
 export default function SellerProfile() {
+  const { t } = useTranslation();
   const { seller, loadProfile } = useSeller();
   const { logout, user } = useAuth();
   const router = useRouter();
 
   const [stats, setStats] = useState([
-    { label: 'Total Revenue', value: '...', icon: 'cash-multiple', color: colors.success || '#4caf50' },
-    { label: 'My Products', value: '...', icon: 'package-variant-closed', color: colors.accent || '#29b6f6' },
-    { label: 'Orders Received', value: '...', icon: 'cart-outline', color: colors.warning || '#ff9800' },
+    { label: t('Total Revenue'), value: '...', icon: 'cash-multiple', color: colors.success || '#4caf50' },
+    { label: t('My Products'), value: '...', icon: 'package-variant-closed', color: colors.accent || '#29b6f6' },
+    { label: t('Orders Received'), value: '...', icon: 'cart-outline', color: colors.warning || '#ff9800' },
   ]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -182,7 +184,7 @@ export default function SellerProfile() {
               styles.statusBadgeText,
               { color: seller?.status === 'approved' ? '#2e7d32' : '#b25d00' }
             ]}>
-              {seller?.status === 'approved' ? 'Verified Seller' : 'Pending Verification'}
+              {seller?.status === 'approved' ? t('Verified Seller') : t('Pending Verification')}
             </Text>
           </View>
         </LinearGradient>
@@ -199,7 +201,7 @@ export default function SellerProfile() {
               ) : (
                 <Text style={[styles.statValue, isDark && styles.textDark]}>{item.value}</Text>
               )}
-              <Text style={styles.statLabel}>{item.label}</Text>
+              <Text style={styles.statLabel}>{t(item.label)}</Text>
             </View>
           ))}
         </View>
@@ -208,13 +210,13 @@ export default function SellerProfile() {
         <View style={[styles.infoCard, isDark && styles.cardBgDark]}>
           <View style={styles.infoCardHeader}>
             <MaterialCommunityIcons name="information-outline" size={20} color={colors.primary} />
-            <Text style={[styles.infoCardTitle, isDark && styles.textDark]}>Shop Information</Text>
+            <Text style={[styles.infoCardTitle, isDark && styles.textDark]}>{t('Shop Information')}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="briefcase-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Business Type</Text>
+              <Text style={styles.infoLabel}>{t('Business Type')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.businessType ?? 'N/A'}</Text>
           </View>
@@ -222,7 +224,7 @@ export default function SellerProfile() {
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="email-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Contact Email</Text>
+              <Text style={styles.infoLabel}>{t('Contact Email')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.userId?.email || user?.email || 'N/A'}</Text>
           </View>
@@ -230,7 +232,7 @@ export default function SellerProfile() {
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="phone-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Contact Phone</Text>
+              <Text style={styles.infoLabel}>{t('Contact Phone')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.phone || seller?.userId?.phone || 'N/A'}</Text>
           </View>
@@ -238,7 +240,7 @@ export default function SellerProfile() {
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="map-marker-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Location</Text>
+              <Text style={styles.infoLabel}>{t('Location')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]} numberOfLines={3}>{address}</Text>
           </View>
@@ -246,7 +248,7 @@ export default function SellerProfile() {
           <View style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="calendar-range" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Member Since</Text>
+              <Text style={styles.infoLabel}>{t('Member Since')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{memberSince}</Text>
           </View>
@@ -256,7 +258,7 @@ export default function SellerProfile() {
         <View style={[styles.infoCard, isDark && styles.cardBgDark]}>
           <View style={styles.infoCardHeader}>
             <MaterialCommunityIcons name="credit-card-outline" size={20} color={colors.primary} />
-            <Text style={[styles.infoCardTitle, isDark && styles.textDark]}>Payment Details</Text>
+            <Text style={[styles.infoCardTitle, isDark && styles.textDark]}>{t('Payment Details')}</Text>
             <TouchableOpacity 
               style={{ marginLeft: 'auto' }} 
               onPress={() => router.push('/(seller)/seller-settings')}
@@ -268,7 +270,7 @@ export default function SellerProfile() {
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="bank-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Bank Name</Text>
+              <Text style={styles.infoLabel}>{t('Bank Name')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.bankName || 'N/A'}</Text>
           </View>
@@ -276,7 +278,7 @@ export default function SellerProfile() {
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="numeric" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>Account Number</Text>
+              <Text style={styles.infoLabel}>{t('Account Number')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.accountNumber || 'N/A'}</Text>
           </View>
@@ -284,7 +286,7 @@ export default function SellerProfile() {
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="barcode" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>IFSC Code</Text>
+              <Text style={styles.infoLabel}>{t('IFSC Code')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.ifscCode || 'N/A'}</Text>
           </View>
@@ -292,7 +294,7 @@ export default function SellerProfile() {
           <View style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
             <View style={styles.infoLabelContainer}>
               <MaterialCommunityIcons name="qrcode" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={styles.infoLabel}>UPI ID</Text>
+              <Text style={styles.infoLabel}>{t('UPI ID')}</Text>
             </View>
             <Text style={[styles.infoValue, isDark && styles.textDark]}>{seller?.bankDetails?.upiId || 'N/A'}</Text>
           </View>

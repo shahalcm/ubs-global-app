@@ -21,9 +21,10 @@ import * as Location from 'expo-location'
 import { updateUserLocation, updateAvatar } from '../../../services/userService'
 import * as ImagePicker from 'expo-image-picker'
 import { getUserAvatarUrl } from '../../../utils/image'
-
+import { useTranslation } from 'react-i18next'
 
 export default function ProfileScreen() {
+  const { t } = useTranslation()
   const { user, logout, updateUser } = useAuth()
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
@@ -273,10 +274,10 @@ export default function ProfileScreen() {
           
           <View style={styles.badgesRow}>
             <View style={styles.badgePremium}>
-              <Text style={styles.badgePremiumText}>Premium Member</Text>
+              <Text style={styles.badgePremiumText}>{t('Premium Member')}</Text>
             </View>
             <View style={styles.badgeVerified}>
-              <Text style={styles.badgeVerifiedText}>Verified Exporter</Text>
+              <Text style={styles.badgeVerifiedText}>{t('Verified Exporter')}</Text>
             </View>
           </View>
 
@@ -285,7 +286,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(buyer)/edit-profile')}
           >
             <MaterialCommunityIcons name="account" size={16} color="#fff" />
-            <Text style={styles.editProfileBtnText}>Edit Profile</Text>
+            <Text style={styles.editProfileBtnText}>{t('Edit Profile')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -294,12 +295,12 @@ export default function ProfileScreen() {
         {/* Promo Card */}
         <View style={styles.promoCard}>
           <Text style={styles.promoTitle}>
-            {user?.role === 'seller' ? 'Seller Dashboard' : 'Scale Your Trade Globally'}
+            {user?.role === 'seller' ? t('Seller Dashboard') : t('Scale Your Trade Globally')}
           </Text>
           <Text style={styles.promoDesc}>
             {user?.role === 'seller' 
-              ? 'Manage your store, view orders, and track your global earnings.'
-              : 'Join the world\'s most reliable network of importers and exporters. Get your products listed today.'}
+              ? t('Manage your store, view orders, and track your global earnings.')
+              : t("Join the world's most reliable network of importers and exporters. Get your products listed today.")}
           </Text>
           <TouchableOpacity 
             style={styles.promoBtn} 
@@ -312,26 +313,26 @@ export default function ProfileScreen() {
             }}
           >
             <Text style={styles.promoBtnText}>
-              {user?.role === 'seller' ? 'Go to Dashboard' : 'Become a Seller'}
+              {user?.role === 'seller' ? t('Go to Dashboard') : t('Become a Seller')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Location Section */}
-        <Text style={styles.sectionTitle}>📍 Location</Text>
+        <Text style={styles.sectionTitle}>📍 {t('Location')}</Text>
         <View style={styles.locationCard}>
           <Text style={styles.locationText}>
             {user?.location?.fullAddress || 
-             (user?.location?.city ? `${user.location.city}, ${user.location.state || ''}, ${user.location.country || ''}`.replace(/,\s*,/, ',').trim() : 'Location not set')}
+             (user?.location?.city ? `${user.location.city}, ${user.location.state || ''}, ${user.location.country || ''}`.replace(/,\s*,/, ',').trim() : t('Location not set'))}
           </Text>
           <View style={styles.locationBtnRow}>
             <TouchableOpacity style={styles.locMiniBtn} onPress={handleGPSUpdate}>
               <MaterialCommunityIcons name="refresh" size={14} color="#000040" />
-              <Text style={styles.locMiniBtnText}>Refresh GPS</Text>
+              <Text style={styles.locMiniBtnText}>{t('Refresh GPS')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.locMiniBtn} onPress={() => setLocationModalVisible(true)}>
               <MaterialCommunityIcons name="pencil" size={14} color="#000040" />
-              <Text style={styles.locMiniBtnText}>Edit Manually</Text>
+              <Text style={styles.locMiniBtnText}>{t('Edit Manually')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -428,23 +429,23 @@ export default function ProfileScreen() {
         </Modal>
 
         {/* Quick Dashboard */}
-        <Text style={styles.sectionTitle}>Quick Dashboard</Text>
+        <Text style={styles.sectionTitle}>{t('Quick Dashboard')}</Text>
         <View style={styles.dashboardGrid}>
           {/* Card 1 */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/orders')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#e8eaf6' }]}>
               <MaterialCommunityIcons name="package" size={24} color="#3f51b5" />
             </View>
-            <Text style={styles.dashCardTitle}>My Orders</Text>
-            <Text style={[styles.dashCardSub, { color: '#008b8b', fontWeight: '700' }]}>View orders</Text>
+            <Text style={styles.dashCardTitle}>{t('My Orders')}</Text>
+            <Text style={[styles.dashCardSub, { color: '#008b8b', fontWeight: '700' }]}>{t('View orders')}</Text>
           </TouchableOpacity>
           {/* Card 2 */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/wishlist')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#e0f7fa' }]}>
               <MaterialCommunityIcons name="heart" size={24} color="#006064" />
             </View>
-            <Text style={styles.dashCardTitle}>Wishlist</Text>
-            <Text style={styles.dashCardSub}>{user?.wishlist?.length || 0} Items</Text>
+            <Text style={styles.dashCardTitle}>{t('Wishlist')}</Text>
+            <Text style={styles.dashCardSub}>{user?.wishlist?.length || 0} {t('Items')}</Text>
           </TouchableOpacity>
           {/* Card 3 */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/messages')} activeOpacity={0.8}>
@@ -454,36 +455,36 @@ export default function ProfileScreen() {
             <View style={[styles.dashIconBox, { backgroundColor: '#efebe9' }]}>
               <MaterialCommunityIcons name="message-text" size={24} color="#4e342e" />
             </View>
-            <Text style={styles.dashCardTitle}>Messages</Text>
-            <Text style={styles.dashCardSub}>Unread</Text>
+            <Text style={styles.dashCardTitle}>{t('Messages')}</Text>
+            <Text style={styles.dashCardSub}>{t('Unread')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/my-requests')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#e8eaf6' }]}> 
               <MaterialCommunityIcons name="account-question" size={24} color="#1a237e" />
             </View>
-            <Text style={styles.dashCardTitle}>Contact Requests</Text>
-            <Text style={styles.dashCardSub}>Track approvals</Text>
+            <Text style={styles.dashCardTitle}>{t('Contact Requests')}</Text>
+            <Text style={styles.dashCardSub}>{t('Track approvals')}</Text>
           </TouchableOpacity>
           {/* Card 4 */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/notifications')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#f3e5f5' }]}>
               <MaterialCommunityIcons name="bell" size={24} color="#6a1b9a" />
             </View>
-            <Text style={styles.dashCardTitle}>Notifications</Text>
-            <Text style={styles.dashCardSub}>View updates</Text>
+            <Text style={styles.dashCardTitle}>{t('Notifications')}</Text>
+            <Text style={styles.dashCardSub}>{t('View updates')}</Text>
           </TouchableOpacity>
           {/* Card 5 - Cart */}
           <TouchableOpacity style={styles.dashCard} onPress={() => router.push('/(buyer)/cart')} activeOpacity={0.8}>
             <View style={[styles.dashIconBox, { backgroundColor: '#fff3e0' }]}>
               <MaterialCommunityIcons name="cart" size={24} color="#e65100" />
             </View>
-            <Text style={styles.dashCardTitle}>My Cart</Text>
-            <Text style={styles.dashCardSub}>View items</Text>
+            <Text style={styles.dashCardTitle}>{t('My Cart')}</Text>
+            <Text style={styles.dashCardSub}>{t('View items')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Account Settings */}
-        <Text style={styles.sectionTitle}>Account Settings</Text>
+        <Text style={styles.sectionTitle}>{t('Account Settings')}</Text>
         <View style={styles.listContainer}>
           <TouchableOpacity 
             style={styles.listItem} 
@@ -492,8 +493,8 @@ export default function ProfileScreen() {
           >
             <Text style={styles.listIcon}>💳</Text>
             <View style={styles.listTextCol}>
-              <Text style={styles.listTitle}>Payment Methods</Text>
-              <Text style={styles.listSub}>Manage cards and billing info</Text>
+              <Text style={styles.listTitle}>{t('Payment Methods')}</Text>
+              <Text style={styles.listSub}>{t('Manage cards and billing info')}</Text>
             </View>
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
@@ -501,12 +502,12 @@ export default function ProfileScreen() {
           <TouchableOpacity 
             style={styles.listItem} 
             activeOpacity={0.7}
-            onPress={() => Alert.alert("Shipping Address", "Primary: London Gateway Port\n\nTo update your delivery address, you can configure it during checkout.")}
+            onPress={() => Alert.alert(t("Shipping Addresses"), `${t("Primary: London Gateway Port")}\n\n${t("To update your delivery address, you can configure it during checkout.")}`)}
           >
             <Text style={styles.listIcon}>📍</Text>
             <View style={styles.listTextCol}>
-              <Text style={styles.listTitle}>Shipping Addresses</Text>
-              <Text style={styles.listSub}>Primary: London Gateway Port</Text>
+              <Text style={styles.listTitle}>{t('Shipping Addresses')}</Text>
+              <Text style={styles.listSub}>{t('Primary: London Gateway Port')}</Text>
             </View>
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
@@ -518,15 +519,15 @@ export default function ProfileScreen() {
           >
             <Text style={styles.listIcon}>🛡</Text>
             <View style={styles.listTextCol}>
-              <Text style={styles.listTitle}>Security & Privacy</Text>
-              <Text style={styles.listSub}>Password, preferences & security</Text>
+              <Text style={styles.listTitle}>{t('Security & Privacy')}</Text>
+              <Text style={styles.listSub}>{t('Password, preferences & security')}</Text>
             </View>
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* Support */}
-        <Text style={styles.sectionTitle}>Support</Text>
+        <Text style={styles.sectionTitle}>{t('Support')}</Text>
         <View style={styles.listContainer}>
           <TouchableOpacity 
             style={styles.listItem} 
@@ -535,8 +536,8 @@ export default function ProfileScreen() {
           >
             <Text style={styles.listIcon}>❓</Text>
             <View style={styles.listTextCol}>
-              <Text style={styles.listTitle}>Help Center</Text>
-              <Text style={styles.listSub}>FAQs, Guides and Tutorials</Text>
+              <Text style={styles.listTitle}>{t('Help Center')}</Text>
+              <Text style={styles.listSub}>{t('FAQs, Guides and Tutorials')}</Text>
             </View>
             <Text style={styles.listArrow}>›</Text>
           </TouchableOpacity>

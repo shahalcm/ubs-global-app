@@ -27,8 +27,10 @@ import { useAuth } from '../../context/AuthContext'
 import { useCall } from '../../context/CallContext'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useTranslation } from 'react-i18next'
 
 export default function BuyerChatScreen() {
+  const { t } = useTranslation()
   const { roomId, sellerName, productTitle } = useLocalSearchParams()
   const { user } = useAuth()
   const { startCall } = useCall()
@@ -378,12 +380,12 @@ export default function BuyerChatScreen() {
               {botActive ? (
                 <>
                   <View style={styles.botDot} />
-                  <Text style={styles.statusText}>AI Assistant Active</Text>
+                  <Text style={styles.statusText}>{t("AI Assistant Active")}</Text>
                 </>
               ) : (
                 <>
                   <View style={[styles.botDot, { backgroundColor: sellerOnline ? '#4caf50' : '#ffa000' }]} />
-                  <Text style={styles.statusText}>{sellerOnline ? 'Online' : 'Seller Active'}</Text>
+                  <Text style={styles.statusText}>{sellerOnline ? t('Online') : t('Seller Active')}</Text>
                 </>
               )}
             </View>
@@ -398,7 +400,7 @@ export default function BuyerChatScreen() {
         {botActive && (
           <View style={styles.aiBanner}>
             <Text style={styles.aiBannerIcon}>🤖</Text>
-            <Text style={styles.aiBannerText}>UBS AI Assistant is handling this chat for instant responses</Text>
+            <Text style={styles.aiBannerText}>{t("UBS AI Assistant is handling this chat for instant responses")}</Text>
           </View>
         )}
 
@@ -420,7 +422,7 @@ export default function BuyerChatScreen() {
               <Text style={{ fontSize: 12 }}>🤖</Text>
             </View>
             <Animated.View style={[styles.typingBubble, { opacity: typingAnim }]}>
-              <Text style={styles.typingText}>UBS Assistant is typing...</Text>
+              <Text style={styles.typingText}>{t("UBS Assistant is typing...")}</Text>
             </Animated.View>
           </View>
         )}
@@ -428,16 +430,16 @@ export default function BuyerChatScreen() {
         {/* QUICK SUGGESTION CHIPS */}
         <View style={styles.chipRow}>
           <TouchableOpacity style={styles.chip} onPress={() => handleSend('What is the price & minimum order?')}>
-            <Text style={styles.chipText}>🏷️ Price & Quotes</Text>
+            <Text style={styles.chipText}>🏷️ {t("Price & Quotes")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.chip} onPress={() => handleSend('Is this item in stock?')}>
-            <Text style={styles.chipText}>📦 Stock Availability</Text>
+            <Text style={styles.chipText}>📦 {t("Stock Availability")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.chip} onPress={() => handleSend('What are the shipping details?')}>
-            <Text style={styles.chipText}>✈️ Shipping Info</Text>
+            <Text style={styles.chipText}>✈️ {t("Shipping Info")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.chip} onPress={() => handleSend('I want to speak to human agent')}>
-            <Text style={styles.chipText}>👤 Speak to Agent</Text>
+            <Text style={styles.chipText}>👤 {t("Speak to Agent")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -445,7 +447,7 @@ export default function BuyerChatScreen() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={t("Type a message...")}
             placeholderTextColor="#888"
             value={inputText}
             onChangeText={setInputText}

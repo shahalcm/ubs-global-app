@@ -16,8 +16,10 @@ import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { getChatRooms, deleteChatRoom } from '../../../services/messageService'
 import { getSellerImageUrl } from '../../../utils/image'
+import { useTranslation } from 'react-i18next'
 
 export default function MessagesScreen() {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(false)
@@ -108,7 +110,7 @@ export default function MessagesScreen() {
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Messages</Text>
+          <Text style={styles.headerTitle}>{t('Messages')}</Text>
         </View>
         <TouchableOpacity style={styles.headerRight} onPress={() => router.push('/(buyer)/help')}>
           <MaterialCommunityIcons name="headset" size={24} color="#333" />
@@ -121,7 +123,7 @@ export default function MessagesScreen() {
           <MaterialCommunityIcons name="magnify" size={20} color="#999" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search conversations..."
+            placeholder={t("Search conversations...")}
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -135,9 +137,9 @@ export default function MessagesScreen() {
       >
         {filteredRooms.length > 0 ? (
           filteredRooms.map((room) => {
-            const sellerName = room.sellerId?.shopName || room.sellerId?.name || room.sellerName || 'Seller'
-            const productName = room.productId?.title || room.productName || room.meta?.propertyTitle || 'Product'
-            const lastMessage = room.lastMessage?.text || room.lastMessage || 'Tap to continue the conversation.'
+            const sellerName = room.sellerId?.shopName || room.sellerId?.name || room.sellerName || t('Seller')
+            const productName = room.productId?.title || room.productName || room.meta?.propertyTitle || t('Product')
+            const lastMessage = room.lastMessage?.text || room.lastMessage || t('Tap to continue the conversation.')
             const timeLabel = room.lastMessage?.createdAt
               ? new Date(room.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               : room.updatedAt
@@ -193,8 +195,8 @@ export default function MessagesScreen() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateIcon}>📨</Text>
-            <Text style={styles.emptyStateTitle}>{loading ? 'Loading chats...' : 'No active conversations yet'}</Text>
-            <Text style={styles.emptyStateDesc}>When your contact request is connected, chats will appear here.</Text>
+            <Text style={styles.emptyStateTitle}>{loading ? t('Loading chats...') : t('No active conversations yet')}</Text>
+            <Text style={styles.emptyStateDesc}>{t('When your contact request is connected, chats will appear here.')}</Text>
           </View>
         )}
       </ScrollView>

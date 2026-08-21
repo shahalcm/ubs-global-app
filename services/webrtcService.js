@@ -7,17 +7,15 @@ try {
 
 const getIceServers = () => {
   const iceServers = [
-    { urls: 'stun:stun.l.google.com:19302' }
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
   ]
-  
-  // Future-proofing TURN server integration for scaling
-  // To override during production deployment, set client environment variables:
-  // EXPO_PUBLIC_TURN_URL, EXPO_PUBLIC_TURN_USERNAME, EXPO_PUBLIC_TURN_PASSWORD
+
   if (process.env.EXPO_PUBLIC_TURN_URL) {
     iceServers.push({
       urls: process.env.EXPO_PUBLIC_TURN_URL,
-      username: process.env.EXPO_PUBLIC_TURN_USERNAME,
-      credential: process.env.EXPO_PUBLIC_TURN_PASSWORD
+      username: process.env.EXPO_PUBLIC_TURN_USERNAME || '',
+      credential: process.env.EXPO_PUBLIC_TURN_PASSWORD || ''
     })
   }
   return iceServers
@@ -28,6 +26,7 @@ class WebRTCManager {
     this.peerConnection = null
     this.localStream = null
     this.remoteStream = null
+    this.iceCandidateQueue = []
     this.onIceCandidateCallback = null
     this.onTrackCallback = null
     this.onConnectionStateChangeCallback = null
@@ -39,53 +38,65 @@ class WebRTCManager {
       if (this.localStream) {
         return this.localStream
       }
-      
+
       if (!WebRTC?.mediaDevices) {
         throw new Error('WebRTC mediaDevices is not available on this platform')
       }
-      
+
+      console.log('[Mobile WebRTC] Requesting microphone stream...')
       const stream = await WebRTC.mediaDevices.getUserMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
         video: false
       })
       this.localStream = stream
+      console.log('[Mobile WebRTC] Microphone stream obtained successfully')
       return stream
     } catch (error) {
-      console.error('WebRTC Service: getUserMedia error:', error)
+      console.error('[Mobile WebRTC] getUserMedia error:', error)
       throw error
     }
   }
 
-  // Create peer connection and bind track events
+  // Create peer connection with candidate queueing
   createPeerConnection() {
+    this.cleanUp()
+
     const pcConfig = {
       iceServers: getIceServers()
     }
-    
+
     if (!WebRTC?.RTCPeerConnection) {
       throw new Error('WebRTC RTCPeerConnection is not available on this platform')
     }
-    
+
+    console.log('[Mobile WebRTC] Creating RTCPeerConnection with STUN/TURN servers:', pcConfig.iceServers)
     this.peerConnection = new WebRTC.RTCPeerConnection(pcConfig)
+    this.iceCandidateQueue = []
 
     // Add local tracks to peer connection
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
         this.peerConnection.addTrack(track, this.localStream)
       })
-    } else {
-      console.warn('WebRTC Service: Peer connection created without local stream')
     }
 
-    // Listen for ICE candidate discoveries
+    // Listen for discover ICE candidates
     this.peerConnection.onicecandidate = (event) => {
-      if (event.candidate && this.onIceCandidateCallback) {
-        this.onIceCandidateCallback(event.candidate)
+      if (event.candidate) {
+        console.log('[ICE Candidate Sent]', event.candidate)
+        if (this.onIceCandidateCallback) {
+          this.onIceCandidateCallback(event.candidate)
+        }
       }
     }
 
     // Listen for incoming remote audio tracks
     this.peerConnection.ontrack = (event) => {
+      console.log('[Mobile WebRTC] Incoming remote audio track:', event.streams)
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0]
         if (this.onTrackCallback) {
@@ -94,11 +105,12 @@ class WebRTCManager {
       }
     }
 
-    // Track state of signaling connection
+    // Track connection state
     this.peerConnection.onconnectionstatechange = () => {
-      console.log('WebRTC Connection State changed to:', this.peerConnection?.connectionState)
-      if (this.onConnectionStateChangeCallback && this.peerConnection) {
-        this.onConnectionStateChangeCallback(this.peerConnection.connectionState)
+      const state = this.peerConnection?.connectionState
+      console.log('[Mobile WebRTC Connection State Changed]', state)
+      if (this.onConnectionStateChangeCallback) {
+        this.onConnectionStateChangeCallback(state)
       }
     }
 
@@ -111,6 +123,7 @@ class WebRTCManager {
       if (!this.peerConnection) {
         throw new Error('PeerConnection is not initialized')
       }
+      console.log('[Offer Sent] Creating local SDP offer...')
       const offer = await this.peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
@@ -118,7 +131,7 @@ class WebRTCManager {
       await this.peerConnection.setLocalDescription(offer)
       return offer
     } catch (error) {
-      console.error('WebRTC Service: createOffer error:', error)
+      console.error('[Mobile WebRTC] createOffer error:', error)
       throw error
     }
   }
@@ -132,12 +145,19 @@ class WebRTCManager {
       if (!WebRTC?.RTCSessionDescription) {
         throw new Error('WebRTC RTCSessionDescription is not available on this platform')
       }
+
+      console.log('[Offer Received] Setting remote description...')
       await this.peerConnection.setRemoteDescription(new WebRTC.RTCSessionDescription(remoteOffer))
+
+      // Flush queued candidates
+      await this.flushIceCandidateQueue()
+
+      console.log('[Answer Sent] Generating answer...')
       const answer = await this.peerConnection.createAnswer()
       await this.peerConnection.setLocalDescription(answer)
       return answer
     } catch (error) {
-      console.error('WebRTC Service: createAnswer error:', error)
+      console.error('[Mobile WebRTC] createAnswer error:', error)
       throw error
     }
   }
@@ -151,24 +171,51 @@ class WebRTCManager {
       if (!WebRTC?.RTCSessionDescription) {
         throw new Error('WebRTC RTCSessionDescription is not available on this platform')
       }
+      console.log('[Answer Received] Setting remote description answer...')
       await this.peerConnection.setRemoteDescription(new WebRTC.RTCSessionDescription(remoteAnswer))
+
+      // Flush queued candidates
+      await this.flushIceCandidateQueue()
     } catch (error) {
-      console.error('WebRTC Service: setAnswer error:', error)
+      console.error('[Mobile WebRTC] setAnswer error:', error)
       throw error
     }
   }
 
-  // Add remote candidate discovered on signaling channel
+  // Add remote candidate discovered with buffering queue
   async addIceCandidate(candidate) {
+    if (!candidate) return
+
     try {
-      if (this.peerConnection) {
+      if (this.peerConnection && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
+        console.log('[ICE Candidate Received] Adding candidate to peer connection')
         if (!WebRTC?.RTCIceCandidate) {
           throw new Error('WebRTC RTCIceCandidate is not available on this platform')
         }
         await this.peerConnection.addIceCandidate(new WebRTC.RTCIceCandidate(candidate))
+      } else {
+        console.log('[ICE Candidate Received] Remote description not set yet. Queueing candidate...')
+        this.iceCandidateQueue.push(candidate)
       }
     } catch (error) {
-      console.error('WebRTC Service: addIceCandidate error:', error)
+      console.error('[Mobile WebRTC] addIceCandidate error:', error)
+    }
+  }
+
+  // Flush queued candidates once remote description is set
+  async flushIceCandidateQueue() {
+    if (this.iceCandidateQueue.length > 0 && this.peerConnection) {
+      console.log(`[Mobile WebRTC] Flushing ${this.iceCandidateQueue.length} queued candidates...`)
+      while (this.iceCandidateQueue.length > 0) {
+        const cand = this.iceCandidateQueue.shift()
+        try {
+          if (WebRTC?.RTCIceCandidate) {
+            await this.peerConnection.addIceCandidate(new WebRTC.RTCIceCandidate(cand))
+          }
+        } catch (e) {
+          console.error('[Mobile WebRTC] Error applying queued candidate:', e)
+        }
+      }
     }
   }
 
@@ -178,12 +225,13 @@ class WebRTCManager {
       this.localStream.getAudioTracks().forEach((track) => {
         track.enabled = !isMuted
       })
+      console.log(`[Mobile WebRTC] Microphone track mute set to: ${isMuted}`)
     }
   }
 
   // Toggle audio speaker route
   toggleSpeaker(isSpeakerOn) {
-    console.log(`WebRTC Service: Route audio stream to speaker: ${isSpeakerOn}`)
+    console.log(`[Mobile WebRTC] Route audio stream to speaker: ${isSpeakerOn}`)
     if (this.localStream) {
       this.localStream.getAudioTracks().forEach((track) => {
         if (track._setVolume) {
@@ -195,7 +243,7 @@ class WebRTCManager {
 
   // Reset service and release hardware devices
   cleanUp() {
-    console.log('WebRTC Service: Cleaning up resources')
+    console.log('[Mobile WebRTC] Cleaning up WebRTC resources')
     if (this.peerConnection) {
       this.peerConnection.close()
       this.peerConnection = null
@@ -209,6 +257,7 @@ class WebRTCManager {
     }
 
     this.remoteStream = null
+    this.iceCandidateQueue = []
     this.onIceCandidateCallback = null
     this.onTrackCallback = null
     this.onConnectionStateChangeCallback = null

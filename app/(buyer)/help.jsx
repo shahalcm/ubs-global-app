@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useTranslation } from "react-i18next";
 
 const FAQS = [
   {
@@ -46,6 +47,7 @@ const FAQS = [
 ];
 
 export default function HelpCenterScreen() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com");
@@ -112,7 +114,7 @@ export default function HelpCenterScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help Center</Text>
+        <Text style={styles.headerTitle}>{t('Help Center')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -122,7 +124,7 @@ export default function HelpCenterScreen() {
           <MaterialCommunityIcons name="magnify" size={20} color="#888" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for help..."
+            placeholder={t('Search for help...')}
             placeholderTextColor="#888"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -131,9 +133,9 @@ export default function HelpCenterScreen() {
 
         {/* Contact Support */}
         <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>Need live support?</Text>
+          <Text style={styles.contactTitle}>{t('Need live support?')}</Text>
           <Text style={styles.contactDesc}>
-            Speak directly with an active UBS Global Customer Care Agent.
+            {t('Speak directly with an active UBS Global Customer Care Agent.')}
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
             <TouchableOpacity
@@ -141,26 +143,26 @@ export default function HelpCenterScreen() {
               onPress={handleStartSupportCall}
             >
               <MaterialCommunityIcons name="phone" size={18} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={styles.contactBtnText}>Call Support</Text>
+              <Text style={styles.contactBtnText}>{t('Call Support')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.contactBtn, { backgroundColor: '#0f172a', flex: 1 }]}
               onPress={handleContactSupport}
             >
-              <Text style={styles.contactBtnText}>Options</Text>
+              <Text style={styles.contactBtnText}>{t('Options')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* FAQs */}
-        <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+        <Text style={styles.sectionTitle}>{t('Frequently Asked Questions')}</Text>
         {filteredFaqs.map((faq, index) => {
           const isExpanded = expandedIndex === index;
           return (
             <View key={index} style={styles.faqCard}>
               <TouchableOpacity onPress={() => toggleExpand(index)} style={styles.faqHeader}>
-                <Text style={styles.faqQ}>{faq.q}</Text>
+                <Text style={styles.faqQ}>{t(faq.q)}</Text>
                 <MaterialCommunityIcons 
                   name={isExpanded ? "chevron-up" : "chevron-down"} 
                   size={20} 
@@ -168,7 +170,7 @@ export default function HelpCenterScreen() {
                 />
               </TouchableOpacity>
               {isExpanded && (
-                <Text style={styles.faqA}>{faq.a}</Text>
+                <Text style={styles.faqA}>{t(faq.a)}</Text>
               )}
             </View>
           );
@@ -177,7 +179,7 @@ export default function HelpCenterScreen() {
         {filteredFaqs.length === 0 && (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="help-circle-outline" size={48} color="#888" />
-            <Text style={styles.emptyText}>No matching questions found</Text>
+            <Text style={styles.emptyText}>{t('No matching questions found')}</Text>
           </View>
         )}
       </ScrollView>

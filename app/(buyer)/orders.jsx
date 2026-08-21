@@ -14,8 +14,10 @@ import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { getMyOrders } from '../../services/orderService'
 import { onOrderStatusChanged, removeListener } from '../../services/socketService'
+import { useTranslation } from 'react-i18next'
 
 export default function MyOrdersScreen() {
+  const { t } = useTranslation()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('All')
@@ -67,14 +69,14 @@ export default function MyOrdersScreen() {
 
   const getStatusDetails = (status) => {
     switch(status) {
-      case 'placed': return { bg: '#e1f5fe', text: '#0288d1', label: 'Placed' }
-      case 'confirmed': return { bg: '#e8f1ff', text: '#1a237e', label: 'Confirmed' }
-      case 'packed': return { bg: '#fffde7', text: '#fbc02d', label: 'Packed' }
-      case 'shipped': return { bg: '#e8f5e9', text: '#2e7d32', label: 'Shipped' }
-      case 'delivered': return { bg: '#e8f5e9', text: '#2e7d32', label: 'Delivered' }
-      case 'cancelled': return { bg: '#ffebee', text: '#c62828', label: 'Cancelled' }
-      case 'returned': return { bg: '#eceff1', text: '#455a64', label: 'Returned' }
-      default: return { bg: '#f5f5f5', text: '#666', label: status?.toUpperCase() || '' }
+      case 'placed': return { bg: '#e1f5fe', text: '#0288d1', label: t('Placed') }
+      case 'confirmed': return { bg: '#e8f1ff', text: '#1a237e', label: t('Confirmed') }
+      case 'packed': return { bg: '#fffde7', text: '#fbc02d', label: t('Packed') }
+      case 'shipped': return { bg: '#e8f5e9', text: '#2e7d32', label: t('Shipped') }
+      case 'delivered': return { bg: '#e8f5e9', text: '#2e7d32', label: t('Delivered') }
+      case 'cancelled': return { bg: '#ffebee', text: '#c62828', label: t('Cancelled') }
+      case 'returned': return { bg: '#eceff1', text: '#455a64', label: t('Returned') }
+      default: return { bg: '#f5f5f5', text: '#666', label: t(status?.toUpperCase() || '') }
     }
   }
 
@@ -97,7 +99,7 @@ export default function MyOrdersScreen() {
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Orders</Text>
+          <Text style={styles.headerTitle}>{t('My Orders')}</Text>
         </View>
         <TouchableOpacity style={styles.headerRight} onPress={loadOrders}>
           <MaterialCommunityIcons name="refresh" size={24} color="#333" />
@@ -114,7 +116,7 @@ export default function MyOrdersScreen() {
               onPress={() => setActiveTab(tab)}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab}
+                {t(tab)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -131,8 +133,8 @@ export default function MyOrdersScreen() {
           {filteredOrders.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="package-variant-closed" size={48} color="#ccc" />
-              <Text style={styles.emptyTitle}>No Orders Found</Text>
-              <Text style={styles.emptyDesc}>You have no orders in this category.</Text>
+              <Text style={styles.emptyTitle}>{t('No Orders Found')}</Text>
+              <Text style={styles.emptyDesc}>{t('You have no orders in this category.')}</Text>
             </View>
           ) : (
             filteredOrders.map((order) => {
@@ -144,7 +146,7 @@ export default function MyOrdersScreen() {
                 <View key={order._id} style={styles.orderCard}>
                   <View style={styles.orderHeader}>
                     <View>
-                      <Text style={styles.orderId} numberOfLines={1}>Order #{order.orderNumber || order._id}</Text>
+                      <Text style={styles.orderId} numberOfLines={1}>{t('Order')} #{order.orderNumber || order._id}</Text>
                       <Text style={styles.orderDate}>
                         {new Date(order.createdAt).toLocaleDateString([], {
                           month: 'short',
@@ -170,15 +172,15 @@ export default function MyOrdersScreen() {
                     />
                     <View style={styles.orderInfo}>
                       <Text style={styles.orderTitle} numberOfLines={2}>
-                        {firstItem?.productName || 'Order Item'}
+                        {firstItem?.productName || t('Order Item')}
                       </Text>
                       {order.items?.length > 1 && (
                         <Text style={styles.additionalItemsText}>
-                          + {order.items.length - 1} other item{order.items.length - 1 > 1 ? 's' : ''}
+                          + {order.items.length - 1} {t('other items')}
                         </Text>
                       )}
-                      <Text style={styles.orderMeta}>Total Items: {totalItemsCount}</Text>
-                      <Text style={styles.orderTotal}>Total: ${Number(order.grandTotal || 0).toFixed(2)}</Text>
+                      <Text style={styles.orderMeta}>{t('Total Items:')} {totalItemsCount}</Text>
+                      <Text style={styles.orderTotal}>{t('Total:')} ${Number(order.grandTotal || 0).toFixed(2)}</Text>
                     </View>
                   </TouchableOpacity>
 
@@ -187,14 +189,14 @@ export default function MyOrdersScreen() {
                       style={styles.outlineBtn}
                       onPress={() => handleNavigateToDetails(order._id)}
                     >
-                      <Text style={styles.outlineBtnText}>Details</Text>
+                      <Text style={styles.outlineBtnText}>{t('Details')}</Text>
                     </TouchableOpacity>
                     {(order.orderStatus === 'placed' || order.orderStatus === 'confirmed' || order.orderStatus === 'packed' || order.orderStatus === 'shipped') ? (
                       <TouchableOpacity 
                         style={styles.primaryBtn}
                         onPress={() => handleNavigateToDetails(order._id)}
                       >
-                        <Text style={styles.primaryBtnText}>Track Order</Text>
+                        <Text style={styles.primaryBtnText}>{t('Track Order')}</Text>
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity 
@@ -208,7 +210,7 @@ export default function MyOrdersScreen() {
                           }
                         }}
                       >
-                        <Text style={styles.primaryBtnText}>Buy Again</Text>
+                        <Text style={styles.primaryBtnText}>{t('Buy Again')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>

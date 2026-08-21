@@ -207,7 +207,9 @@ export default function CartScreen() {
                         activeOpacity={0.8}
                         onPress={() => router.push(`/(buyer)/product-details?id=${product._id}`)}
                       >
-                        <Text style={styles.itemTitle} numberOfLines={2}>{product.title}</Text>
+                        <Text style={styles.itemTitle} numberOfLines={2}>
+                          {product.translations?.[i18n.language]?.title || t(product.title) || product.title}
+                        </Text>
                       </TouchableOpacity>
 
                       {/* Stock status badge */}
@@ -255,7 +257,7 @@ export default function CartScreen() {
                         </View>
 
                         <Text style={styles.itemSubtotal}>
-                          Subtotal: ${(Number(item.price || product.price || 0) * item.quantity).toFixed(2)}
+                          {t('Subtotal:')} ${(Number(item.price || product.price || 0) * item.quantity).toFixed(2)}
                         </Text>
                       </View>
                     </View>

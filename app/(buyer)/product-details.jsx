@@ -19,7 +19,7 @@ import { addRecentlyViewed } from "../../services/recentlyViewed";
 const { width } = Dimensions.get("window");
 
 export default function ProductDetailsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams();
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState("Reviews");
@@ -54,6 +54,37 @@ export default function ProductDetailsScreen() {
   const [submittingApplication, setSubmittingApplication] = useState(false);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
+
+  // On-demand AI translation states
+  const [translatingProduct, setTranslatingProduct] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  const handleTranslateProduct = async () => {
+    if (showOriginal) {
+      setShowOriginal(false);
+      return;
+    }
+    try {
+      setTranslatingProduct(true);
+      const res = await api.post(`/products/${product._id}/translate`, { targetLang: i18n.language });
+      if (res.data?.success && res.data.translation) {
+        const trans = res.data.translation;
+        setProduct(prev => ({
+          ...prev,
+          translations: {
+            ...(prev.translations || {}),
+            [i18n.language]: trans
+          }
+        }));
+        Alert.alert(t('Success'), `${t('Translated to')} ${i18n.language.toUpperCase()}!`);
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert(t('Error'), t('Failed to translate product.'));
+    } finally {
+      setTranslatingProduct(false);
+    }
+  };
 
   useEffect(() => {
     if (user && applyModalVisible) {
@@ -380,8 +411,58 @@ export default function ProductDetailsScreen() {
         )}
 
         <View style={styles.detailsBox}>
-          <Text style={styles.category}>{product.category?.name?.toUpperCase()}</Text>
-          <Text style={styles.title}>{product.title}</Text>
+          <Text style={styles.category}>{t(product.category?.name || "").toUpperCase()}</Text>
+          <Text style={styles.title}>
+            {showOriginal
+              ? product.title
+              : (product.translations?.[i18n.language]?.title || t(product.title) || product.title)}
+          </Text>
+
+          {/* On-Demand Translate Product Button */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8, gap: 10 }}>
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#e3f2fd',
+                borderColor: '#90caf9',
+                borderWidth: 1,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                gap: 6
+              }}
+              onPress={handleTranslateProduct}
+              disabled={translatingProduct}
+            >
+              <MaterialCommunityIcons name="translate" size={16} color="#0288d1" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0288d1' }}>
+                {translatingProduct
+                  ? t('Translating...')
+                  : showOriginal
+                  ? t('Show Translated')
+                  : t('🌐 Translate Product')}
+              </Text>
+            </TouchableOpacity>
+
+            {product.translations?.[i18n.language] && (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#f5f5f5',
+                  borderColor: '#ddd',
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 20
+                }}
+                onPress={() => setShowOriginal(!showOriginal)}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#666' }}>
+                  {showOriginal ? t('Showing Original') : t('Show Original')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Brand & Warranty Badges */}
           {(product.brand || product.warranty) && (
@@ -389,13 +470,13 @@ export default function ProductDetailsScreen() {
               {product.brand && (
                 <View style={styles.brandBadge}>
                   <MaterialCommunityIcons name="shield-check" size={13} color="#1a237e" />
-                  <Text style={styles.brandBadgeText}>{product.brand}</Text>
+                  <Text style={styles.brandBadgeText}>{t(product.brand) || product.brand}</Text>
                 </View>
               )}
               {product.warranty && (
                 <View style={styles.warrantyBadge}>
                   <MaterialCommunityIcons name="certificate" size={13} color="#008b8b" />
-                  <Text style={styles.warrantyBadgeText}>{product.warranty}</Text>
+                  <Text style={styles.warrantyBadgeText}>{t(product.warranty) || product.warranty}</Text>
                 </View>
               )}
             </View>
@@ -417,7 +498,11 @@ export default function ProductDetailsScreen() {
             </View>
           )}
 
-          <Text style={styles.description}>{product.description}</Text>
+          <Text style={styles.description}>
+            {showOriginal
+              ? product.description
+              : (product.translations?.[i18n.language]?.description || t(product.description) || product.description)}
+          </Text>
 
           {/* Color Selection Chips */}
           {!isJobOrService && ((product.colors && product.colors.length > 0) || product.color) && (
@@ -595,49 +680,49 @@ export default function ProductDetailsScreen() {
                   {product.brand && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Brand")}</Text>
-                      <Text style={styles.specVal}>{product.brand}</Text>
+                      <Text style={styles.specVal}>{t(product.brand) || product.brand}</Text>
                     </View>
                   )}
                   {product.countryOfOrigin && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Country of Origin")}</Text>
-                      <Text style={styles.specVal}>{product.countryOfOrigin}</Text>
+                      <Text style={styles.specVal}>{t(product.countryOfOrigin) || product.countryOfOrigin}</Text>
                     </View>
                   )}
                   {product.warranty && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Warranty")}</Text>
-                      <Text style={styles.specVal}>{product.warranty}</Text>
+                      <Text style={styles.specVal}>{t(product.warranty) || product.warranty}</Text>
                     </View>
                   )}
                   {product.material && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Material / Fabric")}</Text>
-                      <Text style={styles.specVal}>{product.material}</Text>
+                      <Text style={styles.specVal}>{t(product.material) || product.material}</Text>
                     </View>
                   )}
                   {product.fit && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Fit Type")}</Text>
-                      <Text style={styles.specVal}>{product.fit}</Text>
+                      <Text style={styles.specVal}>{t(product.fit) || product.fit}</Text>
                     </View>
                   )}
                   {product.sleeve && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Sleeve Type")}</Text>
-                      <Text style={styles.specVal}>{product.sleeve}</Text>
+                      <Text style={styles.specVal}>{t(product.sleeve) || product.sleeve}</Text>
                     </View>
                   )}
                   {product.neck && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Neck / Collar")}</Text>
-                      <Text style={styles.specVal}>{product.neck}</Text>
+                      <Text style={styles.specVal}>{t(product.neck) || product.neck}</Text>
                     </View>
                   )}
                   {product.refundPolicy && (
                     <View style={styles.specRow}>
                       <Text style={styles.specKey}>{t("Return & Refund Policy")}</Text>
-                      <Text style={[styles.specVal, { color: '#008b8b', fontWeight: '700' }]}>{product.refundPolicy}</Text>
+                      <Text style={[styles.specVal, { color: '#008b8b', fontWeight: '700' }]}>{t(product.refundPolicy) || product.refundPolicy}</Text>
                     </View>
                   )}
                 </View>

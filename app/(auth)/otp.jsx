@@ -16,8 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { verifyOTP, sendOTP, loginWithPhone } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
+import { useTranslation } from 'react-i18next'
 
 export default function OTPScreen() {
+  const { t } = useTranslation()
   const { phone: rawPhone } = useLocalSearchParams()
   const phone = rawPhone ? rawPhone.replace(/ /g, '+') : ''
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -169,14 +171,14 @@ export default function OTPScreen() {
             {/* Secure Portal Badge */}
             <View style={styles.secureBadge}>
               <Text style={styles.secureBadgeIcon}>🛡</Text>
-              <Text style={styles.secureBadgeText}>Secure Portal</Text>
+              <Text style={styles.secureBadgeText}>{t('Secure Portal')}</Text>
             </View>
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Verify OTP</Text>
+          <Text style={styles.title}>{t('Verify OTP')}</Text>
           <Text style={styles.subtitle}>
-            Enter the 6-digit code sent to{' '}
+            {t('Enter the 6-digit code sent to')}{' '}
             <Text style={styles.phoneHighlight}>{maskedPhone}</Text>
           </Text>
 
@@ -209,14 +211,14 @@ export default function OTPScreen() {
           {/* Timer & Resend */}
           <View style={styles.resendRow}>
             <Text style={styles.timerText}>
-              🕐  Resend OTP in 0:{timer < 10 ? `0${timer}` : timer}
+              🕐  {t('Resend OTP in')} 0:{timer < 10 ? `0${timer}` : timer}
             </Text>
             <TouchableOpacity onPress={handleResend} disabled={!canResend}>
               <Text style={[
                 styles.resendText,
                 !canResend && styles.resendDisabled
               ]}>
-                Resend Code
+                {t('Resend Code')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -231,7 +233,7 @@ export default function OTPScreen() {
             disabled={!isComplete || loading}
           >
             <Text style={styles.verifyBtnText}>
-              {loading ? 'Verifying...' : 'Verify  →'}
+              {loading ? t('Verifying...') : `${t('Verify')}  →`}
             </Text>
           </TouchableOpacity>
 
@@ -239,11 +241,9 @@ export default function OTPScreen() {
           <View style={styles.privacyCard}>
             <Text style={styles.privacyIcon}>🔒</Text>
             <View style={styles.privacyTextBox}>
-              <Text style={styles.privacyTitle}>Data Privacy Guaranteed</Text>
+              <Text style={styles.privacyTitle}>{t('Data Privacy Guaranteed')}</Text>
               <Text style={styles.privacyDesc}>
-                Your transaction security is our priority. UBS Global uses
-                end-to-end encryption for all international trade
-                authentications.
+                {t('Your transaction security is our priority. UBS Global uses end-to-end encryption for all international trade authentications.')}
               </Text>
             </View>
           </View>

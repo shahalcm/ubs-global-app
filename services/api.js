@@ -46,6 +46,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    const userLang = (await AsyncStorage.getItem('ubs_selected_language')) || 'en'
+    config.headers['X-User-Language'] = userLang
+
     return config
   },
   (error) => {

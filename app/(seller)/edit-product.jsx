@@ -8,6 +8,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import SellerHeader from '../../components/seller/SellerHeader';
 import { useSeller } from '../../context/SellerContext';
 import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Navy', 'Gray', 'Beige', 'Gold', 'Silver'];
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', '38', '40', 'Free Size'];
@@ -109,6 +110,7 @@ const SUBCATEGORIES_MAP = {
 };
 
 export default function EditProduct() {
+  const { t } = useTranslation();
   const { products, updateProduct, deleteProduct } = useSeller();
   const { id } = useLocalSearchParams();
   const [product, setProduct] = useState(null);
@@ -305,28 +307,28 @@ export default function EditProduct() {
   return (
     <SafeAreaView style={styles.flex}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <SellerHeader title="Edit Product" />
+        <SellerHeader title={t('Edit Product')} />
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.photoRow}>
           {images.map((uri, idx) => (
-            <View key={idx} style={styles.thumbSlot}><Text style={styles.thumbText}>Img</Text></View>
+            <View key={idx} style={styles.thumbSlot}><Text style={styles.thumbText}>{t('Img')}</Text></View>
           ))}
           <TouchableOpacity style={styles.thumbSlot} onPress={pickImage}><MaterialCommunityIcons name="plus" size={28} color={colors.primary} /></TouchableOpacity>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Basic Info</Text>
-          <TextInput style={styles.input} placeholder="Product Title" value={form.title} onChangeText={(text) => setForm({ ...form, title: text })} />
-          <TextInput style={[styles.input, styles.textArea]} placeholder="Description" multiline value={form.description} onChangeText={(text) => setForm({ ...form, description: text })} />
-          <TextInput style={styles.input} placeholder="SKU / Product Code" value={form.sku} onChangeText={(text) => setForm({ ...form, sku: text })} />
+          <Text style={styles.cardTitle}>{t('Basic Info')}</Text>
+          <TextInput style={styles.input} placeholder={t('Product Title')} value={form.title} onChangeText={(text) => setForm({ ...form, title: text })} />
+          <TextInput style={[styles.input, styles.textArea]} placeholder={t('Description')} multiline value={form.description} onChangeText={(text) => setForm({ ...form, description: text })} />
+          <TextInput style={styles.input} placeholder={t('SKU / Product Code')} value={form.sku} onChangeText={(text) => setForm({ ...form, sku: text })} />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Specifications & Attributes</Text>
-          <Text style={styles.fieldLabel}>Brand Name</Text>
+          <Text style={styles.cardTitle}>{t('Product Details')}</Text>
+          <Text style={styles.fieldLabel}>{t('Brand Name')}</Text>
           <TextInput style={styles.input} placeholder="Brand Name (e.g. Nike, Samsung)" value={form.brand} onChangeText={(brand) => setForm({ ...form, brand })} />
 
-          <Text style={styles.fieldLabel}>Available Colors</Text>
+          <Text style={styles.fieldLabel}>{t('Available Colors')}</Text>
           <View style={styles.chipsContainer}>
             {PRESET_COLORS.map((c) => {
               const selected = (form.colors || []).includes(c);
@@ -338,11 +340,11 @@ export default function EditProduct() {
             })}
           </View>
           <View style={styles.customAddRow}>
-            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Add custom color" value={customColor} onChangeText={setCustomColor} />
-            <TouchableOpacity style={styles.addChipBtn} onPress={addCustomColor}><Text style={styles.addChipBtnText}>+ Add</Text></TouchableOpacity>
+            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder={t('Add custom color')} value={customColor} onChangeText={setCustomColor} />
+            <TouchableOpacity style={styles.addChipBtn} onPress={addCustomColor}><Text style={styles.addChipBtnText}>+ {t('Add')}</Text></TouchableOpacity>
           </View>
 
-          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Available Sizes</Text>
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t('Available Sizes')}</Text>
           <View style={styles.chipsContainer}>
             {PRESET_SIZES.map((s) => {
               const selected = (form.sizes || []).includes(s);
@@ -354,38 +356,38 @@ export default function EditProduct() {
             })}
           </View>
           <View style={styles.customAddRow}>
-            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Add custom size" value={customSize} onChangeText={setCustomSize} />
-            <TouchableOpacity style={styles.addChipBtn} onPress={addCustomSize}><Text style={styles.addChipBtnText}>+ Add</Text></TouchableOpacity>
+            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder={t('Add custom size')} value={customSize} onChangeText={setCustomSize} />
+            <TouchableOpacity style={styles.addChipBtn} onPress={addCustomSize}><Text style={styles.addChipBtnText}>+ {t('Add')}</Text></TouchableOpacity>
           </View>
 
-          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Country of Origin</Text>
-          <TextInput style={styles.input} placeholder="Country of Origin (e.g. India, USA)" value={form.countryOfOrigin} onChangeText={(countryOfOrigin) => setForm({ ...form, countryOfOrigin })} />
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t('Country of Origin')}</Text>
+          <TextInput style={styles.input} placeholder={t('Country of Origin')} value={form.countryOfOrigin} onChangeText={(countryOfOrigin) => setForm({ ...form, countryOfOrigin })} />
 
-          <Text style={styles.fieldLabel}>Warranty / Guarantee</Text>
-          <TextInput style={styles.input} placeholder="Warranty (e.g. 1 Year Manufacturer Warranty)" value={form.warranty} onChangeText={(warranty) => setForm({ ...form, warranty })} />
+          <Text style={styles.fieldLabel}>{t('Warranty / Guarantee')}</Text>
+          <TextInput style={styles.input} placeholder={t('Warranty / Guarantee')} value={form.warranty} onChangeText={(warranty) => setForm({ ...form, warranty })} />
 
-          <Text style={styles.fieldLabel}>Material / Fabric</Text>
-          <TextInput style={styles.input} placeholder="Material (e.g. 100% Cotton, Leather)" value={form.material} onChangeText={(material) => setForm({ ...form, material })} />
+          <Text style={styles.fieldLabel}>{t('Material / Fabric')}</Text>
+          <TextInput style={styles.input} placeholder={t('Material / Fabric')} value={form.material} onChangeText={(material) => setForm({ ...form, material })} />
 
           <View style={styles.row}>
-            <TextInput style={[styles.input, styles.halfInput]} placeholder="Fit (e.g. Slim, Regular)" value={form.fit} onChangeText={(fit) => setForm({ ...form, fit })} />
-            <TextInput style={[styles.input, styles.halfInput]} placeholder="Sleeve (e.g. Full, Short)" value={form.sleeve} onChangeText={(sleeve) => setForm({ ...form, sleeve })} />
+            <TextInput style={[styles.input, styles.halfInput]} placeholder={t('Fit')} value={form.fit} onChangeText={(fit) => setForm({ ...form, fit })} />
+            <TextInput style={[styles.input, styles.halfInput]} placeholder={t('Sleeve')} value={form.sleeve} onChangeText={(sleeve) => setForm({ ...form, sleeve })} />
           </View>
 
-          <Text style={styles.fieldLabel}>Neck / Collar Type</Text>
-          <TextInput style={styles.input} placeholder="Neck Type (e.g. Round Neck, Polo)" value={form.neck} onChangeText={(neck) => setForm({ ...form, neck })} />
+          <Text style={styles.fieldLabel}>{t('Neck / Collar Type')}</Text>
+          <TextInput style={styles.input} placeholder={t('Neck / Collar Type')} value={form.neck} onChangeText={(neck) => setForm({ ...form, neck })} />
 
-          <Text style={styles.fieldLabel}>Refund & Return Policy</Text>
-          <TextInput style={styles.input} placeholder="Refund Policy (e.g. 7 Days Replacement)" value={form.refundPolicy} onChangeText={(refundPolicy) => setForm({ ...form, refundPolicy })} />
+          <Text style={styles.fieldLabel}>{t('Refund & Return Policy')}</Text>
+          <TextInput style={styles.input} placeholder={t('Refund & Return Policy')} value={form.refundPolicy} onChangeText={(refundPolicy) => setForm({ ...form, refundPolicy })} />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pricing</Text>
-          <TextInput style={styles.input} placeholder="Price" keyboardType="decimal-pad" value={form.price} onChangeText={(price) => setForm({ ...form, price })} />
-          <TextInput style={styles.input} placeholder="Compare Price" keyboardType="decimal-pad" value={form.comparePrice} onChangeText={(comparePrice) => setForm({ ...form, comparePrice })} />
-          <TextInput style={styles.input} placeholder="Cost per item" keyboardType="decimal-pad" value={form.cost} onChangeText={(cost) => setForm({ ...form, cost })} />
+          <Text style={styles.cardTitle}>{t('Pricing')}</Text>
+          <TextInput style={styles.input} placeholder={t('Price')} keyboardType="decimal-pad" value={form.price} onChangeText={(price) => setForm({ ...form, price })} />
+          <TextInput style={styles.input} placeholder={t('Compare Price')} keyboardType="decimal-pad" value={form.comparePrice} onChangeText={(comparePrice) => setForm({ ...form, comparePrice })} />
+          <TextInput style={styles.input} placeholder={t('Cost per item')} keyboardType="decimal-pad" value={form.cost} onChangeText={(cost) => setForm({ ...form, cost })} />
           
-          <Text style={[styles.fieldLabel, { marginTop: 6, marginBottom: 4 }]}>Pricing Unit (Optional)</Text>
+          <Text style={[styles.fieldLabel, { marginTop: 6, marginBottom: 4 }]}>{t('Pricing Unit (Optional)')}</Text>
           <TextInput style={styles.input} placeholder="e.g. /kg, /gm, /liter" value={form.priceUnit} onChangeText={(priceUnit) => setForm({ ...form, priceUnit })} autoCapitalize="none" />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 8 }}>
             {['/kg', '/gm', '/liter', '/pcs', '/box'].map((unit) => (
@@ -418,16 +420,16 @@ export default function EditProduct() {
                   borderRadius: 14,
                 }}
               >
-                <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+                <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '600' }}>{t('Clear')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Category & Subcategory</Text>
+          <Text style={styles.cardTitle}>{t('Category & Subcategory')}</Text>
           
-          <Text style={styles.fieldLabel}>Category</Text>
+          <Text style={styles.fieldLabel}>{t('Category')}</Text>
           <View style={styles.pickerBox}>
             <Picker
               selectedValue={form.category}
@@ -438,12 +440,12 @@ export default function EditProduct() {
               style={styles.picker}
             >
               {CATEGORIES.map(cat => (
-                <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+                <Picker.Item key={cat.value} label={t(cat.label)} value={cat.value} />
               ))}
             </Picker>
           </View>
 
-          <Text style={styles.fieldLabel}>Subcategory</Text>
+          <Text style={styles.fieldLabel}>{t('Subcategory')}</Text>
           <View style={styles.pickerBox}>
             <Picker
               selectedValue={form.subcategory}
@@ -453,17 +455,17 @@ export default function EditProduct() {
               }}
               style={styles.picker}
             >
-              <Picker.Item label="Select Subcategory" value="" />
+              <Picker.Item label={t("Select Subcategory")} value="" />
               {(SUBCATEGORIES_MAP[form.category] || []).map((sub) => (
-                <Picker.Item key={sub.value} label={sub.label} value={sub.value} />
+                <Picker.Item key={sub.value} label={t(sub.label)} value={sub.value} />
               ))}
-              {form.category ? <Picker.Item label="Other / Custom Subcategory" value="custom" /> : null}
+              {form.category ? <Picker.Item label={t("Other / Custom Subcategory")} value="custom" /> : null}
             </Picker>
           </View>
 
           {form.subcategory === 'custom' && (
             <View style={{ marginTop: 6 }}>
-              <Text style={styles.fieldLabel}>Custom Subcategory Name</Text>
+              <Text style={styles.fieldLabel}>{t('Custom Subcategory Name')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Handmade Crafts"
@@ -475,11 +477,11 @@ export default function EditProduct() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Inventory</Text>
+          <Text style={styles.cardTitle}>{t('Inventory')}</Text>
           <View style={styles.row}>
             <TextInput
               style={[styles.input, styles.halfInput]}
-              placeholder="Stock Quantity"
+              placeholder={t('Stock Quantity')}
               keyboardType="number-pad"
               value={form.stock}
               onChangeText={(stockText) => {
@@ -493,14 +495,14 @@ export default function EditProduct() {
             />
             <TextInput
               style={[styles.input, styles.halfInput]}
-              placeholder="Low stock alert"
+              placeholder={t('Low stock alert')}
               keyboardType="number-pad"
               value={form.alertThreshold}
               onChangeText={(alertThreshold) => setForm({ ...form, alertThreshold })}
             />
           </View>
 
-          <Text style={[styles.fieldLabel, { marginTop: 6, marginBottom: 4 }]}>Stock Unit (Optional)</Text>
+          <Text style={[styles.fieldLabel, { marginTop: 6, marginBottom: 4 }]}>{t('Stock Unit (Optional)')}</Text>
           <TextInput style={styles.input} placeholder="e.g. kg, gm, liter, pcs, box" value={form.stockUnit} onChangeText={(stockUnit) => setForm({ ...form, stockUnit })} autoCapitalize="none" />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 8 }}>
             {['kg', 'gm', 'liter', 'pcs', 'box'].map((unit) => (
@@ -533,12 +535,12 @@ export default function EditProduct() {
                   borderRadius: 14,
                 }}
               >
-                <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+                <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '600' }}>{t('Clear')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>In Stock</Text>
+            <Text style={styles.toggleLabel}>{t('In Stock')}</Text>
             <TouchableOpacity
               style={[styles.switch, form.inStock && styles.switchActive]}
               onPress={() =>
@@ -558,16 +560,16 @@ export default function EditProduct() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Shipping</Text>
-          <TextInput style={styles.input} placeholder="Weight (kg)" keyboardType="decimal-pad" value={form.weight} onChangeText={(weight) => setForm({ ...form, weight })} />
+          <Text style={styles.cardTitle}>{t('Shipping')}</Text>
+          <TextInput style={styles.input} placeholder={t('Weight (kg)')} keyboardType="decimal-pad" value={form.weight} onChangeText={(weight) => setForm({ ...form, weight })} />
           <View style={styles.row}><TextInput style={[styles.input, styles.threeInput]} placeholder="L" keyboardType="decimal-pad" value={form.length} onChangeText={(length) => setForm({ ...form, length })} /><TextInput style={[styles.input, styles.threeInput]} placeholder="W" keyboardType="decimal-pad" value={form.width} onChangeText={(width) => setForm({ ...form, width })} /><TextInput style={[styles.input, styles.threeInput]} placeholder="H" keyboardType="decimal-pad" value={form.height} onChangeText={(height) => setForm({ ...form, height })} /></View>
-          <View style={styles.toggleRow}><Text style={styles.toggleLabel}>Free Shipping</Text><TouchableOpacity style={[styles.switch, form.freeShipping && styles.switchActive]} onPress={() => setForm((prev) => ({ ...prev, freeShipping: !prev.freeShipping }))}><View style={[styles.switchThumb, form.freeShipping && styles.switchThumbActive]} /></TouchableOpacity></View>
-          {!form.freeShipping && <TextInput style={styles.input} placeholder="Shipping fee" keyboardType="decimal-pad" value={form.shippingFee} onChangeText={(shippingFee) => setForm({ ...form, shippingFee })} />}
+          <View style={styles.toggleRow}><Text style={styles.toggleLabel}>{t('Free Shipping')}</Text><TouchableOpacity style={[styles.switch, form.freeShipping && styles.switchActive]} onPress={() => setForm((prev) => ({ ...prev, freeShipping: !prev.freeShipping }))}><View style={[styles.switchThumb, form.freeShipping && styles.switchThumbActive]} /></TouchableOpacity></View>
+          {!form.freeShipping && <TextInput style={styles.input} placeholder={t('Shipping Fee')} keyboardType="decimal-pad" value={form.shippingFee} onChangeText={(shippingFee) => setForm({ ...form, shippingFee })} />}
         </View>
 
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} disabled={loading}><MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} /><Text style={styles.deleteLabel}>Delete Product</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} disabled={loading}><MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} /><Text style={styles.deleteLabel}>{t('Delete Product')}</Text></TouchableOpacity>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={loading}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveLabel}>Update Product</Text>}</TouchableOpacity>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={loading}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveLabel}>{t('Update Product')}</Text>}</TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
     </SafeAreaView>

@@ -22,55 +22,48 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 
-const COUNTRIES = [
-  { code: '+1', flag: '🇺🇸', name: 'US' },
-  { code: '+44', flag: '🇬🇧', name: 'UK' },
-  { code: '+91', flag: '🇮🇳', name: 'IN' },
-  { code: '+971', flag: '🇦🇪', name: 'AE' },
-  { code: '+966', flag: '🇸🇦', name: 'SA' },
-  { code: '+92', flag: '🇵🇰', name: 'PK' },
-  { code: '+60', flag: '🇲🇾', name: 'MY' },
-  { code: '+65', flag: '🇸🇬', name: 'SG' },
-  { code: '+86', flag: '🇨🇳', name: 'CN' },
-  { code: '+81', flag: '🇯🇵', name: 'JP' },
-  { code: '+49', flag: '🇩🇪', name: 'DE' },
-  { code: '+33', flag: '🇫🇷', name: 'FR' },
-]
+import { WORLD_COUNTRIES, findCountryByIso } from '../../constants/worldCountries'
+import CountrySelectorModal from '../../components/common/CountrySelectorModal'
+import { detectAutoRegionLanguage } from '../../utils/regionLanguageDetector'
 
 export default function LoginScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { login, updateUser } = useAuth()
   const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com")
 
-  useEffect(() => {
-    const fetchSupport = async () => {
-      try {
-        const res = await api.get('/public-settings');
-        if (res.data?.success && res.data.settings?.supportEmail) {
-          setSupportEmail(res.data.settings.supportEmail);
-        }
-      } catch (err) {
-        console.log("Failed to load public support settings:", err);
-      }
-    };
-    fetchSupport();
-  }, []);
-
-  // Mode: 'otp' | 'password'
   const [loginMode, setLoginMode] = useState('otp')
-
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
+  const [selectedCountry, setSelectedCountry] = useState(WORLD_COUNTRIES[2]) // Default India +91
   const [showPicker, setShowPicker] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Auto detect user country on mount
+  useEffect(() => {
+    async function autoDetectCountry() {
+      const lang = await detectAutoRegionLanguage();
+      if (lang) {
+        if (i18n.language !== lang) {
+          i18n.changeLanguage(lang);
+        }
+        // Map detected language/region to country
+        if (lang === 'ar') setSelectedCountry(WORLD_COUNTRIES.find(c => c.iso === 'SA') || WORLD_COUNTRIES[3]);
+        else if (lang === 'ko') setSelectedCountry(WORLD_COUNTRIES.find(c => c.iso === 'KR') || WORLD_COUNTRIES[0]);
+        else if (lang === 'ja') setSelectedCountry(WORLD_COUNTRIES.find(c => c.iso === 'JP') || WORLD_COUNTRIES[0]);
+        else if (lang === 'de') setSelectedCountry(WORLD_COUNTRIES.find(c => c.iso === 'DE') || WORLD_COUNTRIES[0]);
+        else if (lang === 'fr') setSelectedCountry(WORLD_COUNTRIES.find(c => c.iso === 'FR') || WORLD_COUNTRIES[0]);
+        else if (lang === 'hi') setSelectedCountry(WORLD_COUNTRIES.find(c => c.iso === 'IN') || WORLD_COUNTRIES[2]);
+      }
+    }
+    autoDetectCountry();
+  }, []);
 
   // Forgot Password Modal State
   const [showForgotModal, setShowForgotModal] = useState(false)
   const [forgotStep, setForgotStep] = useState(1) // 1: phone, 2: otp + new password
   const [forgotPhone, setForgotPhone] = useState('')
-  const [forgotCountry, setForgotCountry] = useState(COUNTRIES[0])
+  const [forgotCountry, setForgotCountry] = useState(WORLD_COUNTRIES[2])
   const [showForgotCountryPicker, setShowForgotCountryPicker] = useState(false)
   const [forgotOtp, setForgotOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -395,40 +388,7 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Main Country Picker Modal */}
-      <Modal
-        visible={showPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowPicker(false)}
-        >
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>{t('Select Country Code')}</Text>
-            <FlatList
-              data={COUNTRIES}
-              keyExtractor={(item) => item.code + item.name}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.countryRow}
-                  onPress={() => {
-                    setSelectedCountry(item)
-                    setShowPicker(false)
-                  }}
-                >
-                  <Text style={styles.countryFlag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
-                  <Text style={styles.countryCodeRight}>{item.code}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+
 
       {/* Forgot Password Modal */}
       <Modal
@@ -584,40 +544,21 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Forgot Phone Country Picker Modal */}
-      <Modal
+      {/* Main Country Picker Modal */}
+      <CountrySelectorModal
+        visible={showPicker}
+        onClose={() => setShowPicker(false)}
+        onSelect={(c) => setSelectedCountry(c)}
+        selectedCountry={selectedCountry}
+      />
+
+      {/* Forgot Password Country Picker Modal */}
+      <CountrySelectorModal
         visible={showForgotCountryPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowForgotCountryPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowForgotCountryPicker(false)}
-        >
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>{t('Select Country Code')}</Text>
-            <FlatList
-              data={COUNTRIES}
-              keyExtractor={(item) => item.code + item.name}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.countryRow}
-                  onPress={() => {
-                    setForgotCountry(item)
-                    setShowForgotCountryPicker(false)
-                  }}
-                >
-                  <Text style={styles.countryFlag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
-                  <Text style={styles.countryCodeRight}>{item.code}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setShowForgotCountryPicker(false)}
+        onSelect={(c) => setForgotCountry(c)}
+        selectedCountry={forgotCountry}
+      />
     </SafeAreaView>
   )
 }

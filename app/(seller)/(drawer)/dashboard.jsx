@@ -20,8 +20,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../../constants/colors';
 import { getDashboardStats, getEarnings, getRecentOrders } from '../../../services/sellerService';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { seller, loading, loadProfile } = useSeller();
   const { currency } = useCurrency();
   const router = useRouter();
@@ -178,7 +180,7 @@ export default function Dashboard() {
           {/* Quick Metrics Bar inside Banner */}
           <View style={styles.bannerMetricsRow}>
             <View style={styles.bannerMetricItem}>
-              <Text style={styles.bannerMetricLabel}>Store Rating</Text>
+              <Text style={styles.bannerMetricLabel}>{t('Store Rating')}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 <MaterialCommunityIcons name="star" size={14} color="#ffd700" />
                 <Text style={styles.bannerMetricValue}> 4.9 / 5.0</Text>
@@ -186,12 +188,12 @@ export default function Dashboard() {
             </View>
             <View style={styles.bannerMetricDivider} />
             <View style={styles.bannerMetricItem}>
-              <Text style={styles.bannerMetricLabel}>Active Currency</Text>
+              <Text style={styles.bannerMetricLabel}>{t('Active Currency')}</Text>
               <Text style={styles.bannerMetricValue}>{currency}</Text>
             </View>
             <View style={styles.bannerMetricDivider} />
             <View style={styles.bannerMetricItem}>
-              <Text style={styles.bannerMetricLabel}>Fulfillment Rate</Text>
+              <Text style={styles.bannerMetricLabel}>{t('Fulfillment Rate')}</Text>
               <Text style={styles.bannerMetricValue}>98.5%</Text>
             </View>
           </View>
@@ -199,34 +201,34 @@ export default function Dashboard() {
 
         {/* Quick Actions Bar */}
         <View style={styles.quickActionsCard}>
-          <Text style={[styles.cardHeaderTitle, isDark && styles.textDark]}>Quick Actions</Text>
+          <Text style={[styles.cardHeaderTitle, isDark && styles.textDark]}>{t('Quick Actions')}</Text>
           <View style={styles.quickActionsRow}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/add-product')}>
               <View style={[styles.actionIconWrap, { backgroundColor: '#e0f2fe' }]}>
                 <MaterialCommunityIcons name="plus-circle" size={22} color="#0284c7" />
               </View>
-              <Text style={[styles.actionText, isDark && styles.textDark]}>Add Product</Text>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>{t('Add Product')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/seller-orders')}>
               <View style={[styles.actionIconWrap, { backgroundColor: '#f0fdf4' }]}>
                 <MaterialCommunityIcons name="clipboard-text-clock" size={22} color="#16a34a" />
               </View>
-              <Text style={[styles.actionText, isDark && styles.textDark]}>Orders</Text>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>{t('Orders')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/pickup-addresses')}>
               <View style={[styles.actionIconWrap, { backgroundColor: '#fef3c7' }]}>
                 <MaterialCommunityIcons name="truck-fast" size={22} color="#d97706" />
               </View>
-              <Text style={[styles.actionText, isDark && styles.textDark]}>Pickup Hub</Text>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>{t('Pickup Hub')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(seller)/seller-settings')}>
               <View style={[styles.actionIconWrap, { backgroundColor: '#f3e8ff' }]}>
                 <MaterialCommunityIcons name="store-cog" size={22} color="#9333ea" />
               </View>
-              <Text style={[styles.actionText, isDark && styles.textDark]}>Settings</Text>
+              <Text style={[styles.actionText, isDark && styles.textDark]}>{t('Settings')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -237,36 +239,36 @@ export default function Dashboard() {
             <View style={[styles.statIconWrap, { backgroundColor: '#e8eaf6' }]}>
               <MaterialCommunityIcons name="cash-multiple" size={22} color="#1a237e" />
             </View>
-            <Text style={styles.statLabel}>Total Revenue</Text>
+            <Text style={styles.statLabel}>{t('Total Revenue')}</Text>
             <FormattedPrice amount={rawRevenue} style={styles.statValuePrice} />
-            <Text style={styles.statSub}>Total store earnings</Text>
+            <Text style={styles.statSub}>{t('Total store earnings')}</Text>
           </View>
 
           <View style={[styles.statBox, isDark && styles.cardBgDark]}>
             <View style={[styles.statIconWrap, { backgroundColor: '#e0f2fe' }]}>
               <MaterialCommunityIcons name="package-variant-closed" size={22} color="#0284c7" />
             </View>
-            <Text style={styles.statLabel}>Total Orders</Text>
+            <Text style={styles.statLabel}>{t('Total Orders')}</Text>
             <Text style={[styles.statValue, isDark && styles.textDark]}>{totalOrders}</Text>
-            <Text style={styles.statSub}>Processed orders</Text>
+            <Text style={styles.statSub}>{t('Processed orders')}</Text>
           </View>
 
           <View style={[styles.statBox, isDark && styles.cardBgDark]}>
             <View style={[styles.statIconWrap, { backgroundColor: '#fef3c7' }]}>
               <MaterialCommunityIcons name="clock-alert-outline" size={22} color="#d97706" />
             </View>
-            <Text style={styles.statLabel}>Pending Orders</Text>
+            <Text style={styles.statLabel}>{t('Pending Orders')}</Text>
             <Text style={[styles.statValue, { color: '#d97706' }]}>{pendingOrders}</Text>
-            <Text style={styles.statSub}>Awaiting dispatch</Text>
+            <Text style={styles.statSub}>{t('Awaiting dispatch')}</Text>
           </View>
 
           <View style={[styles.statBox, isDark && styles.cardBgDark]}>
             <View style={[styles.statIconWrap, { backgroundColor: '#f0fdf4' }]}>
               <MaterialCommunityIcons name="cube-outline" size={22} color="#16a34a" />
             </View>
-            <Text style={styles.statLabel}>Listed Products</Text>
+            <Text style={styles.statLabel}>{t('Listed Products')}</Text>
             <Text style={[styles.statValue, isDark && styles.textDark]}>{totalProducts}</Text>
-            <Text style={styles.statSub}>Active catalog</Text>
+            <Text style={styles.statSub}>{t('Active catalog')}</Text>
           </View>
         </View>
 
@@ -274,23 +276,23 @@ export default function Dashboard() {
         <View style={[styles.funnelCard, isDark && styles.cardBgDark]}>
           <View style={styles.sectionHeaderLeft}>
             <MaterialCommunityIcons name="progress-clock" size={20} color="#1a237e" />
-            <Text style={[styles.cardHeaderTitle, isDark && styles.textDark, { marginLeft: 6 }]}>Order Fulfillment Pipeline</Text>
+            <Text style={[styles.cardHeaderTitle, isDark && styles.textDark, { marginLeft: 6 }]}>{t('Order Fulfillment Pipeline')}</Text>
           </View>
 
           <View style={styles.funnelRow}>
             <TouchableOpacity style={styles.funnelStep} onPress={() => router.push('/(seller)/seller-orders')}>
               <Text style={[styles.funnelCount, { color: '#d97706' }]}>{pendingOrders}</Text>
-              <Text style={styles.funnelLabel}>Pending</Text>
+              <Text style={styles.funnelLabel}>{t('Pending')}</Text>
             </TouchableOpacity>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
             <TouchableOpacity style={styles.funnelStep} onPress={() => router.push('/(seller)/seller-orders')}>
               <Text style={[styles.funnelCount, { color: '#0284c7' }]}>{Math.max(0, totalOrders - pendingOrders)}</Text>
-              <Text style={styles.funnelLabel}>In Transit</Text>
+              <Text style={styles.funnelLabel}>{t('In Transit')}</Text>
             </TouchableOpacity>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
             <TouchableOpacity style={styles.funnelStep} onPress={() => router.push('/(seller)/seller-orders')}>
               <Text style={[styles.funnelCount, { color: '#16a34a' }]}>{totalOrders}</Text>
-              <Text style={styles.funnelLabel}>Completed</Text>
+              <Text style={styles.funnelLabel}>{t('Completed')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -309,10 +311,10 @@ export default function Dashboard() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
             <MaterialCommunityIcons name="clipboard-text-clock-outline" size={18} color="#1a237e" />
-            <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Recent Orders</Text>
+            <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('Recent Orders')}</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/(seller)/seller-orders')}>
-            <Text style={styles.viewAll}>View All</Text>
+            <Text style={styles.viewAll}>{t('View All')}</Text>
           </TouchableOpacity>
         </View>
 

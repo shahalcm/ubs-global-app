@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { getProducts } from '../../services/productService'
 import { ProductGridSkeleton } from '../../components/buyer/BuyerSkeleton'
 import { getProductImageUrl } from '../../utils/image'
+import { useTranslation } from 'react-i18next'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -193,7 +194,7 @@ export default function ProductListingScreen() {
         />
         {item.stock <= 0 && (
           <View style={styles.outOfStockOverlay}>
-            <Text style={styles.outOfStockTag}>Out of Stock</Text>
+            <Text style={styles.outOfStockTag}>{t('Out of Stock')}</Text>
           </View>
         )}
         <TouchableOpacity
@@ -209,12 +210,12 @@ export default function ProductListingScreen() {
       {/* Info */}
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>
-          {item.title || item.name}
+          {item.translations?.[i18n.language]?.title || t(item.title || item.name) || (item.title || item.name)}
         </Text>
         <View style={styles.ratingRow}>
           <Text style={styles.starIcon}>☆</Text>
           <Text style={styles.ratingText}>
-            {item.rating || 0} ({item.totalReviews || 0} reviews)
+            {item.rating || 0} ({item.totalReviews || 0} {t('reviews')})
           </Text>
         </View>
         {!((category || item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
@@ -228,7 +229,7 @@ export default function ProductListingScreen() {
                 <Text style={styles.cartBtnIcon}>🛒</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={{ fontSize: 10, color: '#d32f2f', fontWeight: '700' }}>Out of Stock</Text>
+              <Text style={{ fontSize: 10, color: '#d32f2f', fontWeight: '700' }}>{t('Out of Stock')}</Text>
             )}
           </View>
         )}

@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Picker } from '@react-native-picker/picker'
 import api from '../../services/api'
 import { useSeller } from '../../context/SellerContext'
+import { useTranslation } from 'react-i18next'
 
 const CATEGORIES = [
   { label: 'Select Category', value: '' },
@@ -120,6 +121,7 @@ const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', '38', '40', 'Free Size']
 
 export default function AddProductScreen() {
+  const { t } = useTranslation()
   const { loadDashboard } = useSeller()
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -382,9 +384,9 @@ export default function AddProductScreen() {
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard')}>
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.topTitle}>Add New Product</Text>
+          <Text style={styles.topTitle}>{t('Add New Product')}</Text>
           <TouchableOpacity onPress={handleSaveDraft}>
-            <Text style={styles.saveDraft}>Save Draft</Text>
+            <Text style={styles.saveDraft}>{t('Save Draft')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -403,10 +405,10 @@ export default function AddProductScreen() {
               <>
                 <Text style={styles.cameraIcon}>📷</Text>
                 <Text style={styles.uploadTitle}>
-                  Upload Product Photos
+                  {t('Upload Product Photos')}
                 </Text>
                 <Text style={styles.uploadSub}>
-                  Add up to 5 images
+                  {t('Add up to 5 images')}
                 </Text>
               </>
             ) : (
@@ -450,21 +452,21 @@ export default function AddProductScreen() {
 
           {/* BASIC INFO SECTION */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Info</Text>
+            <Text style={styles.sectionTitle}>{t('Basic Info')}</Text>
 
-            <Text style={styles.fieldLabel}>PRODUCT TITLE</Text>
+            <Text style={styles.fieldLabel}>{t('PRODUCT TITLE')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter product name"
+              placeholder={t('Enter product title')}
               placeholderTextColor="#bbb"
               value={title}
               onChangeText={setTitle}
             />
 
-            <Text style={styles.fieldLabel}>DESCRIPTION</Text>
+            <Text style={styles.fieldLabel}>{t('DESCRIPTION')}</Text>
             <TextInput
               style={[styles.input, styles.textarea]}
-              placeholder="Describe your product features and benefits..."
+              placeholder={t('Enter product description')}
               placeholderTextColor="#bbb"
               value={description}
               onChangeText={setDescription}
@@ -473,7 +475,7 @@ export default function AddProductScreen() {
               textAlignVertical="top"
             />
 
-            <Text style={styles.fieldLabel}>SKU / PRODUCT CODE</Text>
+            <Text style={styles.fieldLabel}>{t('SKU / PRODUCT CODE')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g., UBS-2024-PRD"
@@ -485,9 +487,9 @@ export default function AddProductScreen() {
 
           {/* PRODUCT SPECIFICATIONS & ATTRIBUTES SECTION */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Product Specifications & Details</Text>
+            <Text style={styles.sectionTitle}>{t('Product Details')}</Text>
 
-            <Text style={styles.fieldLabel}>BRAND NAME</Text>
+            <Text style={styles.fieldLabel}>{t('BRAND NAME')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Nike, Samsung, Zara, UBS Exclusive..."
@@ -497,7 +499,7 @@ export default function AddProductScreen() {
             />
 
             {/* COLOR OPTIONS */}
-            <Text style={styles.fieldLabel}>AVAILABLE COLORS</Text>
+            <Text style={styles.fieldLabel}>{t('AVAILABLE COLORS')}</Text>
             <View style={styles.chipsContainer}>
               {PRESET_COLORS.map((c) => {
                 const selected = selectedColors.includes(c)
@@ -629,9 +631,9 @@ export default function AddProductScreen() {
 
           {/* PRICING SECTION */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pricing</Text>
+            <Text style={styles.sectionTitle}>{t('Pricing')}</Text>
 
-            <Text style={styles.fieldLabel}>PRICE (USD)</Text>
+            <Text style={styles.fieldLabel}>{t('PRICE ($)')}</Text>
             <View style={styles.priceInput}>
               <Text style={styles.dollarSign}>$</Text>
               <TextInput
@@ -644,7 +646,7 @@ export default function AddProductScreen() {
               />
             </View>
 
-            <Text style={styles.fieldLabel}>COMPARE PRICE</Text>
+            <Text style={styles.fieldLabel}>{t('COMPARE PRICE')}</Text>
             <View style={styles.priceInput}>
               <Text style={styles.dollarSign}>$</Text>
               <TextInput
@@ -657,7 +659,7 @@ export default function AddProductScreen() {
               />
             </View>
 
-            <Text style={styles.fieldLabel}>COST PER ITEM</Text>
+            <Text style={styles.fieldLabel}>{t('COST PER ITEM')}</Text>
             <View style={styles.priceInput}>
               <Text style={styles.dollarSign}>$</Text>
               <TextInput
@@ -669,9 +671,9 @@ export default function AddProductScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            <Text style={styles.helperText}>{"Customers won't see this"}</Text>
+            <Text style={styles.helperText}>{t("Customers won't see this")}</Text>
 
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>PRICING UNIT (e.g. /kg, /gm, /liter) - OPTIONAL</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t('PRICING UNIT (e.g. /kg, /gm, /liter) - OPTIONAL')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. /kg, /gm, /liter, /pcs"
@@ -711,7 +713,7 @@ export default function AddProductScreen() {
                     borderRadius: 16,
                   }}
                 >
-                  <Text style={{ fontSize: 12, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+                  <Text style={{ fontSize: 12, color: '#c62828', fontWeight: '600' }}>{t('Clear')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -719,9 +721,9 @@ export default function AddProductScreen() {
 
           {/* CATEGORY SECTION */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category</Text>
+            <Text style={styles.sectionTitle}>{t('Category')}</Text>
 
-            <Text style={styles.fieldLabel}>CATEGORY</Text>
+            <Text style={styles.fieldLabel}>{t('CATEGORY')}</Text>
             <View style={styles.pickerBox}>
               <Picker
                 selectedValue={category}
@@ -729,12 +731,12 @@ export default function AddProductScreen() {
                 style={styles.picker}
               >
                 {CATEGORIES.map(cat => (
-                  <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+                  <Picker.Item key={cat.value} label={t(cat.label)} value={cat.value} />
                 ))}
               </Picker>
             </View>
 
-            <Text style={styles.fieldLabel}>SUBCATEGORY</Text>
+            <Text style={styles.fieldLabel}>{t('SUBCATEGORY')}</Text>
             <View style={styles.pickerBox}>
               <Picker
                 selectedValue={subcategory}
@@ -744,17 +746,17 @@ export default function AddProductScreen() {
                 }}
                 style={styles.picker}
               >
-                <Picker.Item label="Select Subcategory" value="" />
+                <Picker.Item label={t("Select Subcategory")} value="" />
                 {(SUBCATEGORIES_MAP[category] || []).map((sub) => (
-                  <Picker.Item key={sub.value} label={sub.label} value={sub.value} />
+                  <Picker.Item key={sub.value} label={t(sub.label)} value={sub.value} />
                 ))}
-                {category ? <Picker.Item label="Other / Custom Subcategory" value="custom" /> : null}
+                {category ? <Picker.Item label={t("Other / Custom Subcategory")} value="custom" /> : null}
               </Picker>
             </View>
 
             {(subcategory === 'custom') && (
               <View style={{ marginTop: 10 }}>
-                <Text style={styles.fieldLabel}>CUSTOM SUBCATEGORY NAME</Text>
+                <Text style={styles.fieldLabel}>{t('CUSTOM SUBCATEGORY NAME')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. Handmade Crafts, Sports Equipment"
@@ -769,9 +771,9 @@ export default function AddProductScreen() {
           {/* INVENTORY SECTION */}
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Inventory</Text>
+              <Text style={styles.sectionTitle}>{t('Inventory')}</Text>
               <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>In Stock</Text>
+                <Text style={styles.toggleLabel}>{t('In Stock')}</Text>
                 <Switch
                   value={inStock}
                   onValueChange={(val) => {
@@ -788,7 +790,7 @@ export default function AddProductScreen() {
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>STOCK QUANTITY</Text>
+            <Text style={styles.fieldLabel}>{t('Stock Quantity')}</Text>
             <TextInput
               style={styles.input}
               placeholder="0"
@@ -800,7 +802,7 @@ export default function AddProductScreen() {
               }}
               keyboardType="number-pad"
             />
-            <Text style={styles.fieldLabel}>STOCK UNIT (OPTIONAL)</Text>
+            <Text style={styles.fieldLabel}>{t('STOCK UNIT (OPTIONAL)')}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. kg, gm, liter, pcs, box"
@@ -840,12 +842,12 @@ export default function AddProductScreen() {
                     borderRadius: 16,
                   }}
                 >
-                  <Text style={{ fontSize: 12, color: '#c62828', fontWeight: '600' }}>Clear</Text>
+                  <Text style={{ fontSize: 12, color: '#c62828', fontWeight: '600' }}>{t('Clear')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
 
-            <Text style={styles.fieldLabel}>LOW STOCK ALERT</Text>
+            <Text style={styles.fieldLabel}>{t('LOW STOCK ALERT')}</Text>
             <TextInput
               style={styles.input}
               placeholder="5"
@@ -859,9 +861,9 @@ export default function AddProductScreen() {
           {/* SHIPPING SECTION */}
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Shipping</Text>
+              <Text style={styles.sectionTitle}>{t('Shipping')}</Text>
               <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>Free Shipping</Text>
+                <Text style={styles.toggleLabel}>{t('Free Shipping')}</Text>
                 <Switch
                   value={freeShipping}
                   onValueChange={setFreeShipping}
@@ -871,7 +873,7 @@ export default function AddProductScreen() {
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>WEIGHT (KG)</Text>
+            <Text style={styles.fieldLabel}>{t('WEIGHT (KG)')}</Text>
             <TextInput
               style={styles.input}
               placeholder="0.0"
@@ -881,7 +883,7 @@ export default function AddProductScreen() {
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.fieldLabel}>DIMENSIONS (L X W X H) CM</Text>
+            <Text style={styles.fieldLabel}>{t('DIMENSIONS (L X W X H) CM')}</Text>
             <View style={styles.dimensionsRow}>
               <TextInput
                 style={[styles.input, styles.dimInput]}
@@ -911,7 +913,7 @@ export default function AddProductScreen() {
 
             {!freeShipping && (
               <>
-                <Text style={styles.fieldLabel}>SHIPPING FEE (USD)</Text>
+                <Text style={styles.fieldLabel}>{t('SHIPPING FEE (USD)')}</Text>
                 <View style={styles.priceInput}>
                   <Text style={styles.dollarSign}>$</Text>
                   <TextInput
@@ -940,10 +942,10 @@ export default function AddProductScreen() {
             {loading ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.addBtnText}>Uploading to Cloudinary...</Text>
+                <Text style={styles.addBtnText}>{t('Uploading...')}</Text>
               </View>
             ) : (
-              <Text style={styles.addBtnText}>⊞ Add Product</Text>
+              <Text style={styles.addBtnText}>⊞ {t('Save Product')}</Text>
             )}
           </TouchableOpacity>
         </View>

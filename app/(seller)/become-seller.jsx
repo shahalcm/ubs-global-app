@@ -28,32 +28,11 @@ import api from "../../services/api";
 import { applyAsSeller, getSellerProfile } from "../../services/sellerService";
 import FormattedPrice from "../../components/common/FormattedPrice";
 
-const COUNTRIES = [
-  { code: '+1', flag: '🇺🇸', name: 'US' },
-  { code: '+44', flag: '🇬🇧', name: 'UK' },
-  { code: '+91', flag: '🇮🇳', name: 'IN' },
-  { code: '+971', flag: '🇦🇪', name: 'AE' },
-  { code: '+966', flag: '🇸🇦', name: 'SA' },
-  { code: '+92', flag: '🇵🇰', name: 'PK' },
-  { code: '+880', flag: '🇧🇩', name: 'BD' },
-  { code: '+60', flag: '🇲🇾', name: 'MY' },
-  { code: '+65', flag: '🇸🇬', name: 'SG' },
-  { code: '+86', flag: '🇨🇳', name: 'CN' },
-  { code: '+81', flag: '🇯🇵', name: 'JP' },
-  { code: '+49', flag: '🇩🇪', name: 'DE' },
-  { code: '+33', flag: '🇫🇷', name: 'FR' },
-  { code: '+34', flag: '🇪🇸', name: 'ES' },
-  { code: '+55', flag: '🇧🇷', name: 'BR' },
-];
+import { WORLD_COUNTRIES } from '../../constants/worldCountries';
+import CountrySelectorModal from '../../components/common/CountrySelectorModal';
 
 export default function BecomeSellerScreen() {
-  let t = (str) => str;
-  try {
-    const { t: trans } = useTranslation();
-    if (trans) t = trans;
-  } catch (e) {
-    // i18n fallback
-  }
+  const { t } = useTranslation();
 
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams() || {};
@@ -72,7 +51,7 @@ export default function BecomeSellerScreen() {
   };
 
   const [step, setStep] = useState(1);
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[2]); // Default to +91 IN
+  const [selectedCountry, setSelectedCountry] = useState(WORLD_COUNTRIES[2]); // Default to +91 IN
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   
   // Regional Offer State
@@ -122,7 +101,7 @@ export default function BecomeSellerScreen() {
           setPromoCodeInput(res.data.promo.code);
         }
         // Match country phone prefix if matching code
-        const matched = COUNTRIES.find(c => c.name === res.data.country);
+        const matched = WORLD_COUNTRIES.find(c => c.name === res.data.country || c.iso === res.data.country);
         if (matched) {
           setSelectedCountry(matched);
         }
@@ -1104,39 +1083,12 @@ export default function BecomeSellerScreen() {
         </ScrollView>
 
         {/* Country Picker Modal */}
-        <Modal
+        <CountrySelectorModal
           visible={showCountryPicker}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowCountryPicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            onPress={() => setShowCountryPicker(false)}
-            activeOpacity={1}
-          >
-            <View style={styles.modalSheet}>
-              <Text style={styles.modalTitle}>{t('Select Country')}</Text>
-              <FlatList
-                data={COUNTRIES}
-                keyExtractor={(item) => item.code + item.name}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.countryRow}
-                    onPress={() => {
-                      setSelectedCountry(item)
-                      setShowCountryPicker(false)
-                    }}
-                  >
-                    <Text style={styles.countryFlag}>{item.flag}</Text>
-                    <Text style={styles.countryName}>{item.name}</Text>
-                    <Text style={styles.countryCode}>{item.code}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          </TouchableOpacity>
-        </Modal>
+          onClose={() => setShowCountryPicker(false)}
+          onSelect={(c) => setSelectedCountry(c)}
+          selectedCountry={selectedCountry}
+        />
       </KeyboardAvoidingView>
     </View>
   );

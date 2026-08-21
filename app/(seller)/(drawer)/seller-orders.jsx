@@ -18,8 +18,10 @@ import { onOrderStatusChanged, removeListener } from '../../../services/socketSe
 import { colors } from '../../../constants/colors'
 import { getProductImageUrl } from '../../../utils/image'
 import SellerHeader from '../../../components/seller/SellerHeader'
+import { useTranslation } from 'react-i18next'
 
 export default function SellerOrdersScreen() {
+  const { t } = useTranslation()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -78,27 +80,27 @@ export default function SellerOrdersScreen() {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'placed': return { bg: '#fff3e0', text: '#f57c00', label: 'NEW' }
-      case 'confirmed': return { bg: '#e1f5fe', text: '#0288d1', label: 'CONFIRMED' }
-      case 'packed': return { bg: '#efebe9', text: '#5d4037', label: 'PACKED' }
-      case 'shipped': return { bg: '#f3e5f5', text: '#7b1fa2', label: 'SHIPPED' }
-      case 'delivered': return { bg: '#e8f5e9', text: '#2e7d32', label: 'DELIVERED' }
-      case 'cancelled': return { bg: '#ffebee', text: '#c62828', label: 'CANCELLED' }
-      case 'returned': return { bg: '#eceff1', text: '#455a64', label: 'RETURNED' }
-      default: return { bg: '#f5f5f5', text: '#666', label: status?.toUpperCase() || 'UNKNOWN' }
+      case 'placed': return { bg: '#fff3e0', text: '#f57c00', label: t('NEW') }
+      case 'confirmed': return { bg: '#e1f5fe', text: '#0288d1', label: t('CONFIRMED') }
+      case 'packed': return { bg: '#efebe9', text: '#5d4037', label: t('PACKED') }
+      case 'shipped': return { bg: '#f3e5f5', text: '#7b1fa2', label: t('SHIPPED') }
+      case 'delivered': return { bg: '#e8f5e9', text: '#2e7d32', label: t('DELIVERED') }
+      case 'cancelled': return { bg: '#ffebee', text: '#c62828', label: t('CANCELLED') }
+      case 'returned': return { bg: '#eceff1', text: '#455a64', label: t('RETURNED') }
+      default: return { bg: '#f5f5f5', text: '#666', label: t(status?.toUpperCase() || 'UNKNOWN') }
     }
   }
 
   const getTabLabel = (tab) => {
     switch (tab) {
-      case 'all': return 'All'
-      case 'placed': return 'New'
-      case 'confirmed': return 'Confirmed'
-      case 'packed': return 'Packed'
-      case 'shipped': return 'Shipped'
-      case 'delivered': return 'Delivered'
-      case 'cancelled': return 'Cancelled'
-      default: return tab.toUpperCase()
+      case 'all': return t('All')
+      case 'placed': return t('New')
+      case 'confirmed': return t('Confirmed')
+      case 'packed': return t('Packed')
+      case 'shipped': return t('Shipped')
+      case 'delivered': return t('Delivered')
+      case 'cancelled': return t('Cancelled')
+      default: return t(tab.toUpperCase())
     }
   }
 
@@ -205,10 +207,10 @@ export default function SellerOrdersScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <SellerHeader title="Manage Orders" />
+        <SellerHeader title={t("Manage Orders")} />
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading orders...</Text>
+          <Text style={styles.loadingText}>{t("Loading orders...")}</Text>
         </View>
       </View>
     )
@@ -221,7 +223,7 @@ export default function SellerOrdersScreen() {
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(seller)/dashboard')}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Orders</Text>
+        <Text style={styles.headerTitle}>{t("Manage Orders")}</Text>
         <TouchableOpacity onPress={() => loadOrders(false)}>
           <MaterialCommunityIcons name="refresh" size={24} color={colors.primary} />
         </TouchableOpacity>
@@ -269,7 +271,7 @@ export default function SellerOrdersScreen() {
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="clipboard-text-outline" size={48} color="#b0bec5" />
             <Text style={styles.emptyText}>
-              No {selectedTab !== 'all' ? selectedTab : ''} orders found.
+              {t("No orders found")}
             </Text>
           </View>
         ) : (
@@ -293,7 +295,7 @@ export default function SellerOrdersScreen() {
                     onPress={() => router.push(`/(seller)/order-details?orderId=${order._id}`)}
                   >
                     <MaterialCommunityIcons name="eye-outline" size={14} color="#1a237e" />
-                    <Text style={{ color: '#1a237e', fontWeight: 'bold', fontSize: 12 }}>View Details</Text>
+                    <Text style={{ color: '#1a237e', fontWeight: 'bold', fontSize: 12 }}>{t("View Details")}</Text>
                   </TouchableOpacity>
                 </View>
 

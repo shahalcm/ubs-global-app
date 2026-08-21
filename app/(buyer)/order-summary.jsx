@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext'
 import { colors } from '../../constants/colors'
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getProductImageUrl } from '../../utils/image'
+import { useTranslation } from 'react-i18next'
 
 // Field Order for Keyboard Navigation
 const FIELD_ORDER = ['fullName', 'phone', 'email', 'street', 'landmark', 'city', 'state', 'country', 'zipCode']
@@ -83,6 +84,7 @@ const AddressInput = React.memo(React.forwardRef(({
   halfWidth = false,
   required = false
 }, ref) => {
+  const { t } = useTranslation()
   const icon = getInputIcon(field)
   const fieldConfig = getFieldConfig(field)
 
@@ -115,7 +117,7 @@ const AddressInput = React.memo(React.forwardRef(({
         isFocused && { color: colors.primary },
         !!error && { color: colors.error }
       ]}>
-        {label} {required && <Text style={{ color: colors.error }}>*</Text>}
+        {t(label)} {required && <Text style={{ color: colors.error }}>*</Text>}
       </Text>
       <TouchableOpacity
         activeOpacity={1}
@@ -135,7 +137,7 @@ const AddressInput = React.memo(React.forwardRef(({
         <TextInput
           ref={ref}
           style={styles.textInput}
-          placeholder={`Enter ${label.replace('*', '').toLowerCase()}`}
+          placeholder={`${t('Enter')} ${t(label.replace('*', '').trim())}`}
           placeholderTextColor="#b0bec5"
           value={value || ''}
           onChangeText={handleChangeText}
@@ -158,6 +160,7 @@ const AddressInput = React.memo(React.forwardRef(({
 }))
 
 export default function OrderSummaryScreen() {
+  const { t, i18n } = useTranslation()
   const insets = useSafeAreaInsets()
   const { user } = useAuth()
   const { productId, quantity, sellerId } = useLocalSearchParams()
@@ -538,7 +541,7 @@ export default function OrderSummaryScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Checkout & Review</Text>
+        <Text style={styles.topTitle}>{t('Checkout & Review')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -559,54 +562,56 @@ export default function OrderSummaryScreen() {
               <View style={[styles.stepCircle, styles.stepCircleDone]}>
                 <MaterialCommunityIcons name="check" size={14} color="#ffffff" />
               </View>
-              <Text style={styles.stepTextDone}>Cart</Text>
+              <Text style={styles.stepTextDone}>{t('Cart')}</Text>
             </View>
             <View style={[styles.stepLine, styles.stepLineActive]} />
             <View style={styles.stepItem}>
               <View style={[styles.stepCircle, styles.stepCircleActive]}>
                 <Text style={styles.stepNumActive}>2</Text>
               </View>
-              <Text style={styles.stepTextActive}>Shipping</Text>
+              <Text style={styles.stepTextActive}>{t('Shipping')}</Text>
             </View>
             <View style={styles.stepLine} />
             <View style={styles.stepItem}>
               <View style={styles.stepCircle}>
                 <Text style={styles.stepNum}>3</Text>
               </View>
-              <Text style={styles.stepText}>Payment</Text>
+              <Text style={styles.stepText}>{t('Payment')}</Text>
             </View>
           </View>
 
           {/* Product Info */}
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="shopping-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Items In Order</Text>
+            <Text style={styles.sectionTitle}>{t('Items In Order')}</Text>
           </View>
           
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Image source={{ uri: getProductImageUrl(product.images?.[0] || product.image) }} style={styles.pImg} />
               <View style={styles.pInfo}>
-                <Text style={styles.pTitle} numberOfLines={2}>{product.title}</Text>
+                <Text style={styles.pTitle} numberOfLines={2}>
+                  {product.translations?.[i18n.language]?.title || t(product.title) || product.title}
+                </Text>
                 
                 <View style={styles.badgeRow}>
                   <View style={styles.qtyBadge}>
-                    <Text style={styles.qtyBadgeText}>Qty: {quantity}</Text>
+                    <Text style={styles.qtyBadgeText}>{t('Qty:')} {quantity}</Text>
                   </View>
                   {product.freeShipping ? (
                     <View style={styles.shippingBadge}>
-                      <Text style={styles.shippingBadgeText}>Free Shipping</Text>
+                      <Text style={styles.shippingBadgeText}>{t('Free Shipping')}</Text>
                     </View>
                   ) : (
                     <View style={[styles.shippingBadge, { backgroundColor: '#fff3e0' }]}>
-                      <Text style={[styles.shippingBadgeText, { color: '#e65100' }]}>Standard Shipping</Text>
+                      <Text style={[styles.shippingBadgeText, { color: '#e65100' }]}>{t('Standard Shipping')}</Text>
                     </View>
                   )}
                 </View>
 
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceEach}>{currencySymbol}{(Number(product.price || 0) * exchangeRate).toFixed(2)} each</Text>
-                  <Text style={styles.priceTotal}>Subtotal: {currencySymbol}{subtotal.toFixed(2)}</Text>
+                  <Text style={styles.priceEach}>{currencySymbol}{(Number(product.price || 0) * exchangeRate).toFixed(2)} {t('each')}</Text>
+                  <Text style={styles.priceTotal}>{t('Subtotal:')} {currencySymbol}{subtotal.toFixed(2)}</Text>
                 </View>
               </View>
             </View>
@@ -614,7 +619,7 @@ export default function OrderSummaryScreen() {
             <View style={styles.estDeliveryBox}>
               <MaterialCommunityIcons name="truck-delivery-outline" size={16} color="#1a237e" />
               <Text style={styles.estDeliveryText}>
-                Estimated Delivery: <Text style={{ fontWeight: '800' }}>{estimatedDeliveryText}</Text>
+                {t('Estimated Delivery:')} <Text style={{ fontWeight: '800' }}>{estimatedDeliveryText}</Text>
               </Text>
             </View>
           </View>
@@ -624,7 +629,7 @@ export default function OrderSummaryScreen() {
             <View style={styles.autofillBanner}>
               <MaterialCommunityIcons name="history" size={22} color={colors.primary} style={{ marginRight: 10 }} />
               <View style={styles.autofillTextContainer}>
-                <Text style={styles.autofillTitle}>Use Last Shipping Address?</Text>
+                <Text style={styles.autofillTitle}>{t('Use Last Shipping Address?')}</Text>
                 <Text style={styles.autofillDesc} numberOfLines={1}>
                   {pastAddress.street}, {pastAddress.city}
                 </Text>
@@ -635,7 +640,7 @@ export default function OrderSummaryScreen() {
                 accessibilityLabel="Autofill past address button"
                 accessibilityRole="button"
               >
-                <Text style={styles.autofillBtnText}>Autofill</Text>
+                <Text style={styles.autofillBtnText}>{t('Autofill')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -643,7 +648,7 @@ export default function OrderSummaryScreen() {
           {/* Section 1: Contact Details */}
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="account-details-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Contact Details</Text>
+            <Text style={styles.sectionTitle}>{t('Contact Details')}</Text>
           </View>
 
           <View style={styles.card}>
@@ -695,11 +700,11 @@ export default function OrderSummaryScreen() {
           {/* Section 2: Shipping Location */}
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="map-marker-radius-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Shipping Location</Text>
+            <Text style={styles.sectionTitle}>{t('Shipping Location')}</Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.inputLabel}>Address Type</Text>
+            <Text style={styles.inputLabel}>{t('Address Type')}</Text>
             <View style={styles.addressTypeContainer}>
               <TouchableOpacity
                 style={[styles.typePill, addressType === 'home' && styles.typePillActive]}
@@ -711,7 +716,7 @@ export default function OrderSummaryScreen() {
                   size={16}
                   color={addressType === 'home' ? '#ffffff' : '#64748b'}
                 />
-                <Text style={[styles.typePillText, addressType === 'home' && styles.typePillTextActive]}>Home</Text>
+                <Text style={[styles.typePillText, addressType === 'home' && styles.typePillTextActive]}>{t('Home')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -724,7 +729,7 @@ export default function OrderSummaryScreen() {
                   size={16}
                   color={addressType === 'work' ? '#ffffff' : '#64748b'}
                 />
-                <Text style={[styles.typePillText, addressType === 'work' && styles.typePillTextActive]}>Work</Text>
+                <Text style={[styles.typePillText, addressType === 'work' && styles.typePillTextActive]}>{t('Work')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -737,7 +742,7 @@ export default function OrderSummaryScreen() {
                   size={16}
                   color={addressType === 'other' ? '#ffffff' : '#64748b'}
                 />
-                <Text style={[styles.typePillText, addressType === 'other' && styles.typePillTextActive]}>Other</Text>
+                <Text style={[styles.typePillText, addressType === 'other' && styles.typePillTextActive]}>{t('Other')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -839,7 +844,7 @@ export default function OrderSummaryScreen() {
           {/* Delivery Speed */}
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="speedometer" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Delivery Speed</Text>
+            <Text style={styles.sectionTitle}>{t('Delivery Speed')}</Text>
           </View>
 
           <View style={styles.card}>
@@ -854,11 +859,11 @@ export default function OrderSummaryScreen() {
                 color={shippingSpeed === 'standard' ? colors.primary : '#b0bec5'}
               />
               <View style={styles.speedTextWrapper}>
-                <Text style={styles.speedTitle}>Standard Delivery (3-5 Days)</Text>
-                <Text style={styles.speedDesc}>Reliable door-to-door delivery with tracking</Text>
+                <Text style={styles.speedTitle}>{t('Standard Delivery (3-5 Days)')}</Text>
+                <Text style={styles.speedDesc}>{t('Reliable door-to-door delivery with tracking')}</Text>
               </View>
               <Text style={styles.speedPrice}>
-                {baseShippingFee === 0 ? 'FREE' : `${currencySymbol}${baseShippingFee.toFixed(2)}`}
+                {baseShippingFee === 0 ? t('FREE') : `${currencySymbol}${baseShippingFee.toFixed(2)}`}
               </Text>
             </TouchableOpacity>
 
@@ -874,12 +879,12 @@ export default function OrderSummaryScreen() {
               />
               <View style={styles.speedTextWrapper}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.speedTitle}>Express Expedited (1-2 Days)</Text>
+                  <Text style={styles.speedTitle}>{t('Express Expedited (1-2 Days)')}</Text>
                   <View style={styles.fastTag}>
-                    <Text style={styles.fastTagText}>FASTEST</Text>
+                    <Text style={styles.fastTagText}>{t('FASTEST')}</Text>
                   </View>
                 </View>
-                <Text style={styles.speedDesc}>Priority fulfillment & air express transport</Text>
+                <Text style={styles.speedDesc}>{t('Priority fulfillment & air express transport')}</Text>
               </View>
               <Text style={styles.speedPrice}>+{currencySymbol}{(9.99 * exchangeRate).toFixed(2)}</Text>
             </TouchableOpacity>
@@ -888,13 +893,13 @@ export default function OrderSummaryScreen() {
           {/* Order Note */}
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="note-text-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Order Note For Seller</Text>
+            <Text style={styles.sectionTitle}>{t('Order Note For Seller')}</Text>
           </View>
 
           <View style={styles.card}>
             <TextInput
               style={styles.sellerNoteInput}
-              placeholder="E.g. Gift wrap this item, call before delivery, leave with gate guard..."
+              placeholder={t('E.g. Gift wrap this item, call before delivery, leave with gate guard...')}
               placeholderTextColor="#b0bec5"
               value={sellerNote}
               onChangeText={setSellerNote}
@@ -903,31 +908,30 @@ export default function OrderSummaryScreen() {
             />
           </View>
 
-
           {/* Pricing Details */}
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="receipt" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Price Breakdown ({currencyCode})</Text>
+            <Text style={styles.sectionTitle}>{t('Price Breakdown')} ({currencyCode})</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Items Subtotal</Text>
+              <Text style={styles.rowLabel}>{t('Items Subtotal')}</Text>
               <Text style={styles.rowVal}>{currencySymbol}{subtotal.toFixed(2)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Shipping Fee ({shippingSpeed === 'express' ? 'Express' : 'Standard'})</Text>
+              <Text style={styles.rowLabel}>{t('Shipping Fee')} ({shippingSpeed === 'express' ? t('Express') : t('Standard')})</Text>
               <Text style={[styles.rowVal, totalShipping === 0 && { color: '#2e7d32', fontWeight: '700' }]}>
-                {totalShipping === 0 ? 'FREE' : `${currencySymbol}${totalShipping.toFixed(2)}`}
+                {totalShipping === 0 ? t('FREE') : `${currencySymbol}${totalShipping.toFixed(2)}`}
               </Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Tax (5%)</Text>
+              <Text style={styles.rowLabel}>{t('Tax')} (5%)</Text>
               <Text style={styles.rowVal}>{currencySymbol}{tax.toFixed(2)}</Text>
             </View>
             {appliedDiscount > 0 && (
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { color: '#2e7d32' }]}>Promo Discount</Text>
+                <Text style={[styles.rowLabel, { color: '#2e7d32' }]}>{t('Promo Discount')}</Text>
                 <Text style={[styles.rowVal, { color: '#2e7d32', fontWeight: '700' }]}>
                   -{currencySymbol}{appliedDiscount.toFixed(2)}
                 </Text>
@@ -937,7 +941,7 @@ export default function OrderSummaryScreen() {
             <View style={styles.totalDivider} />
             
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Grand Total</Text>
+              <Text style={styles.totalLabel}>{t('Grand Total')}</Text>
               <Text style={styles.totalVal}>{currencySymbol}{grandTotal.toFixed(2)}</Text>
             </View>
           </View>
@@ -946,20 +950,20 @@ export default function OrderSummaryScreen() {
           <View style={styles.trustBadgesCard}>
             <View style={styles.trustBadgeItem}>
               <MaterialCommunityIcons name="shield-check-outline" size={20} color="#2e7d32" />
-              <Text style={styles.trustBadgeTitle}>256-bit SSL</Text>
-              <Text style={styles.trustBadgeSub}>Encrypted</Text>
+              <Text style={styles.trustBadgeTitle}>{t('256-bit SSL')}</Text>
+              <Text style={styles.trustBadgeSub}>{t('Encrypted')}</Text>
             </View>
             <View style={styles.trustBadgeDivider} />
             <View style={styles.trustBadgeItem}>
               <MaterialCommunityIcons name="rotate-left" size={20} color="#0288d1" />
-              <Text style={styles.trustBadgeTitle}>Easy Returns</Text>
-              <Text style={styles.trustBadgeSub}>Buyer Protection</Text>
+              <Text style={styles.trustBadgeTitle}>{t('Easy Returns')}</Text>
+              <Text style={styles.trustBadgeSub}>{t('Buyer Protection')}</Text>
             </View>
             <View style={styles.trustBadgeDivider} />
             <View style={styles.trustBadgeItem}>
               <MaterialCommunityIcons name="check-decagram-outline" size={20} color="#651fff" />
-              <Text style={styles.trustBadgeTitle}>Verified</Text>
-              <Text style={styles.trustBadgeSub}>Global Seller</Text>
+              <Text style={styles.trustBadgeTitle}>{t('Verified')}</Text>
+              <Text style={styles.trustBadgeSub}>{t('Global Seller')}</Text>
             </View>
           </View>
         </ScrollView>
@@ -981,7 +985,7 @@ export default function OrderSummaryScreen() {
             ) : (
               <>
                 <Text style={styles.payBtnText}>
-                  Pay {currencySymbol}{grandTotal.toFixed(2)}
+                  {t('Pay')} {currencySymbol}{grandTotal.toFixed(2)}
                 </Text>
                 <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
               </>
@@ -990,7 +994,7 @@ export default function OrderSummaryScreen() {
           <View style={styles.trustContainer}>
             <MaterialCommunityIcons name="lock-outline" size={12} color="#9e9e9e" />
             <Text style={styles.trustText}>
-              Secure via {isIndia ? 'Razorpay' : 'Stripe'} • 100% Encrypted & Safe
+              {t('Secure via')} {isIndia ? 'Razorpay' : 'Stripe'} • {t('100% Encrypted & Safe')}
             </Text>
           </View>
         </View>

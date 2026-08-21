@@ -12,14 +12,13 @@ export default function useVoiceCall(currentUser) {
   const [isMuted, setIsMuted] = useState(false)
   const [isSpeaker, setIsSpeaker] = useState(false)
   const [duration, setDuration] = useState(0)
-  const [otherUser, setOtherUser] = useState(null) // { id, name, avatar }
-  
+  const [otherUser, setOtherUser] = useState(null)
+
   const timerRef = useRef(null)
   const socketRef = useRef(null)
   const otherUserRef = useRef(null)
   const callIdRef = useRef(null)
 
-  // Sync refs to avoid stale closures in socket callbacks
   useEffect(() => {
     otherUserRef.current = otherUser
   }, [otherUser])
@@ -28,9 +27,9 @@ export default function useVoiceCall(currentUser) {
     callIdRef.current = callId
   }, [callId])
 
-  // Reset the calling state locally
+  // Reset local call state
   const resetCallState = useCallback(() => {
-    console.log('VoiceCallHook: Resetting call state')
+    console.log('[Mobile VoiceCallHook] Resetting call state')
     if (timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
@@ -46,7 +45,7 @@ export default function useVoiceCall(currentUser) {
     setOtherUser(null)
   }, [])
 
-  // Start call timer when call is accepted
+  // Call timer management
   useEffect(() => {
     if (status === 'accepted') {
       setDuration(0)
@@ -64,52 +63,46 @@ export default function useVoiceCall(currentUser) {
     }
   }, [status])
 
-  // Setup WebRTC and signaling socket listeners
+  // Socket signaling listener setup
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
     socketRef.current = socket
 
-    // Helper: Initialize peer connection on receiver's side
     const initReceiverPeerConnection = async (sdpOffer) => {
       try {
         await webrtcService.setupLocalStream()
         webrtcService.createPeerConnection()
 
-        // Send ICE candidate discovered locally
         webrtcService.onIceCandidateCallback = (candidate) => {
           if (otherUserRef.current) {
             socket.emit('ice-candidate', {
+              callId: callIdRef.current,
               targetId: otherUserRef.current.id,
               candidate
             })
           }
         }
 
-        // Set remote stream output
-        webrtcService.onTrackCallback = (stream) => {
-          console.log('VoiceCallHook: Received remote audio track')
-        }
-
-        // Create SDP answer and send it back to caller
         const answer = await webrtcService.createAnswer(sdpOffer)
         if (otherUserRef.current) {
           socket.emit('answer', {
+            callId: callIdRef.current,
             targetId: otherUserRef.current.id,
             answer
           })
         }
       } catch (error) {
-        console.error('Failed to setup receiver WebRTC:', error)
+        console.error('[Mobile VoiceCallHook] Receiver WebRTC setup failed:', error)
         handleEndCall()
       }
     }
 
-    // 1. Listen for incoming calls
-    socket.on('incoming-call', (data) => {
-      // If already in a call, auto-reject
+    // 1. Incoming Call Event
+    const handleIncomingCall = (data) => {
+      console.log('[Mobile VoiceCallHook] Incoming Call:', data)
       if (status !== 'idle') {
-        socket.emit('call-rejected', {
+        socket.emit('reject-call', {
           targetId: data.callerId,
           callId: data.callId,
           reason: 'busy'
@@ -117,7 +110,6 @@ export default function useVoiceCall(currentUser) {
         return
       }
 
-      console.log('VoiceCallHook: Received incoming-call event from:', data.callerName)
       setCallId(data.callId)
       setChannelId(data.channelId)
       setIsIncoming(true)
@@ -125,85 +117,107 @@ export default function useVoiceCall(currentUser) {
       setOtherUser({
         id: data.callerId,
         name: data.callerName,
-        avatar: data.callerAvatar
+        avatar: data.callerAvatar,
+        type: data.callerType
       })
-    })
+    }
+    socket.on('incoming-call', handleIncomingCall)
+    socket.on('support-call:incoming', handleIncomingCall)
 
-    // 2. Listen for SDP offer (on receiver side)
-    socket.on('offer', async (data) => {
-      console.log('VoiceCallHook: Received SDP offer from caller')
+    // 2. Offer Event
+    const handleOffer = async (data) => {
+      console.log('[Mobile VoiceCallHook] Offer Received')
       await initReceiverPeerConnection(data.offer)
-    })
+    }
+    socket.on('offer', handleOffer)
+    socket.on('support-call:offer', handleOffer)
 
-    // 3. Listen for SDP answer (on caller side)
-    socket.on('answer', async (data) => {
-      console.log('VoiceCallHook: Received SDP answer from receiver')
+    // 3. Answer Event
+    const handleAnswer = async (data) => {
+      console.log('[Mobile VoiceCallHook] Answer Received')
       try {
         await webrtcService.setAnswer(data.answer)
         setStatus('accepted')
-        // Update call log to accepted in database
-        if (callIdRef.current) {
-          await api.patch(`/calls/${callIdRef.current}`, { status: 'accepted' })
-        }
       } catch (error) {
-        console.error('Failed to set remote answer:', error)
+        console.error('[Mobile VoiceCallHook] Failed to set remote answer:', error)
         handleEndCall()
       }
-    })
+    }
+    socket.on('answer', handleAnswer)
+    socket.on('support-call:answer', handleAnswer)
 
-    // 4. Listen for ICE candidates
-    socket.on('ice-candidate', async (data) => {
+    // 4. ICE Candidate Event
+    const handleIceCandidate = async (data) => {
       await webrtcService.addIceCandidate(data.candidate)
-    })
+    }
+    socket.on('ice-candidate', handleIceCandidate)
+    socket.on('support-call:ice-candidate', handleIceCandidate)
 
-    // 5. Listen for Call Rejection
-    socket.on('call-rejected', async (data) => {
-      console.log('VoiceCallHook: Call rejected. Reason:', data.reason)
+    // 5. Call Accepted Event
+    const handleCallAccepted = (data) => {
+      console.log('[Mobile VoiceCallHook] Call Accepted by Peer')
+      setStatus('accepted')
+    }
+    socket.on('accept-call', handleCallAccepted)
+    socket.on('support-call:accepted', handleCallAccepted)
+
+    // 6. Call Rejected Event
+    const handleCallRejected = (data) => {
+      console.log('[Mobile VoiceCallHook] Call Rejected:', data)
       setStatus('rejected')
-      
-      // Update call log state on server
-      if (callIdRef.current) {
-        const updateStatus = data.reason === 'busy' ? 'rejected' : 'rejected'
-        await api.patch(`/calls/${callIdRef.current}`, { status: updateStatus })
-      }
-      
-      Alert.alert('Call Failed', data.reason === 'busy' ? 'User is busy' : 'Call rejected')
+      Alert.alert('Call Declined', data.message || 'Call was declined.')
       setTimeout(() => {
         resetCallState()
       }, 2000)
-    })
+    }
+    socket.on('call-rejected', handleCallRejected)
+    socket.on('support-call:rejected', handleCallRejected)
 
-    // 6. Listen for Call Ended by peer
-    socket.on('call-ended', async () => {
-      console.log('VoiceCallHook: Call ended by remote user')
+    // 7. Call Timeout Event
+    const handleCallTimeout = () => {
+      console.log('[Mobile VoiceCallHook] Ringing Timed Out')
+      setStatus('missed')
+      Alert.alert('No Answer', 'Call was not answered.')
+      setTimeout(() => {
+        resetCallState()
+      }, 2000)
+    }
+    socket.on('call-timeout', handleCallTimeout)
+    socket.on('support-call:timeout', handleCallTimeout)
+
+    // 8. Call Ended Event
+    const handleCallEnded = () => {
+      console.log('[Mobile VoiceCallHook] Call Ended by Remote Peer')
       setStatus('ended')
       setTimeout(() => {
         resetCallState()
       }, 1500)
-    })
-
-    // 7. Listen for Call Cancelled by caller before pickup
-    socket.on('call-cancelled', () => {
-      console.log('VoiceCallHook: Outgoing call cancelled by caller')
-      setStatus('missed')
-      setTimeout(() => {
-        resetCallState()
-      }, 1500)
-    })
+    }
+    socket.on('call-ended', handleCallEnded)
+    socket.on('support-call:ended', handleCallEnded)
 
     return () => {
-      socket.off('incoming-call')
-      socket.off('offer')
-      socket.off('answer')
-      socket.off('ice-candidate')
-      socket.off('call-rejected')
-      socket.off('call-ended')
-      socket.off('call-cancelled')
+      socket.off('incoming-call', handleIncomingCall)
+      socket.off('support-call:incoming', handleIncomingCall)
+      socket.off('offer', handleOffer)
+      socket.off('support-call:offer', handleOffer)
+      socket.off('answer', handleAnswer)
+      socket.off('support-call:answer', handleAnswer)
+      socket.off('ice-candidate', handleIceCandidate)
+      socket.off('support-call:ice-candidate', handleIceCandidate)
+      socket.off('accept-call', handleCallAccepted)
+      socket.off('support-call:accepted', handleCallAccepted)
+      socket.off('call-rejected', handleCallRejected)
+      socket.off('support-call:rejected', handleCallRejected)
+      socket.off('call-timeout', handleCallTimeout)
+      socket.off('support-call:timeout', handleCallTimeout)
+      socket.off('call-ended', handleCallEnded)
+      socket.off('support-call:ended', handleCallEnded)
     }
   }, [status, resetCallState, currentUser])
 
-  // Initiate an outgoing call
-  const handleStartCall = async (receiverId, receiverName, receiverAvatar) => {
+  // Initiate Outgoing Call (to user, seller, or support admin)
+  const handleStartCall = async (receiverId, receiverName, receiverAvatar, receiverType = 'user') => {
     if (!socketRef.current) {
       Alert.alert('Connection Error', 'Socket is disconnected. Retrying...')
       return
@@ -214,46 +228,36 @@ export default function useVoiceCall(currentUser) {
       setOtherUser({
         id: receiverId,
         name: receiverName,
-        avatar: receiverAvatar
+        avatar: receiverAvatar,
+        type: receiverType
       })
 
-      // 1. Create call log on backend
-      const res = await api.post('/calls', { receiverId })
+      // 1. Create Call via API
+      const res = await api.post('/calls/initiate', { receiverId, receiverType })
       if (!res.data || !res.data.success) {
-        throw new Error(res.data?.message || 'Failed to initialize call API')
+        throw new Error(res.data?.message || 'Failed to initialize call')
       }
 
-      const { call, receiver } = res.data
+      const { call } = res.data
       setCallId(call._id)
       setChannelId(call.channelId)
-      
-      // Update otherUser with resolved receiver details
-      setOtherUser({
-        id: receiver._id,
-        name: receiver.name,
-        avatar: receiver.avatar
-      })
 
       // 2. Setup WebRTC Peer Connection locally
       await webrtcService.setupLocalStream()
       webrtcService.createPeerConnection()
 
-      // Bind candidate handler
       webrtcService.onIceCandidateCallback = (candidate) => {
         socketRef.current.emit('ice-candidate', {
-          targetId: receiver._id,
+          callId: call._id,
+          targetId: receiverId,
           candidate
         })
       }
 
-      // Bind remote track handler
-      webrtcService.onTrackCallback = (stream) => {
-        console.log('VoiceCallHook: Connected to remote track stream')
-      }
-
       // 3. Emit signaling 'call-user' to recipient
       socketRef.current.emit('call-user', {
-        receiverId: receiver._id,
+        receiverId,
+        receiverType,
         callerId: currentUser._id,
         callerName: currentUser.name,
         callerAvatar: currentUser.avatar,
@@ -261,112 +265,92 @@ export default function useVoiceCall(currentUser) {
         callId: call._id
       })
 
-      // 4. Generate WebRTC SDP offer and emit
+      // 4. Generate Offer and Emit
       const offer = await webrtcService.createOffer()
       socketRef.current.emit('offer', {
-        targetId: receiver._id,
+        callId: call._id,
+        targetId: receiverId,
         offer
       })
 
       setStatus('ringing')
     } catch (error) {
-      console.error('Failed to initiate outgoing call:', error)
+      console.error('[Mobile VoiceCallHook] Failed to initiate outgoing call:', error)
       Alert.alert('Call Failed', error.message || 'Error establishing connection')
       resetCallState()
     }
   }
 
-  // Accept incoming call
+  // Accept Incoming Call
   const handleAcceptCall = async () => {
     if (!otherUser || !callId) return
     try {
+      await webrtcService.setupLocalStream()
+      webrtcService.createPeerConnection()
+
+      webrtcService.onIceCandidateCallback = (candidate) => {
+        if (socketRef.current) {
+          socketRef.current.emit('ice-candidate', {
+            callId,
+            targetId: otherUser.id,
+            candidate
+          })
+        }
+      }
+
+      if (socketRef.current) {
+        socketRef.current.emit('accept-call', {
+          callId,
+          targetId: otherUser.id
+        })
+      }
+
       setStatus('accepted')
-      await api.patch(`/calls/${callId}`, { status: 'accepted' })
-      console.log('VoiceCallHook: Call accepted')
     } catch (error) {
-      console.error('Error accepting call:', error)
+      console.error('[Mobile VoiceCallHook] Error accepting call:', error)
       handleEndCall()
     }
   }
 
-  // Reject incoming call
-  const handleRejectCall = async () => {
-    if (!otherUser || !callId) return
-    try {
-      setStatus('rejected')
-      socketRef.current.emit('call-rejected', {
+  // Reject Incoming Call
+  const handleRejectCall = () => {
+    if (otherUser && callId && socketRef.current) {
+      socketRef.current.emit('reject-call', {
+        callId,
         targetId: otherUser.id,
-        callId
+        reason: 'rejected'
       })
-      await api.patch(`/calls/${callId}`, { status: 'rejected' })
-      resetCallState()
-    } catch (error) {
-      console.error('Error rejecting call:', error)
-      resetCallState()
     }
+    resetCallState()
   }
 
-  // End active call or cancel outgoing call
-  const handleEndCall = async () => {
-    if (!otherUser) {
+  // End Active Call
+  const handleEndCall = () => {
+    if (otherUser && callId && socketRef.current) {
+      socketRef.current.emit('end-call', {
+        callId,
+        targetId: otherUser.id,
+        endedBy: 'user'
+      })
+    }
+    setStatus('ended')
+    setTimeout(() => {
       resetCallState()
-      return
-    }
-
-    try {
-      if (status === 'connecting' || status === 'ringing') {
-        if (isIncoming) {
-          // Reject incoming call
-          socketRef.current.emit('call-rejected', {
-            targetId: otherUser.id,
-            callId,
-            reason: 'declined'
-          })
-          if (callId) {
-            await api.patch(`/calls/${callId}`, { status: 'rejected' })
-          }
-        } else {
-          // Cancel outgoing call
-          socketRef.current.emit('call-cancelled', {
-            targetId: otherUser.id,
-            callId
-          })
-          if (callId) {
-            await api.patch(`/calls/${callId}`, { status: 'missed' })
-          }
-        }
-      } else if (status === 'accepted') {
-        // End active ongoing call
-        socketRef.current.emit('call-ended', {
-          targetId: otherUser.id,
-          callId
-        })
-        if (callId) {
-          await api.patch(`/calls/${callId}`, { status: 'ended' })
-        }
-      }
-    } catch (error) {
-      console.error('Error ending call:', error)
-    } finally {
-      setStatus('ended')
-      setTimeout(() => {
-        resetCallState()
-      }, 1000)
-    }
+    }, 1000)
   }
 
-  // Toggle local mute
+  // Toggle Mute
   const handleToggleMute = () => {
-    const nextMutedState = !isMuted
-    setIsMuted(nextMutedState)
-    webrtcService.toggleMute(nextMutedState)
+    const nextMuted = !isMuted
+    setIsMuted(nextMuted)
+    webrtcService.toggleMute(nextMuted)
   }
 
-  // Toggle device speakerphone
+  // Toggle Speaker
   const handleToggleSpeaker = () => {
-    const nextSpeakerState = !isSpeaker
-    setIsSpeaker(nextSpeakerState)
-    webrtcService.toggleSpeaker(nextSpeakerState)
+    const nextSpeaker = !isSpeaker
+    setIsSpeaker(nextSpeaker)
+    webrtcService.toggleSpeaker(nextSpeaker)
   }
 
   return {
