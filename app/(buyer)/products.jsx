@@ -1,10 +1,9 @@
 // app/(buyer)/products.jsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Image,
   FlatList,
@@ -13,12 +12,14 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  TextInput,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import api from '../../services/api'
 import { getCategoryImage } from '../../constants/categories'
 import { useTranslation } from 'react-i18next'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = (width - 48) / 2
@@ -29,12 +30,14 @@ const CATEGORIES = [
     name: 'Fashion',
     count: '2.4k+ Products',
     image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&q=80',
+    popular: true,
   },
   {
     id: '2',
     name: 'Mobiles',
     count: '1.8k+ Products',
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80',
+    popular: true,
   },
   {
     id: '3',
@@ -47,12 +50,14 @@ const CATEGORIES = [
     name: 'Industrial',
     count: '3.2k+ Products',
     image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80',
+    popular: true,
   },
   {
     id: '5',
     name: 'Electronics',
     count: '4.5k+ Products',
     image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&q=80',
+    popular: true,
   },
   {
     id: '6',
@@ -65,6 +70,7 @@ const CATEGORIES = [
     name: 'Grocery',
     count: '2.1k+ Products',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80',
+    popular: true,
   },
   {
     id: '8',
@@ -89,6 +95,7 @@ const CATEGORIES = [
     name: 'Machinery',
     count: '1.6k+ Products',
     image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80',
+    popular: true,
   },
   {
     id: '12',
@@ -99,61 +106,55 @@ const CATEGORIES = [
 ]
 
 export default function ProductsScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const isRTL = i18n?.dir?.() === 'rtl' || ['ar', 'ur', 'he', 'fa'].includes(i18n?.language)
   const insets = useSafeAreaInsets()
+
   const [categories, setCategories] = useState(CATEGORIES)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [hasError, setHasError] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedFilter, setSelectedFilter] = useState('all') // 'all' | 'popular'
+
   const [supportEmail, setSupportEmail] = useState("ubsimportingexporting@gmail.com")
   const [supportPhone, setSupportPhone] = useState("9544755008")
 
   const handleRequestQuote = () => {
     Alert.alert(
-      "Request a Quote",
-      "Get custom wholesale pricing and sourcing quotes from our network. How would you like to connect?",
+      t("Request a Quote"),
+      t("Our global network of verified vendors can source specific wholesale products for your business needs."),
       [
         {
-          text: "Email Requirements",
+          text: t("Email Requirements"),
           onPress: () => Linking.openURL(`mailto:${supportEmail}?subject=Wholesale Sourcing & Quote Request`)
         },
         {
-          text: "Call Hotline",
+          text: t("Call Hotline"),
           onPress: () => Linking.openURL(`tel:${supportPhone}`)
         },
         {
-          text: "Cancel",
+          text: t("Cancel"),
           style: "cancel"
         }
       ]
     )
   }
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true)
-    await loadCategories()
-    setRefreshing(false)
-  }, [])
+  const getTranslatedCategoryName = React.useCallback((item) => {
+    if (!item) return ''
+    const currentLang = i18n?.language || 'en'
+    return (
+      item.translations?.[currentLang]?.name ||
+      t(item.name) ||
+      item.name
+    )
+  }, [i18n?.language, t])
 
-  useEffect(() => {
-    loadCategories()
-
-    const fetchSupport = async () => {
-      try {
-        const res = await api.get('/public-settings')
-        if (res.data?.success && res.data.settings) {
-          if (res.data.settings.supportEmail) setSupportEmail(res.data.settings.supportEmail)
-          if (res.data.settings.contactPhone) setSupportPhone(res.data.settings.contactPhone)
-        }
-      } catch (err) {
-        console.log("Failed to load public support settings:", err)
-      }
-    }
-    fetchSupport()
-  }, [])
-
-  const loadCategories = async () => {
+  const loadCategories = React.useCallback(async () => {
     try {
       setLoading(true)
+      setHasError(false)
       const res = await api.get('/categories')
       if (res?.data?.categories) {
         const apiCategories = res.data.categories
@@ -161,7 +162,7 @@ export default function ProductsScreen() {
         apiCategories.forEach(apiCat => {
           const index = merged.findIndex(c => 
             c.name.replace(/\s+/g, ' ').toLowerCase() === apiCat.name.replace(/\s+/g, ' ').toLowerCase()
-          );
+          )
           if (index !== -1) {
             merged[index] = { ...merged[index], ...apiCat, name: merged[index].name }
           } else {
@@ -176,10 +177,51 @@ export default function ProductsScreen() {
       }
     } catch (err) {
       console.log('Error loading categories in products screen:', err)
+      setHasError(true)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true)
+    await loadCategories()
+    setRefreshing(false)
+  }, [loadCategories])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadCategories()
+
+    const fetchSupport = async () => {
+      try {
+        const res = await api.get('/public-settings')
+        if (res.data?.success && res.data.settings) {
+          if (res.data.settings.supportEmail) setSupportEmail(res.data.settings.supportEmail)
+          if (res.data.settings.contactPhone) setSupportPhone(res.data.settings.contactPhone)
+        }
+      } catch (err) {
+        console.log("Failed to load public support settings:", err)
+      }
+    }
+    fetchSupport()
+  }, [loadCategories])
+
+  const filteredCategories = useMemo(() => {
+    let result = categories
+    if (selectedFilter === 'popular') {
+      result = result.filter(c => c.popular)
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      result = result.filter(item => {
+        const engName = (item.name || '').toLowerCase()
+        const translatedName = getTranslatedCategoryName(item).toLowerCase()
+        return engName.includes(q) || translatedName.includes(q)
+      })
+    }
+    return result
+  }, [categories, selectedFilter, searchQuery, getTranslatedCategoryName])
 
   const handleCategoryPress = (item) => {
     if (item.name === 'Real Estate') {
@@ -192,52 +234,56 @@ export default function ProductsScreen() {
     }
   }
 
-  const renderCategory = ({ item }) => (
-    <TouchableOpacity
-      style={styles.categoryCard}
-      onPress={() => handleCategoryPress(item)}
-      activeOpacity={0.85}
-    >
-      <Image
-        source={getCategoryImage(item.name, item.image)}
-        style={styles.categoryImage}
-        resizeMode="cover"
-      />
-      <View style={styles.categoryInfo}>
-        <Text style={styles.categoryName}>
-          {t(item.name)}
-        </Text>
-        <Text style={styles.categoryCount}>
-          {t(item.count) || item.count || t('0+ Products')}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  )
+  const renderCategory = ({ item }) => {
+    const translatedName = getTranslatedCategoryName(item)
+    return (
+      <TouchableOpacity
+        style={styles.categoryCard}
+        onPress={() => handleCategoryPress(item)}
+        activeOpacity={0.85}
+      >
+        <Image
+          source={getCategoryImage(item.name, item.image)}
+          style={styles.categoryImage}
+          resizeMode="cover"
+        />
+        <View style={[styles.categoryInfo, isRTL && { alignItems: 'flex-end' }]}>
+          <Text style={[styles.categoryName, isRTL && { textAlign: 'right' }]} numberOfLines={1}>
+            {translatedName}
+          </Text>
+          <Text style={[styles.categoryCount, isRTL && { textAlign: 'right' }]}>
+            {t(item.count) || item.count || `0+ ${t('categories.products', t('Products'))}`}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    )
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, isRTL && { flexDirection: 'row-reverse' }]}>
         <TouchableOpacity
           onPress={() => router.push('/(buyer)/drawer')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.topTitle}>UBS Global</Text>
         <TouchableOpacity
           onPress={() => router.push('/(buyer)/cart')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Text style={styles.bellIcon}>🔔</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={categories}
+        data={filteredCategories}
         renderItem={renderCategory}
-        keyExtractor={(item) => item.id || item._id}
+        keyExtractor={(item) => (item.id || item._id || item.name).toString()}
         numColumns={2}
-        columnWrapperStyle={styles.row}
+        columnWrapperStyle={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}
         refreshing={refreshing}
         onRefresh={onRefresh}
         refreshControl={
@@ -250,22 +296,113 @@ export default function ProductsScreen() {
         }
         ListHeaderComponent={
           <View style={styles.pageHeader}>
-            <Text style={styles.pageTitle}>
-              {t("All Categories")}
+            <Text style={[styles.pageTitle, isRTL && { textAlign: 'right' }]}>
+              {t('categories.title', t('All Categories'))}
             </Text>
-            <Text style={styles.pageSubtitle}>
+            <Text style={[styles.pageSubtitle, isRTL && { textAlign: 'right' }]}>
               {t("Explore a world of products curated for international logistics and global trade excellence.")}
             </Text>
+
+            {/* Search Bar */}
+            <View style={[styles.searchBox, isRTL && { flexDirection: 'row-reverse' }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#757575" />
+              <TextInput
+                style={[styles.searchInput, isRTL && { textAlign: 'right' }]}
+                placeholder={t('categories.search', t('Search categories...'))}
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+                autoCapitalize="none"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Filter Tabs */}
+            <View style={[styles.filterTabsRow, isRTL && { flexDirection: 'row-reverse' }]}>
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  selectedFilter === 'all' && styles.filterTabActive,
+                ]}
+                onPress={() => setSelectedFilter('all')}
+              >
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    selectedFilter === 'all' && styles.filterTabTextActive,
+                  ]}
+                >
+                  {t('categories.all', t('All'))}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  selectedFilter === 'popular' && styles.filterTabActive,
+                ]}
+                onPress={() => setSelectedFilter('popular')}
+              >
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    selectedFilter === 'popular' && styles.filterTabTextActive,
+                  ]}
+                >
+                  {t('categories.popular', t('Popular'))}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Error / Retry Banner */}
+            {hasError && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{t('Failed to load categories')}</Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={loadCategories}>
+                  <Text style={styles.retryBtnText}>{t('categories.retry', t('Retry'))}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Loading Indicator */}
+            {loading && !refreshing && (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color="#1a237e" />
+                <Text style={styles.loadingText}>{t('categories.loading', t('Loading...'))}</Text>
+              </View>
+            )}
           </View>
+        }
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>🔍</Text>
+              <Text style={styles.emptyTitle}>
+                {t('categories.noCategories', t('No categories found'))}
+              </Text>
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearSearchBtn}
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Text style={styles.clearSearchText}>{t('Clear Search')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
         }
         ListFooterComponent={
           <>
             {/* Can't find card */}
             <View style={styles.findCard}>
-              <Text style={styles.findTitle}>
+              <Text style={[styles.findTitle, isRTL && { textAlign: 'right' }]}>
                 {t("Can't find what you're looking for?")}
               </Text>
-              <Text style={styles.findDesc}>
+              <Text style={[styles.findDesc, isRTL && { textAlign: 'right' }]}>
                 {t("Our global network of verified vendors can source specific wholesale products for your business needs.")}
               </Text>
               <TouchableOpacity 
@@ -283,7 +420,6 @@ export default function ProductsScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-
     </View>
   )
 }
@@ -326,19 +462,135 @@ const styles = StyleSheet.create({
 
   // Page Header
   pageHeader: {
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   pageTitle: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '700',
     color: '#1a237e',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   pageSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    lineHeight: 22,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+
+  // Search Box
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 12,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    paddingVertical: 0,
+  },
+
+  // Filter Tabs
+  filterTabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d7dce6',
+  },
+  filterTabActive: {
+    backgroundColor: '#1a237e',
+    borderColor: '#1a237e',
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+  },
+  filterTabTextActive: {
+    color: '#fff',
+  },
+
+  // Error State
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffebee',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#c62828',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  retryBtn: {
+    backgroundColor: '#c62828',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Loading Box
+  loadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#666',
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 10,
+  },
+  clearSearchBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#1a237e',
+  },
+  clearSearchText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Grid Row
@@ -358,14 +610,14 @@ const styles = StyleSheet.create({
   },
   categoryImage: {
     width: '100%',
-    height: 140,
+    height: 130,
     backgroundColor: '#e8ecf4',
   },
   categoryInfo: {
     padding: 12,
   },
   categoryName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#1a237e',
     marginBottom: 4,

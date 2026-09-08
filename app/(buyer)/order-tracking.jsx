@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { trackOrder, cancelOrder } from '../../services/orderService'
+import { trackOrder, cancelOrder, getMyOrders } from '../../services/orderService'
 import { downloadOrderInvoice, downloadShippingLabel } from '../../services/shipmentService'
 
 export default function OrderTrackingScreen() {
@@ -31,21 +31,39 @@ export default function OrderTrackingScreen() {
 
   useEffect(() => {
     let isMounted = true
-    if (orderId) {
-      loadOrder()
-    } else {
-      setLoading(false)
-      setError('Order ID is missing in navigation params')
-    }
+    loadOrder(orderId)
     return () => { isMounted = false }
   }, [orderId])
 
-  const loadOrder = async () => {
+  const loadOrder = async (targetId = orderId) => {
     try {
       setLoading(true)
       setError(null)
+
+      let idToFetch = targetId
+
+      if (!idToFetch) {
+        // Fallback: Fetch user's latest order automatically
+        const ordersRes = await getMyOrders()
+        const ordersList = ordersRes?.orders || (Array.isArray(ordersRes) ? ordersRes : [])
+        if (ordersList.length > 0) {
+          const activeOrder = ordersList.find(o => ['placed', 'confirmed', 'packed', 'shipped'].includes(o.orderStatus)) || ordersList[0]
+          idToFetch = activeOrder?._id || activeOrder?.id
+        } else {
+          setError('No orders found to track. Please place an order first.')
+          setLoading(false)
+          return
+        }
+      }
+
+      if (!idToFetch) {
+        setError('No order specified. Please select an order from My Orders.')
+        setLoading(false)
+        return
+      }
+
       const res = await Promise.race([
-        trackOrder(orderId),
+        trackOrder(idToFetch),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000))
       ])
 
@@ -70,12 +88,12 @@ export default function OrderTrackingScreen() {
 
     try {
       setCancelling(true)
-      const res = await cancelOrder(orderId, cancelReason.trim())
+      const res = await cancelOrder(order?._id || orderId, cancelReason.trim())
       if (res.success) {
         Alert.alert('Cancelled', 'Your order has been cancelled successfully.')
         setIsCancelModalVisible(false)
         setCancelReason('')
-        loadOrder()
+        loadOrder(order?._id || orderId)
       } else {
         Alert.alert('Error', res.message || 'Failed to cancel order.')
       }
@@ -143,7 +161,7 @@ export default function OrderTrackingScreen() {
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity 
             style={{ backgroundColor: '#1a237e', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }} 
-            onPress={loadOrder}
+            onPress={() => loadOrder(orderId)}
           >
             <Text style={{ color: '#fff', fontWeight: 'bold' }}>Retry</Text>
           </TouchableOpacity>

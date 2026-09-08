@@ -93,28 +93,51 @@ const getCategoryData = (category) => {
 }
 
 export default function ProductListingScreen() {
+  const { t, i18n } = useTranslation()
+  const isRTL = i18n?.dir?.() === 'rtl' || ['ar', 'ur', 'he', 'fa'].includes(i18n?.language);
   const { category, search } = useLocalSearchParams()
-  const categoryData = getCategoryData(category || search)
+  const categoryData = React.useMemo(() => getCategoryData(category || search), [category, search])
   const [activeTab, setActiveTab] = useState(categoryData.subcategories[0])
   const [wishlist, setWishlist] = useState({})
   const [products, setProducts] = useState([])
-  const [pagination, setPagination] = useState(null)
+  const [, setPagination] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isRelated, setIsRelated] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+
+  const loadProducts = React.useCallback(async () => {
+    try {
+      setLoading(true)
+      setProducts([]) // clear previous products
+      const res = await getProducts({
+        category: category,
+        search: search,
+        page: 1,
+        limit: 20
+      })
+      if (res?.products) {
+        setProducts(res.products)
+        setPagination(res.pagination)
+        setIsRelated(res.isRelated || false)
+      }
+    } catch (error) {
+      console.log(error)
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }, [category, search])
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true)
     await loadProducts()
     setRefreshing(false)
-  }, [category, search])
+  }, [loadProducts])
 
   React.useEffect(() => {
     loadProducts()
-    if (categoryData.subcategories.length > 0) {
-      setActiveTab(categoryData.subcategories[0])
-    }
-  }, [category, search])
+    setActiveTab(categoryData.subcategories[0] || '')
+  }, [loadProducts, categoryData])
 
   // Filter products locally based on activeTab
   const displayedProducts = React.useMemo(() => {
@@ -137,7 +160,7 @@ export default function ProductListingScreen() {
     }
 
     if (tabLower === 'discounted') {
-      return products.filter((p) => p.comparePrice && p.comparePrice > p.price)
+      return products.filter((p) => p.comparePrice && Number(p.comparePrice) > Number(p.price))
     }
 
     // Standard subcategory matching
@@ -145,29 +168,6 @@ export default function ProductListingScreen() {
       (p) => p.subcategory && p.subcategory.toLowerCase() === tabLower
     )
   }, [products, activeTab])
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true)
-      setProducts([]) // clear previous products
-      const res = await getProducts({
-        category: category,
-        search: search,
-        page: 1,
-        limit: 20
-      })
-      if (res?.products) {
-        setProducts(res.products)
-        setPagination(res.pagination)
-        setIsRelated(res.isRelated || false)
-      }
-    } catch (error) {
-      console.log(error)
-      setProducts([])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const toggleWishlist = (id) => {
     setWishlist((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -241,14 +241,14 @@ export default function ProductListingScreen() {
     <SafeAreaView style={styles.container}>
 
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, isRTL && { flexDirection: 'row-reverse' }]}>
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(buyer)/home')}>
-          <Text style={styles.backArrow}>←</Text>
+          <Text style={styles.backArrow}>{isRTL ? '→' : '←'}</Text>
         </TouchableOpacity>
-        <Text style={styles.topTitle} numberOfLines={1}>
-          {search ? `Search: "${search}"` : (category || 'Logistics Equipment')}
+        <Text style={[styles.topTitle, isRTL && { textAlign: 'right' }]} numberOfLines={1}>
+          {search ? `${t('Search')}: "${search}"` : (t(category) || category || t('Logistics Equipment'))}
         </Text>
-        <View style={styles.topRight}>
+        <View style={[styles.topRight, isRTL && { flexDirection: 'row-reverse' }]}>
           <TouchableOpacity style={styles.topIconBtn}>
             <Text style={styles.topIcon}>🔍</Text>
           </TouchableOpacity>
@@ -266,7 +266,7 @@ export default function ProductListingScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsScroll}
+          contentContainerStyle={[styles.tabsScroll, isRTL && { flexDirection: 'row-reverse' }]}
         >
           {categoryData.subcategories.map((tab) => (
             <TouchableOpacity
@@ -283,7 +283,7 @@ export default function ProductListingScreen() {
                   activeTab === tab && styles.tabTextActive,
                 ]}
               >
-                {tab}
+                {t(tab)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -291,20 +291,20 @@ export default function ProductListingScreen() {
       </View>
 
       {/* Results Count + Sort */}
-      <View style={styles.resultsRow}>
+      <View style={[styles.resultsRow, isRTL && { flexDirection: 'row-reverse' }]}>
         <Text style={styles.resultsText}>
-          {isRelated ? 'Showing related items' : `Showing ${displayedProducts.length} items`}
+          {isRelated ? t('Showing related items') : `${t('Showing')} ${displayedProducts.length} ${t('items')}`}
         </Text>
-        <TouchableOpacity style={styles.sortBtn}>
+        <TouchableOpacity style={[styles.sortBtn, isRTL && { flexDirection: 'row-reverse' }]}>
           <Text style={styles.sortIcon}>≡</Text>
-          <Text style={styles.sortText}>Sort</Text>
+          <Text style={styles.sortText}>{t('Sort')}</Text>
         </TouchableOpacity>
       </View>
 
       {isRelated && (
         <View style={styles.relatedBanner}>
-          <Text style={styles.relatedBannerText}>
-            ℹ️ No exact matches found. Showing related products:
+          <Text style={[styles.relatedBannerText, isRTL && { textAlign: 'right' }]}>
+            {t('ℹ️ No exact matches found. Showing related products:')}
           </Text>
         </View>
       )}
@@ -315,17 +315,17 @@ export default function ProductListingScreen() {
       ) : products.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>📦</Text>
-          <Text style={styles.emptyTitle}>No Products Found</Text>
+          <Text style={styles.emptyTitle}>{t('No Products Found')}</Text>
           <Text style={styles.emptyDesc}>
-            No products available in this category yet. Please check back later.
+            {t('No products available in this category yet. Please check back later.')}
           </Text>
         </View>
       ) : displayedProducts.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🔍</Text>
-          <Text style={styles.emptyTitle}>{`No Items in "${activeTab}"`}</Text>
+          <Text style={styles.emptyTitle}>{t('No Items in "{{tab}}"', { tab: t(activeTab), defaultValue: `No Items in "${t(activeTab)}"` })}</Text>
           <Text style={styles.emptyDesc}>
-            There are currently no items matching this subcategory. Try selecting another tab or check back later.
+            {t('There are currently no items matching this subcategory. Try selecting another tab or check back later.')}
           </Text>
         </View>
       ) : (
@@ -334,7 +334,7 @@ export default function ProductListingScreen() {
           renderItem={renderProduct}
           keyExtractor={(item) => (item.id || item._id).toString()}
           numColumns={2}
-          columnWrapperStyle={styles.gridRow}
+          columnWrapperStyle={[styles.gridRow, isRTL && { flexDirection: 'row-reverse' }]}
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}
@@ -355,13 +355,13 @@ export default function ProductListingScreen() {
       )}
 
       {/* Sort & Filter Floating Button */}
-      <View style={styles.fabWrapper}>
+      <View style={[styles.fabWrapper, isRTL && { left: 20, right: undefined }]}>
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, isRTL && { flexDirection: 'row-reverse' }]}
           onPress={() => router.push('/(buyer)/product-filter')}
         >
           <Text style={styles.fabIcon}>≡</Text>
-          <Text style={styles.fabText}>Sort & Filter</Text>
+          <Text style={styles.fabText}>{t('Sort & Filter')}</Text>
         </TouchableOpacity>
       </View>
 

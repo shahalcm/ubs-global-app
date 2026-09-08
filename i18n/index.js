@@ -155,6 +155,14 @@ export const initI18n = async () => {
         react: {
           useSuspense: false,
         },
+        returnEmptyString: false,
+        returnNull: false,
+        missingKeyHandler: (lngs, ns, key) => {
+          if (__DEV__) {
+            console.warn(`[i18n] Missing translation for key: "${key}" in lng:`, lngs);
+          }
+        },
+        parseMissingKeyHandler: (key) => key,
       })
     } else {
       await i18next.changeLanguage(savedLanguage)
@@ -168,8 +176,20 @@ export const initI18n = async () => {
         lng: 'en',
         fallbackLng: 'en',
         interpolation: { escapeValue: false },
+        returnEmptyString: false,
+        returnNull: false,
+        parseMissingKeyHandler: (key) => key,
       })
     }
+  }
+}
+
+export const safeTranslate = (key, options) => {
+  try {
+    if (!key) return ''
+    return i18next.t(key, options) || (typeof key === 'string' ? key : '')
+  } catch (e) {
+    return typeof key === 'string' ? key : ''
   }
 }
 

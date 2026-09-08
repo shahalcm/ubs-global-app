@@ -114,9 +114,9 @@ export default function RecentlyViewedScreen() {
 
   const renderProductCard = ({ item }) => {
     const isOutOfStock = Number(item.stock ?? 0) <= 0;
-    const hasDiscount = item.comparePrice && Number(item.comparePrice) > Number(item.price);
+    const hasDiscount = Boolean(item.comparePrice && Number(item.comparePrice) > Number(item.price));
     const discountPercent = hasDiscount
-      ? Math.round(((item.comparePrice - item.price) / item.comparePrice) * 100)
+      ? Math.round(((Number(item.comparePrice) - Number(item.price)) / Number(item.comparePrice)) * 100)
       : 0;
 
     return (
@@ -137,16 +137,16 @@ export default function RecentlyViewedScreen() {
             contentFit="cover"
             transition={200}
           />
-          {hasDiscount && (
+          {hasDiscount ? (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>-{discountPercent}%</Text>
             </View>
-          )}
-          {isOutOfStock && (
+          ) : null}
+          {isOutOfStock ? (
             <View style={styles.outOfStockBadge}>
               <Text style={styles.outOfStockText}>{t('Out of Stock')}</Text>
             </View>
-          )}
+          ) : null}
           <TouchableOpacity
             style={styles.favBtn}
             onPress={(e) => {
@@ -179,17 +179,17 @@ export default function RecentlyViewedScreen() {
           <View style={styles.ratingRow}>
             <MaterialCommunityIcons name="star" size={12} color="#ffb300" />
             <Text style={styles.ratingText}>{item.rating || 4.5}</Text>
-            {item.sellerId?.shopName && (
+            {item.sellerId?.shopName ? (
               <Text style={styles.sellerName} numberOfLines={1}>
                 • {item.sellerId.shopName}
               </Text>
-            )}
+            ) : null}
           </View>
 
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.price}>${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}</Text>
-              {hasDiscount && <Text style={styles.comparePrice}>${item.comparePrice}</Text>}
+              {hasDiscount ? <Text style={styles.comparePrice}>${item.comparePrice}</Text> : null}
             </View>
             <TouchableOpacity
               style={[styles.cartBtn, isOutOfStock && styles.cartBtnDisabled]}

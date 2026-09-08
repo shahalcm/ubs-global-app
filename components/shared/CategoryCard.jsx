@@ -4,7 +4,8 @@ import { Image } from 'expo-image';
 import { colors } from '../../constants/colors';
 import { getCategoryImage } from '../../constants/categories';
 
-export function CategoryCard({ label, image, onPress, variant = 'circle' }) {
+export function CategoryCard({ label, categoryName, image, onPress, variant = 'circle' }) {
+  const imageLookupKey = categoryName || label;
   if (variant === 'pill') {
     return (
       <TouchableOpacity style={styles.pill} onPress={onPress} activeOpacity={0.85}>
@@ -17,7 +18,7 @@ export function CategoryCard({ label, image, onPress, variant = 'circle' }) {
     <TouchableOpacity style={styles.categoryItem} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.categoryCircle}>
         <Image
-          source={getCategoryImage(label, image)}
+          source={getCategoryImage(imageLookupKey, image)}
           style={styles.categoryImage}
           transition={200}
         />

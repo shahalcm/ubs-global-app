@@ -176,7 +176,7 @@ const BANNERS = [
 
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { addToCart } = useCart();
   const [search, setSearch] = useState("");
   const [activeBanner, setActiveBanner] = useState(0);
@@ -459,9 +459,9 @@ export default function HomeScreen() {
 
   const renderFeaturedProduct = ({ item }) => {
     const isOutOfStock = Number(item.stock ?? 0) <= 0;
-    const hasDiscount = item.comparePrice && Number(item.comparePrice) > Number(item.price);
+    const hasDiscount = Boolean(item.comparePrice && Number(item.comparePrice) > Number(item.price));
     const discountPercent = hasDiscount
-      ? Math.round(((item.comparePrice - item.price) / item.comparePrice) * 100)
+      ? Math.round(((Number(item.comparePrice) - Number(item.price)) / Number(item.comparePrice)) * 100)
       : 0;
 
     return (
@@ -482,16 +482,16 @@ export default function HomeScreen() {
             contentFit="cover"
             transition={200}
           />
-          {hasDiscount && (
+          {hasDiscount ? (
             <View style={styles.recentDiscountBadge}>
               <Text style={styles.recentDiscountText}>-{discountPercent}%</Text>
             </View>
-          )}
-          {isOutOfStock && (
+          ) : null}
+          {isOutOfStock ? (
             <View style={styles.outOfStockBadgeOverlay}>
               <Text style={styles.outOfStockBadgeOverlayText}>{t('Out of Stock')}</Text>
             </View>
-          )}
+          ) : null}
           <TouchableOpacity
             style={styles.recentFavBtn}
             onPress={(e) => {
@@ -517,39 +517,39 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 10, fontWeight: '700', color: '#444' }}>
               {item.rating || 4.5}
             </Text>
-            {item.totalSales > 0 && (
+            {Number(item.totalSales) > 0 ? (
               <Text style={{ fontSize: 10, color: '#888' }}>
                 • {item.totalSales} {t('sold')}
               </Text>
-            )}
+            ) : null}
           </View>
 
           {!(
             (item.category?.name || item.category || '').toLowerCase().trim() === 'job portal' ||
             (item.category?.name || item.category || '').toLowerCase().trim() === 'service portal'
-          ) && (
+          ) ? (
             <View style={styles.priceRow}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                 <Text style={styles.productPrice}>
                   ${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}
                 </Text>
-                {hasDiscount && (
+                {hasDiscount ? (
                   <Text style={{ fontSize: 10, color: '#999', textDecorationLine: 'line-through' }}>
                     ${item.comparePrice}
                   </Text>
-                )}
+                ) : null}
               </View>
             </View>
-          )}
+          ) : null}
 
-          {item.sellerId && (
+          {item.sellerId ? (
             <View style={styles.sellerRow}>
               <MaterialCommunityIcons name="storefront" size={10} color="#888" style={{ marginRight: 2 }} />
               <Text style={styles.sellerText} numberOfLines={1}>
                 {item.sellerId.shopName}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -557,9 +557,9 @@ export default function HomeScreen() {
 
   const renderRecentlyViewedProduct = ({ item }) => {
     const isOutOfStock = Number(item.stock ?? 0) <= 0;
-    const hasDiscount = item.comparePrice && Number(item.comparePrice) > Number(item.price);
+    const hasDiscount = Boolean(item.comparePrice && Number(item.comparePrice) > Number(item.price));
     const discountPercent = hasDiscount
-      ? Math.round(((item.comparePrice - item.price) / item.comparePrice) * 100)
+      ? Math.round(((Number(item.comparePrice) - Number(item.price)) / Number(item.comparePrice)) * 100)
       : 0;
 
     return (
@@ -580,16 +580,16 @@ export default function HomeScreen() {
             contentFit="cover"
             transition={200}
           />
-          {hasDiscount && (
+          {hasDiscount ? (
             <View style={styles.recentDiscountBadge}>
               <Text style={styles.recentDiscountText}>-{discountPercent}%</Text>
             </View>
-          )}
-          {isOutOfStock && (
+          ) : null}
+          {isOutOfStock ? (
             <View style={styles.outOfStockBadgeOverlay}>
               <Text style={styles.outOfStockBadgeOverlayText}>{t('Out of Stock')}</Text>
             </View>
-          )}
+          ) : null}
           <TouchableOpacity
             style={styles.recentFavBtn}
             onPress={(e) => {
@@ -615,19 +615,19 @@ export default function HomeScreen() {
               <MaterialCommunityIcons name="star" size={12} color="#ffb300" />
               <Text style={styles.recentRatingText}>{item.rating || 4.5}</Text>
             </View>
-            {item.sellerId?.shopName && (
+            {item.sellerId?.shopName ? (
               <Text style={styles.recentSellerText} numberOfLines={1}>
                 {item.sellerId.shopName}
               </Text>
-            )}
+            ) : null}
           </View>
 
           <View style={styles.recentFooterRow}>
             <View>
               <Text style={styles.productPrice}>${item.price}{item.priceUnit ? ` ${item.priceUnit}` : ''}</Text>
-              {hasDiscount && (
+              {hasDiscount ? (
                 <Text style={styles.recentComparePrice}>${item.comparePrice}</Text>
-              )}
+              ) : null}
             </View>
             <TouchableOpacity
               style={[styles.recentAddToCartBtn, isOutOfStock && { opacity: 0.5 }]}
@@ -845,7 +845,8 @@ export default function HomeScreen() {
           {categories.map((item) => (
             <CategoryCard
               key={item._id || item.id || item.name}
-              label={t(item.name)}
+              label={item.translations?.[i18n.language]?.name || t(item.name) || item.name}
+              categoryName={item.name}
               image={item.image}
               onPress={() => {
                 if (item.name && item.name.toLowerCase() === 'real estate') {
@@ -984,9 +985,9 @@ export default function HomeScreen() {
                   <Text style={styles.realEstateBadgeText}>{t('REAL ESTATE MARKETPLACE')}</Text>
                 </View>
                 <Text style={styles.realEstateTitle}>{t(realestateBanner.title)}</Text>
-                {realestateBanner.subtitle && (
+                {realestateBanner.subtitle ? (
                   <Text style={styles.realEstateSubtitle}>{t(realestateBanner.subtitle)}</Text>
-                )}
+                ) : null}
                 <View style={styles.realEstateBtn}>
                   <Text style={styles.realEstateBtnText}>{t('Browse Properties →')}</Text>
                 </View>

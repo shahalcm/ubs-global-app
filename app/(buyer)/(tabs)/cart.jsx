@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { getCart, removeFromCart, updateCartItem } from '../../../services/cartService'
 
 export default function CartScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [cartData, setCartData] = useState({
     items: [],
     subtotal: '0.00',

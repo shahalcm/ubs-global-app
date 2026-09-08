@@ -29,6 +29,137 @@ export const CATEGORY_IMAGES = {
 
 const DEFAULT_FALLBACK = { uri: 'https://via.placeholder.com/150' }
 
+const CATEGORY_ALIASES = {
+  'fashion': 'Fashion',
+  'الأزياء': 'Fashion',
+  'وസ്ത്രങ്ങൾ': 'Fashion',
+  'फैशन': 'Fashion',
+  'mode': 'Fashion',
+  'moda': 'Fashion',
+  '时尚': 'Fashion',
+  'ファッション': 'Fashion',
+  '패션': 'Fashion',
+  'فیشن': 'Fashion',
+
+  'mobiles': 'Mobiles',
+  'الهواتف': 'Mobiles',
+  'മൊബൈൽ': 'Mobiles',
+  'मोबाइल': 'Mobiles',
+  'téléphones': 'Mobiles',
+  'móviles': 'Mobiles',
+  '手机': 'Mobiles',
+  '携帯電話': 'Mobiles',
+  '휴대폰': 'Mobiles',
+  'موبائل': 'Mobiles',
+
+  'furniture': 'Furniture',
+  'الأثاث': 'Furniture',
+  'ഫർണിച്ചർ': 'Furniture',
+  'फर्नीचर': 'Furniture',
+  'meubles': 'Furniture',
+  'muebles': 'Furniture',
+  '家具': 'Furniture',
+  '가구': 'Furniture',
+  'فرنیچر': 'Furniture',
+
+  'cosmetics': 'Cosmetics',
+  'مستحضرات التجميل': 'Cosmetics',
+  'സൗന്ദര്യവർദ്ധകവസ്തുക്കൾ': 'Cosmetics',
+  'सौंदर्य प्रसाधन': 'Cosmetics',
+  'cosmétiques': 'Cosmetics',
+  'cosméticos': 'Cosmetics',
+  '化妆品': 'Cosmetics',
+  '化粧品': 'Cosmetics',
+  '화장품': 'Cosmetics',
+  'کاسمیٹکس': 'Cosmetics',
+
+  'grocery': 'Grocery',
+  'البقالة': 'Grocery',
+  'പലചരക്ക്': 'Grocery',
+  'किराना': 'Grocery',
+  'épicerie': 'Grocery',
+  'comestibles': 'Grocery',
+  '杂货': 'Grocery',
+  '食料品': 'Grocery',
+  '식료품': 'Grocery',
+  'گروسری': 'Grocery',
+
+  'electronics': 'Electronics',
+  'الإلكترونيات': 'Electronics',
+  'ഇലക്ട്രോണിക്സ്': 'Electronics',
+  'इलेक्ट्रॉनिक्स': 'Electronics',
+  'électronique': 'Electronics',
+  'electrónica': 'Electronics',
+  '电子': 'Electronics',
+  'エレクトロニクス': 'Electronics',
+  '전자제품': 'Electronics',
+  'الیکٹرانکس': 'Electronics',
+
+  'medicines': 'Medicines',
+  'الأدوية': 'Medicines',
+  'മരുന്നുകൾ': 'Medicines',
+  'दवाइयाँ': 'Medicines',
+  'médicaments': 'Medicines',
+  'medicamentos': 'Medicines',
+  '药品': 'Medicines',
+  '医薬品': 'Medicines',
+  '의약품': 'Medicines',
+  'ادویات': 'Medicines',
+
+  'real estate': 'Real Estate',
+  'العقارات': 'Real Estate',
+  'റിയൽ എസ്റ്റേറ്റ്': 'Real Estate',
+  'रियल एस्टेट': 'Real Estate',
+  'immobilier': 'Real Estate',
+  'bienes raíces': 'Real Estate',
+  '房地产': 'Real Estate',
+  '不動産': 'Real Estate',
+  '부동산': 'Real Estate',
+  'رئیل اسٹیٹ': 'Real Estate',
+
+  'machinery': 'Machinery',
+  'الآلات': 'Machinery',
+  'മെഷിനറി': 'Machinery',
+  'मशीनरी': 'Machinery',
+  'machines': 'Machinery',
+  'maquinaria': 'Machinery',
+  '机械': 'Machinery',
+  '機械': 'Machinery',
+  '기계': 'Machinery',
+  'مشینری': 'Machinery',
+
+  'spare parts': 'Spare Parts',
+  'قطع الغيار': 'Spare Parts',
+  'സ്പെയർ പാർട്സ്': 'Spare Parts',
+  'स्पेयर पार्ट्स': 'Spare Parts',
+  'rechange': 'Spare Parts',
+  'repuestos': 'Spare Parts',
+  '备件': 'Spare Parts',
+  'スペアパーツ': 'Spare Parts',
+  '예비 부품': 'Spare Parts',
+  'اسپیئر پارٹس': 'Spare Parts',
+
+  'perfumes': 'Perfumes',
+  'العطور': 'Perfumes',
+  'പെർഫ്യൂം': 'Perfumes',
+  'इत्र': 'Perfumes',
+  'parfums': 'Perfumes',
+  'perfumes': 'Perfumes',
+  '香水': 'Perfumes',
+  '향수': 'Perfumes',
+  'عطر': 'Perfumes',
+
+  'oils': 'Oils',
+  'الزيوت': 'Oils',
+  'എണ്ണകൾ': 'Oils',
+  'तेल': 'Oils',
+  'huiles': 'Oils',
+  'aceites': 'Oils',
+  '芳香油': 'Oils',
+  '오일': 'Oils',
+  'تیل': 'Oils',
+}
+
 export function getCategoryImage(categoryName, apiImage) {
   if (apiImage && typeof apiImage === 'string' && apiImage.startsWith('http')) {
     let formattedUrl = apiImage;
@@ -71,6 +202,16 @@ export function getCategoryImage(categoryName, apiImage) {
   for (const key of Object.keys(CATEGORY_IMAGES)) {
     if (key.toLowerCase() === lowerName) {
       return CATEGORY_IMAGES[key]
+    }
+  }
+
+  // Check alias lookup
+  if (CATEGORY_ALIASES[lowerName] && CATEGORY_IMAGES[CATEGORY_ALIASES[lowerName]]) {
+    return CATEGORY_IMAGES[CATEGORY_ALIASES[lowerName]]
+  }
+  for (const [alias, canonicalKey] of Object.entries(CATEGORY_ALIASES)) {
+    if (lowerName.includes(alias.toLowerCase()) && CATEGORY_IMAGES[canonicalKey]) {
+      return CATEGORY_IMAGES[canonicalKey]
     }
   }
 
